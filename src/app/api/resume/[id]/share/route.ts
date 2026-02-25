@@ -8,7 +8,9 @@ function generateShareToken(): string {
 }
 
 function getShareUrl(token: string, request: NextRequest): string {
-  const origin = request.headers.get('origin') || request.nextUrl.origin;
+  const host = request.headers.get('x-forwarded-host') || request.headers.get('host');
+  const proto = request.headers.get('x-forwarded-proto') || 'https';
+  const origin = host ? `${proto}://${host}` : request.nextUrl.origin;
   return `${origin}/share/${token}`;
 }
 
