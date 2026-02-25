@@ -360,6 +360,12 @@ Contributions are welcome! Here's how to get started:
 4. Push to the branch: `git push origin feat/your-feature`
 5. Open a Pull Request
 
+## Community
+
+Join the WeChat group for discussion and support:
+
+<img src="images/chat-group.jpg" width="200" alt="WeChat Group QR Code" />
+
 ## FAQ
 
 <details>
