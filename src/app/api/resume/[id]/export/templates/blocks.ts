@@ -67,7 +67,7 @@ function buildBlocksSectionContent(section: Section, lang: string): string {
   if (section.type === 'certifications') {
     const items = (c as CertificationsContent).items || [];
     return `<div class="overflow-hidden rounded-md border" style="border-color:#e3e2de">${items.map((it: any, idx: number) =>
-      `<div class="flex items-baseline justify-between px-3 py-2" style="${idx < items.length - 1 ? 'border-bottom:1px solid #e3e2de' : ''}"><span class="text-sm font-medium" style="color:${PRIMARY}">${esc(it.name)}</span><span class="text-xs" style="color:#9b9a97">${esc(it.issuer)}${it.date ? ` | ${esc(it.date)}` : ''}</span></div>`
+      `<div class="flex items-baseline justify-between px-3 py-2" style="${idx < items.length - 1 ? 'border-bottom:1px solid #e3e2de' : ''}"><span class="text-sm font-medium" style="color:${PRIMARY}">${esc(it.name)}</span>${it.issuer || it.date ? `<span class="text-xs" style="color:#9b9a97">${it.issuer ? esc(it.issuer) : ''}${it.issuer && it.date ? ' | ' : ''}${it.date ? esc(it.date) : ''}</span>` : ''}</div>`
     ).join('')}</div>`;
   }
 

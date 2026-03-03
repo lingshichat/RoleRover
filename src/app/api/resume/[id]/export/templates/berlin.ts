@@ -60,7 +60,7 @@ function buildBerlinSectionContent(section: Section, lang: string): string {
 
   if (section.type === 'certifications') {
     return `<div class="space-y-1.5">${((c as CertificationsContent).items || []).map((it: any) =>
-      `<div class="flex items-baseline justify-between"><div><span class="text-sm font-bold" style="color:${TEXT}">${esc(it.name)}</span><span class="text-sm text-zinc-500"> &mdash; ${esc(it.issuer)}</span></div>${it.date ? `<span class="shrink-0 text-xs font-bold" style="color:${BLUE}">${esc(it.date)}</span>` : ''}</div>`
+      `<div class="flex items-baseline justify-between"><div><span class="text-sm font-bold" style="color:${TEXT}">${esc(it.name)}</span>${it.issuer ? `<span class="text-sm text-zinc-500"> &mdash; ${esc(it.issuer)}</span>` : ''}</div>${it.date ? `<span class="shrink-0 text-xs font-bold" style="color:${BLUE}">${esc(it.date)}</span>` : ''}</div>`
     ).join('')}</div>`;
   }
 

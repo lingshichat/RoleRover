@@ -216,7 +216,7 @@ function RetroSectionContent({ section, resume }: { section: any; resume: Resume
           <div key={item.id} className="flex items-baseline gap-2">
             <span className="shrink-0 text-xs" style={{ color: PRIMARY }}>{'\u2666'}</span>
             <span className="text-sm font-bold" style={{ color: PRIMARY }}>{item.name}</span>
-            <span className="text-xs" style={{ color: ACCENT }}>{item.issuer}{item.date ? ` (${item.date})` : ''}</span>
+            {(item.issuer || item.date) && <span className="text-xs" style={{ color: ACCENT }}>{item.issuer}{item.issuer && item.date ? ' ' : ''}{item.date && `(${item.date})`}</span>}
           </div>
         ))}
       </div>

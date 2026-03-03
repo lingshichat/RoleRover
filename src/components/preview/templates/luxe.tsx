@@ -186,7 +186,7 @@ function LuxeSectionContent({ section, lang }: { section: any; lang?: string }) 
           <div key={item.id} className="flex items-baseline justify-between">
             <div>
               <span className="text-sm font-bold" style={{ color: TEXT }}>{item.name}</span>
-              <span className="text-sm" style={{ color: '#a8a29e' }}> &mdash; {item.issuer}</span>
+              {item.issuer && <span className="text-sm" style={{ color: '#a8a29e' }}> &mdash; {item.issuer}</span>}
             </div>
             {item.date && <span className="shrink-0 text-xs italic" style={{ color: GOLD }}>{item.date}</span>}
           </div>

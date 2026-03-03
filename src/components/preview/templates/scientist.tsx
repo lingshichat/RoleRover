@@ -200,7 +200,7 @@ function ScientistSectionContent({ section, resume }: { section: any; resume: Re
           <div key={item.id} className="text-sm">
             <span className="text-xs font-bold" style={{ color: ACCENT }}>[{idx + 1}]</span>
             <span className="ml-1.5 font-medium" style={{ color: PRIMARY }}>{item.name}</span>
-            <span style={{ color: MUTED }}>, {item.issuer}, {item.date}</span>
+            {(item.issuer || item.date) && <span style={{ color: MUTED }}>{item.issuer && <>, {item.issuer}</>}{item.date && <>, {item.date}</>}</span>}
           </div>
         ))}
       </div>

@@ -97,7 +97,7 @@ export function generatePlainText(resume: ResumeWithSections): string {
         const certs = section.content as CertificationsContent;
         lines.push(`== ${section.title} ==`);
         for (const item of certs.items || []) {
-          lines.push(`- ${safe(item.name)}, ${safe(item.issuer)} (${safe(item.date)})`);
+          lines.push(`- ${safe(item.name)}${item.issuer ? `, ${safe(item.issuer)}` : ''}${item.date ? ` (${safe(item.date)})` : ''}`);
         }
         lines.push('');
         break;

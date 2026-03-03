@@ -59,7 +59,7 @@ function buildArchitectSectionContent(section: Section, lang: string = 'en'): st
 
   if (section.type === 'certifications') {
     return `<div class="space-y-1.5">${((c as CertificationsContent).items || []).map((it: any) =>
-      `<div class="flex items-baseline gap-2"><span class="h-1.5 w-1.5 shrink-0 rotate-45" style="background-color:${ACCENT}"></span><span class="text-sm font-medium" style="color:${PRIMARY}">${esc(it.name)}</span><span class="text-sm" style="color:${MUTED}"> — ${esc(it.issuer)} (${esc(it.date)})</span></div>`
+      `<div class="flex items-baseline gap-2"><span class="h-1.5 w-1.5 shrink-0 rotate-45" style="background-color:${ACCENT}"></span><span class="text-sm font-medium" style="color:${PRIMARY}">${esc(it.name)}</span><span class="text-sm" style="color:${MUTED}">${it.issuer ? ` — ${esc(it.issuer)}` : ''}${it.date ? ` (${esc(it.date)})` : ''}</span></div>`
     ).join('')}</div>`;
   }
 

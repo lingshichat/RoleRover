@@ -240,7 +240,7 @@ function BlocksSectionContent({ section, resume }: { section: any; resume: Resum
         {items.map((item: any, idx: number) => (
           <div key={item.id} className="flex items-baseline justify-between px-3 py-2" style={{ borderBottom: idx < items.length - 1 ? '1px solid #e3e2de' : 'none' }}>
             <span className="text-sm font-medium" style={{ color: PRIMARY }}>{item.name}</span>
-            <span className="text-xs" style={{ color: '#9b9a97' }}>{item.issuer}{item.date ? ` | ${item.date}` : ''}</span>
+            {(item.issuer || item.date) && <span className="text-xs" style={{ color: '#9b9a97' }}>{item.issuer}{item.issuer && item.date ? ' | ' : ''}{item.date}</span>}
           </div>
         ))}
       </div>

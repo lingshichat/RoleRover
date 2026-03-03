@@ -177,7 +177,7 @@ function JapaneseSectionContent({ section, lang }: { section: any; lang?: string
           <div key={item.id} className="flex items-baseline justify-between">
             <div>
               <span className="text-sm font-normal" style={{ color: PRIMARY }}>{item.name}</span>
-              <span className="text-xs font-light" style={{ color: ACCENT }}> &mdash; {item.issuer}</span>
+              {item.issuer && <span className="text-xs font-light" style={{ color: ACCENT }}> &mdash; {item.issuer}</span>}
             </div>
             {item.date && <span className="shrink-0 text-[10px] font-light" style={{ color: ACCENT }}>{item.date}</span>}
           </div>

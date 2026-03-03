@@ -214,7 +214,7 @@ function MagazineSectionContent({ section, resume }: { section: any; resume: Res
           <div key={item.id} className="flex items-baseline gap-2">
             <span className="h-1.5 w-1.5 shrink-0 rotate-45" style={{ backgroundColor: ACCENT }} />
             <span className="text-sm font-bold" style={{ color: PRIMARY }}>{item.name}</span>
-            <span className="text-xs" style={{ color: SECONDARY }}>{item.issuer}{item.date ? ` | ${item.date}` : ''}</span>
+            {(item.issuer || item.date) && <span className="text-xs" style={{ color: SECONDARY }}>{item.issuer}{item.issuer && item.date ? ' | ' : ''}{item.date}</span>}
           </div>
         ))}
       </div>

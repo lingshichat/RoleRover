@@ -183,7 +183,7 @@ function CoderSidebarContent({ section }: { section: any }) {
         {items.map((item: any) => (
           <div key={item.id}>
             <p className="text-[10px] font-semibold" style={{ color: '#c9d1d9' }}>{item.name}</p>
-            <p className="text-[9px]" style={{ color: '#484f58' }}>{item.issuer}{item.date ? ` (${item.date})` : ''}</p>
+            {(item.issuer || item.date) && <p className="text-[9px]" style={{ color: '#484f58' }}>{item.issuer}{item.date ? ` (${item.date})` : ''}</p>}
           </div>
         ))}
       </div>
@@ -386,7 +386,7 @@ function CoderMainContent({ section, resume }: { section: any; resume: Resume })
         {items.map((item: any) => (
           <div key={item.id}>
             <span className="text-sm font-bold" style={{ color: DARK }}>{item.name}</span>
-            <span className="text-xs text-zinc-500">{' - '}{item.issuer}{item.date ? ` (${item.date})` : ''}</span>
+            {(item.issuer || item.date) && <span className="text-xs text-zinc-500">{item.issuer && <>{' - '}{item.issuer}</>}{item.date && <> ({item.date})</>}</span>}
           </div>
         ))}
       </div>

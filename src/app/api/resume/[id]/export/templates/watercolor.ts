@@ -72,7 +72,7 @@ function buildWatercolorSectionContent(section: Section, lang: string): string {
 
   if (section.type === 'certifications') {
     return `<div class="flex flex-wrap gap-2">${((c as CertificationsContent).items || []).map((it: any) =>
-      `<div class="rounded-xl px-4 py-2" style="background-color:${WASH};border:1px solid ${ACCENT}30"><p class="text-sm font-bold" style="color:${PRIMARY}">${esc(it.name)}</p><p class="text-xs" style="color:${TEXT}">${esc(it.issuer)}${it.date ? ` | ${esc(it.date)}` : ''}</p></div>`
+      `<div class="rounded-xl px-4 py-2" style="background-color:${WASH};border:1px solid ${ACCENT}30"><p class="text-sm font-bold" style="color:${PRIMARY}">${esc(it.name)}</p>${it.issuer || it.date ? `<p class="text-xs" style="color:${TEXT}">${it.issuer ? esc(it.issuer) : ''}${it.issuer && it.date ? ' | ' : ''}${it.date ? esc(it.date) : ''}</p>` : ''}</div>`
     ).join('')}</div>`;
   }
 

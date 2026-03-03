@@ -59,7 +59,7 @@ function buildRetroSectionContent(section: Section, lang: string): string {
 
   if (section.type === 'certifications') {
     return `<div class="space-y-1.5">${((c as CertificationsContent).items || []).map((it: any) =>
-      `<div class="flex items-baseline gap-2"><span class="shrink-0 text-xs" style="color:${PRIMARY}">&diams;</span><span class="text-sm font-bold" style="color:${PRIMARY}">${esc(it.name)}</span><span class="text-xs" style="color:${ACCENT}">${esc(it.issuer)}${it.date ? ` (${esc(it.date)})` : ''}</span></div>`
+      `<div class="flex items-baseline gap-2"><span class="shrink-0 text-xs" style="color:${PRIMARY}">&diams;</span><span class="text-sm font-bold" style="color:${PRIMARY}">${esc(it.name)}</span>${it.issuer || it.date ? `<span class="text-xs" style="color:${ACCENT}">${it.issuer ? esc(it.issuer) : ''}${it.issuer && it.date ? ' ' : ''}${it.date ? `(${esc(it.date)})` : ''}</span>` : ''}</div>`
     ).join('')}</div>`;
   }
 

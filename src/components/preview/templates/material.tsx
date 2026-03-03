@@ -215,7 +215,7 @@ function MaterialSectionContent({ section, resume }: { section: any; resume: Res
         {items.map((item: any) => (
           <div key={item.id} className="flex items-baseline justify-between rounded-lg bg-zinc-50 px-4 py-2">
             <span className="text-sm font-semibold" style={{ color: PRIMARY }}>{item.name}</span>
-            <span className="text-xs text-zinc-500">{item.issuer}{item.date ? ` | ${item.date}` : ''}</span>
+            {(item.issuer || item.date) && <span className="text-xs text-zinc-500">{item.issuer}{item.issuer && item.date ? ' | ' : ''}{item.date}</span>}
           </div>
         ))}
       </div>

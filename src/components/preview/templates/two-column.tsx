@@ -158,7 +158,7 @@ function LeftSectionContent({ section }: { section: any }) {
         {items.map((item: any) => (
           <div key={item.id}>
             <p className="text-xs font-semibold text-zinc-200">{item.name}</p>
-            <p className="text-[10px] text-zinc-400">{item.issuer}{item.date ? ` (${item.date})` : ''}</p>
+            {(item.issuer || item.date) && <p className="text-[10px] text-zinc-400">{item.issuer}{item.date ? ` (${item.date})` : ''}</p>}
           </div>
         ))}
       </div>

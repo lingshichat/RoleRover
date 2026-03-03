@@ -162,7 +162,7 @@ function NordicSectionContent({ section, resume }: { section: any; resume: Resum
         {((content as CertificationsContent).items || []).map((item: any) => (
           <div key={item.id}>
             <span className="text-sm font-medium" style={{ color: SLATE_500 }}>{item.name}</span>
-            <span className="text-sm font-light" style={{ color: SLATE_400 }}> — {item.issuer} ({item.date})</span>
+            {(item.issuer || item.date) && <span className="text-sm font-light" style={{ color: SLATE_400 }}>{item.issuer && <> — {item.issuer}</>}{item.date && <> ({item.date})</>}</span>}
           </div>
         ))}
       </div>

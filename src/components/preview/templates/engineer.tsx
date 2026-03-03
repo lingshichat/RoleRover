@@ -264,7 +264,7 @@ function EngineerSectionContent({ section, resume }: { section: any; resume: Res
           <div key={item.id} className="flex items-center gap-2">
             <span className="h-1 w-1 shrink-0" style={{ backgroundColor: ACCENT }} />
             <span className="text-sm font-medium" style={{ color: PRIMARY }}>{item.name}</span>
-            <span className="text-sm" style={{ color: SECONDARY }}> — {item.issuer} ({item.date})</span>
+            {(item.issuer || item.date) && <span className="text-sm" style={{ color: SECONDARY }}>{item.issuer && <> — {item.issuer}</>}{item.date && <> ({item.date})</>}</span>}
           </div>
         ))}
       </div>

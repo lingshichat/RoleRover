@@ -184,7 +184,7 @@ function LegalSectionContent({ section, resume }: { section: any; resume: Resume
         {((content as CertificationsContent).items || []).map((item: any) => (
           <div key={item.id} className="text-sm">
             <span className="font-bold" style={{ color: PRIMARY }}>{item.name}</span>
-            <span style={{ color: MUTED }}> — {item.issuer}, {item.date}</span>
+            {(item.issuer || item.date) && <span style={{ color: MUTED }}>{item.issuer && <> — {item.issuer}</>}{item.date && <>, {item.date}</>}</span>}
           </div>
         ))}
       </div>

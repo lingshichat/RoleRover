@@ -62,7 +62,7 @@ function buildArtisticSectionContent(section: Section, lang: string): string {
 
   if (section.type === 'certifications') {
     return `<div class="flex flex-wrap gap-2">${((c as CertificationsContent).items || []).map((it: any) =>
-      `<div class="rounded-lg px-4 py-2" style="border:1px dashed ${ACCENT}30;background-color:${HIGHLIGHT}10"><p class="text-sm font-bold" style="color:${PRIMARY}">${esc(it.name)}</p><p class="text-xs text-zinc-500">${esc(it.issuer)}${it.date ? ` | ${esc(it.date)}` : ''}</p></div>`
+      `<div class="rounded-lg px-4 py-2" style="border:1px dashed ${ACCENT}30;background-color:${HIGHLIGHT}10"><p class="text-sm font-bold" style="color:${PRIMARY}">${esc(it.name)}</p>${it.issuer || it.date ? `<p class="text-xs text-zinc-500">${it.issuer ? esc(it.issuer) : ''}${it.issuer && it.date ? ' | ' : ''}${it.date ? esc(it.date) : ''}</p>` : ''}</div>`
     ).join('')}</div>`;
   }
 

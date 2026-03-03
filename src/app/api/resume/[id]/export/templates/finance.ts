@@ -55,7 +55,7 @@ function buildFinanceSectionContent(section: Section, lang: string): string {
 
   if (section.type === 'certifications') {
     return `<div class="space-y-1.5">${((c as CertificationsContent).items || []).map((it: any) =>
-      `<div><span class="text-sm font-bold" style="color:${SLATE_800}">${esc(it.name)}</span><span class="text-sm text-slate-600"> — ${esc(it.issuer)} (${esc(it.date)})</span></div>`
+      `<div><span class="text-sm font-bold" style="color:${SLATE_800}">${esc(it.name)}</span><span class="text-sm text-slate-600">${it.issuer ? ` — ${esc(it.issuer)}` : ''}${it.date ? ` (${esc(it.date)})` : ''}</span></div>`
     ).join('')}</div>`;
   }
 

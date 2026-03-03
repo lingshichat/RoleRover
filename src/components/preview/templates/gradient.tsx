@@ -226,7 +226,7 @@ function GradientSectionContent({ section, resume }: { section: any; resume: Res
         {items.map((item: any) => (
           <div key={item.id} className="flex items-baseline justify-between">
             <span className="text-sm font-semibold" style={{ color: ACCENT }}>{item.name}</span>
-            <span className="text-xs text-zinc-500">{item.issuer}{item.date ? ` | ${item.date}` : ''}</span>
+            {(item.issuer || item.date) && <span className="text-xs text-zinc-500">{item.issuer}{item.issuer && item.date ? ' | ' : ''}{item.date}</span>}
           </div>
         ))}
       </div>

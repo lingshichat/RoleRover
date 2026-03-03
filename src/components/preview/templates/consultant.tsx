@@ -176,7 +176,7 @@ function ConsultantSectionContent({ section, resume }: { section: any; resume: R
         {((content as CertificationsContent).items || []).map((item: any) => (
           <div key={item.id}>
             <span className="text-sm font-bold" style={{ color: GRAY_700 }}>{item.name}</span>
-            <span className="text-sm text-gray-500"> — {item.issuer} ({item.date})</span>
+            {(item.issuer || item.date) && <span className="text-sm text-gray-500">{item.issuer && <> — {item.issuer}</>}{item.date && <> ({item.date})</>}</span>}
           </div>
         ))}
       </div>

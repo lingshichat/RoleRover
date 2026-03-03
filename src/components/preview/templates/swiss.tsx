@@ -177,10 +177,10 @@ function SwissSectionContent({ section, lang }: { section: any; lang?: string })
       <div className="space-y-1.5">
         {((content as CertificationsContent).items || []).map((item: any) => (
           <div key={item.id} className="grid grid-cols-[140px_1fr] gap-4">
-            <span className="text-xs" style={{ color: '#52525b' }}>{item.date}</span>
+            <span className="text-xs" style={{ color: '#52525b' }}>{item.date || '\u00A0'}</span>
             <div>
               <span className="text-sm font-bold" style={{ color: TEXT }}>{item.name}</span>
-              <span className="text-sm" style={{ color: '#3f3f46' }}> &mdash; {item.issuer}</span>
+              {item.issuer && <span className="text-sm" style={{ color: '#3f3f46' }}> &mdash; {item.issuer}</span>}
             </div>
           </div>
         ))}

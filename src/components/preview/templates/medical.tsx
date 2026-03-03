@@ -166,7 +166,7 @@ function MedicalSectionContent({ section, resume }: { section: any; resume: Resu
         {((content as CertificationsContent).items || []).map((item: any) => (
           <div key={item.id}>
             <span className="text-sm font-bold" style={{ color: TEAL_800 }}>{item.name}</span>
-            <span className="text-sm text-gray-600"> — {item.issuer} ({item.date})</span>
+            {(item.issuer || item.date) && <span className="text-sm text-gray-600">{item.issuer && <> — {item.issuer}</>}{item.date && <> ({item.date})</>}</span>}
           </div>
         ))}
       </div>

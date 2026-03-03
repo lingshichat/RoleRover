@@ -46,10 +46,10 @@ export function CertificationsSection({ section, onUpdate }: Props) {
               </Button>
             </div>
             <FieldWrapper>
-              <EditableText label="Name" value={item.name} onChange={(v) => updateItem(index, { name: v })} />
-              <EditableText label="Issuer" value={item.issuer} onChange={(v) => updateItem(index, { issuer: v })} />
+              <EditableText label={t('certName')} value={item.name} onChange={(v) => updateItem(index, { name: v })} />
+              <EditableText label={t('issuer')} value={item.issuer} onChange={(v) => updateItem(index, { issuer: v })} />
             </FieldWrapper>
-            <EditableText label="Date" value={item.date} onChange={(v) => updateItem(index, { date: v })} />
+            <EditableText label={t('certDate')} value={item.date} onChange={(v) => updateItem(index, { date: v })} />
           </div>
         </div>
       ))}

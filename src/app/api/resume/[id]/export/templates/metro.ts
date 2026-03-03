@@ -58,7 +58,7 @@ function buildMetroSectionContent(section: Section, lang: string): string {
 
   if (section.type === 'certifications') {
     return `<div class="space-y-1.5">${((c as CertificationsContent).items || []).map((it: any) =>
-      `<div class="flex items-baseline justify-between border-l-3 pl-4" style="border-color:${AMBER}"><span class="text-sm font-bold" style="color:${PRIMARY}">${esc(it.name)}</span><span class="text-xs text-zinc-500">${esc(it.issuer)}${it.date ? ` | ${esc(it.date)}` : ''}</span></div>`
+      `<div class="flex items-baseline justify-between border-l-3 pl-4" style="border-color:${AMBER}"><span class="text-sm font-bold" style="color:${PRIMARY}">${esc(it.name)}</span>${it.issuer || it.date ? `<span class="text-xs text-zinc-500">${it.issuer ? esc(it.issuer) : ''}${it.issuer && it.date ? ' | ' : ''}${it.date ? esc(it.date) : ''}</span>` : ''}</div>`
     ).join('')}</div>`;
   }
 

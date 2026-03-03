@@ -26,7 +26,7 @@ export function buildTwoColumnLeftContent(section: Section): string {
   }
   if (section.type === 'certifications') {
     return `<div class="space-y-1.5">${((c as CertificationsContent).items || []).map((it: any) =>
-      `<div><p class="text-xs font-semibold text-zinc-200">${esc(it.name)}</p><p class="text-[10px] text-zinc-400">${esc(it.issuer)}${it.date ? ` (${esc(it.date)})` : ''}</p></div>`
+      `<div><p class="text-xs font-semibold text-zinc-200">${esc(it.name)}</p>${it.issuer || it.date ? `<p class="text-[10px] text-zinc-400">${it.issuer ? esc(it.issuer) : ''}${it.date ? ` (${esc(it.date)})` : ''}</p>` : ''}</div>`
     ).join('')}</div>`;
   }
   if (section.type === 'custom') {

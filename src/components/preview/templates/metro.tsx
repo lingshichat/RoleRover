@@ -216,7 +216,7 @@ function MetroSectionContent({ section, resume }: { section: any; resume: Resume
         {items.map((item: any) => (
           <div key={item.id} className="flex items-baseline justify-between border-l-3 pl-4" style={{ borderColor: AMBER }}>
             <span className="text-sm font-bold" style={{ color: PRIMARY }}>{item.name}</span>
-            <span className="text-xs text-zinc-500">{item.issuer}{item.date ? ` | ${item.date}` : ''}</span>
+            {(item.issuer || item.date) && <span className="text-xs text-zinc-500">{item.issuer}{item.issuer && item.date ? ' | ' : ''}{item.date}</span>}
           </div>
         ))}
       </div>

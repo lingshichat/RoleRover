@@ -192,7 +192,7 @@ function SectionContent({ section, lang }: { section: any; lang?: string }) {
         {items.map((item: any) => (
           <div key={item.id}>
             <span className="font-semibold text-zinc-800 text-sm">{item.name}</span>
-            <span className="text-sm text-zinc-600"> — {item.issuer}{item.date ? ` (${item.date})` : ''}</span>
+            {(item.issuer || item.date) && <span className="text-sm text-zinc-600">{item.issuer && <> — {item.issuer}</>}{item.date && <> ({item.date})</>}</span>}
           </div>
         ))}
       </div>

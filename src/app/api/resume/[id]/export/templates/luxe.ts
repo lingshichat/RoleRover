@@ -56,7 +56,7 @@ function buildLuxeSectionContent(section: Section, lang: string): string {
 
   if (section.type === 'certifications') {
     return `<div class="space-y-2">${((c as CertificationsContent).items || []).map((it: any) =>
-      `<div class="flex items-baseline justify-between"><div><span class="text-sm font-bold" style="color:${TEXT}">${esc(it.name)}</span><span class="text-sm" style="color:#a8a29e"> &mdash; ${esc(it.issuer)}</span></div>${it.date ? `<span class="shrink-0 text-xs italic" style="color:${GOLD}">${esc(it.date)}</span>` : ''}</div>`
+      `<div class="flex items-baseline justify-between"><div><span class="text-sm font-bold" style="color:${TEXT}">${esc(it.name)}</span>${it.issuer ? `<span class="text-sm" style="color:#a8a29e"> &mdash; ${esc(it.issuer)}</span>` : ''}</div>${it.date ? `<span class="shrink-0 text-xs italic" style="color:${GOLD}">${esc(it.date)}</span>` : ''}</div>`
     ).join('')}</div>`;
   }
 

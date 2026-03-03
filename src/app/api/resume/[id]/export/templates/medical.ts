@@ -56,7 +56,7 @@ function buildMedicalSectionContent(section: Section, lang: string): string {
 
   if (section.type === 'certifications') {
     return `<div class="space-y-1.5">${((c as CertificationsContent).items || []).map((it: any) =>
-      `<div><span class="text-sm font-bold" style="color:${TEAL_800}">${esc(it.name)}</span><span class="text-sm text-gray-600"> — ${esc(it.issuer)} (${esc(it.date)})</span></div>`
+      `<div><span class="text-sm font-bold" style="color:${TEAL_800}">${esc(it.name)}</span>${it.issuer ? `<span class="text-sm text-gray-600"> — ${esc(it.issuer)}</span>` : ''}${it.date ? `<span class="text-sm text-gray-600"> (${esc(it.date)})</span>` : ''}</div>`
     ).join('')}</div>`;
   }
 

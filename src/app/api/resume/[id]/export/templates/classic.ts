@@ -51,7 +51,7 @@ export function buildClassicSectionContent(section: Section, lang: string = 'en'
   }
   if (section.type === 'certifications') {
     return `<div class="space-y-1">${((c as CertificationsContent).items || []).map((it: any) =>
-      `<div><span class="font-semibold text-zinc-800 text-sm">${esc(it.name)}</span><span class="text-sm text-zinc-600"> — ${esc(it.issuer)} (${esc(it.date)})</span></div>`
+      `<div><span class="font-semibold text-zinc-800 text-sm">${esc(it.name)}</span><span class="text-sm text-zinc-600">${it.issuer ? ` — ${esc(it.issuer)}` : ''}${it.date ? ` (${esc(it.date)})` : ''}</span></div>`
     ).join('')}</div>`;
   }
   if (section.type === 'languages') {

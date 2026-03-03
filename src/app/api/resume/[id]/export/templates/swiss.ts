@@ -64,7 +64,7 @@ function buildSwissSectionContent(section: Section, lang: string): string {
 
   if (section.type === 'certifications') {
     return `<div class="space-y-1.5">${((c as CertificationsContent).items || []).map((it: any) =>
-      `<div class="grid grid-cols-[140px_1fr] gap-4"><span class="text-xs" style="color:#71717a">${esc(it.date)}</span><div><span class="text-sm font-bold" style="color:${TEXT}">${esc(it.name)}</span><span class="text-sm" style="color:#3f3f46"> &mdash; ${esc(it.issuer)}</span></div></div>`
+      `<div class="grid grid-cols-[140px_1fr] gap-4"><span class="text-xs" style="color:#71717a">${it.date ? esc(it.date) : '&nbsp;'}</span><div><span class="text-sm font-bold" style="color:${TEXT}">${esc(it.name)}</span>${it.issuer ? `<span class="text-sm" style="color:#3f3f46"> &mdash; ${esc(it.issuer)}</span>` : ''}</div></div>`
     ).join('')}</div>`;
   }
 

@@ -46,7 +46,7 @@ function buildCoderSidebarContent(section: Section): string {
   if (section.type === 'certifications') {
     return `<div class="space-y-1.5">${((c as CertificationsContent).items || []).map((it: any) => `<div>
       <p class="text-[10px] font-semibold" style="color:#c9d1d9">${esc(it.name)}</p>
-      <p class="text-[9px]" style="color:#484f58">${esc(it.issuer)}${it.date ? ` (${esc(it.date)})` : ''}</p>
+      ${it.issuer || it.date ? `<p class="text-[9px]" style="color:#484f58">${it.issuer ? esc(it.issuer) : ''}${it.date ? ` (${esc(it.date)})` : ''}</p>` : ''}
     </div>`).join('')}</div>`;
   }
 
@@ -114,7 +114,7 @@ function buildCoderMainContent(section: Section, lang: string): string {
 
   if (section.type === 'certifications') {
     return `<div class="space-y-1.5">${((c as CertificationsContent).items || []).map((it: any) =>
-      `<div><span class="text-sm font-bold" style="color:${DARK}">${esc(it.name)}</span><span class="text-xs text-zinc-500"> - ${esc(it.issuer)}${it.date ? ` (${esc(it.date)})` : ''}</span></div>`
+      `<div><span class="text-sm font-bold" style="color:${DARK}">${esc(it.name)}</span>${it.issuer || it.date ? `<span class="text-xs text-zinc-500">${it.issuer ? ` - ${esc(it.issuer)}` : ''}${it.date ? ` (${esc(it.date)})` : ''}</span>` : ''}</div>`
     ).join('')}</div>`;
   }
 

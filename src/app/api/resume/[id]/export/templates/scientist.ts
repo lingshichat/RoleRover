@@ -59,7 +59,7 @@ function buildScientistSectionContent(section: Section, sectionIdx: number, lang
 
   if (section.type === 'certifications') {
     return `<div class="space-y-1.5">${((c as CertificationsContent).items || []).map((it: any, idx: number) =>
-      `<div class="text-sm"><span class="text-xs font-bold" style="color:${ACCENT}">[${idx + 1}]</span><span class="ml-1.5 font-medium" style="color:${PRIMARY}">${esc(it.name)}</span><span style="color:${MUTED}">, ${esc(it.issuer)}, ${esc(it.date)}</span></div>`
+      `<div class="text-sm"><span class="text-xs font-bold" style="color:${ACCENT}">[${idx + 1}]</span><span class="ml-1.5 font-medium" style="color:${PRIMARY}">${esc(it.name)}</span><span style="color:${MUTED}">${it.issuer ? `, ${esc(it.issuer)}` : ''}${it.date ? `, ${esc(it.date)}` : ''}</span></div>`
     ).join('')}</div>`;
   }
 

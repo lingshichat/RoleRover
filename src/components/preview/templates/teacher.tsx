@@ -209,7 +209,7 @@ function TeacherSectionContent({ section, resume }: { section: any; resume: Resu
           <div key={item.id} className="flex items-center gap-2">
             <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: ACCENT }} />
             <span className="text-sm font-medium" style={{ color: PRIMARY }}>{item.name}</span>
-            <span className="text-sm" style={{ color: MUTED }}> — {item.issuer} ({item.date})</span>
+            {(item.issuer || item.date) && <span className="text-sm" style={{ color: MUTED }}>{item.issuer && <> — {item.issuer}</>}{item.date && <> ({item.date})</>}</span>}
           </div>
         ))}
       </div>
