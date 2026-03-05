@@ -9,17 +9,17 @@ import type {
   CustomContent,
   GitHubContent,
 } from '@/types/resume';
-import { esc, getPersonalInfo, visibleSections, buildHighlights, buildQrCodesHtml, type ResumeWithSections, type Section } from '../utils';
+import { esc, md, getPersonalInfo, visibleSections, buildHighlights, buildQrCodesHtml, type ResumeWithSections, type Section } from '../utils';
 
 function buildInfographicSectionContent(section: Section, color: string, colorIndex: number, lang: string): string {
   const c = section.content as any;
   const COLORS = ['#3b82f6', '#ef4444', '#f59e0b', '#10b981', '#8b5cf6', '#ec4899'];
-  if (section.type === 'summary') return `<p class="rounded-lg border-l-4 bg-zinc-50 p-4 text-sm leading-relaxed text-zinc-600" style="border-color:${color}">${esc((c as SummaryContent).text)}</p>`;
+  if (section.type === 'summary') return `<p class="rounded-lg border-l-4 bg-zinc-50 p-4 text-sm leading-relaxed text-zinc-600" style="border-color:${color}">${md((c as SummaryContent).text)}</p>`;
   if (section.type === 'work_experience') {
     return `<div class="space-y-4">${((c as WorkExperienceContent).items || []).map((it: any) => `<div class="rounded-lg border border-zinc-100 p-4">
       <div class="flex items-baseline justify-between"><h3 class="text-sm font-bold text-zinc-800">${esc(it.position)}</h3><span class="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium text-white" style="background:${color}">${esc(it.startDate)} – ${esc(it.endDate) || (it.current ? (lang === 'zh' ? '至今' : 'Present') : '')}</span></div>
       ${it.company ? `<p class="text-sm" style="color:${color}">${esc(it.company)}</p>` : ''}
-      ${it.description ? `<p class="mt-1 text-sm text-zinc-600">${esc(it.description)}</p>` : ''}
+      ${it.description ? `<p class="mt-1 text-sm text-zinc-600">${md(it.description)}</p>` : ''}
       ${it.technologies?.length ? `<div class="mt-1.5 flex flex-wrap gap-1">${it.technologies.map((t: string) => `<span class="rounded-full px-2 py-0.5 text-[10px] font-medium text-white" style="background:${color};opacity:0.8">${esc(t)}</span>`).join('')}</div>` : ''}
       ${it.highlights?.length ? `<ul class="mt-1 list-disc pl-4">${buildHighlights(it.highlights, 'text-sm text-zinc-600')}</ul>` : ''}
     </div>`).join('')}</div>`;
@@ -42,7 +42,7 @@ function buildInfographicSectionContent(section: Section, color: string, colorIn
   if (section.type === 'projects') {
     return `<div class="space-y-3">${((c as ProjectsContent).items || []).map((it: any) => `<div class="rounded-lg border border-zinc-100 p-4">
       <div class="flex items-baseline justify-between"><h3 class="text-sm font-bold" style="color:${color}">${esc(it.name)}</h3>${it.startDate ? `<span class="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium text-white" style="background:${color}">${esc(it.startDate)} – ${it.endDate ? esc(it.endDate) : (lang === 'zh' ? '至今' : 'Present')}</span>` : ''}</div>
-      ${it.description ? `<p class="mt-1 text-sm text-zinc-600">${esc(it.description)}</p>` : ''}
+      ${it.description ? `<p class="mt-1 text-sm text-zinc-600">${md(it.description)}</p>` : ''}
       ${it.technologies?.length ? `<div class="mt-1.5 flex flex-wrap gap-1">${it.technologies.map((t: string) => `<span class="rounded-full px-2 py-0.5 text-[10px] font-medium text-white" style="background:${color};opacity:0.8">${esc(t)}</span>`).join('')}</div>` : ''}
       ${it.highlights?.length ? `<ul class="mt-1 list-disc pl-4">${buildHighlights(it.highlights, 'text-sm text-zinc-600')}</ul>` : ''}
     </div>`).join('')}</div>`;
@@ -61,18 +61,18 @@ function buildInfographicSectionContent(section: Section, color: string, colorIn
     return `<div class="space-y-3">${((c as GitHubContent).items || []).map((it: any) => `<div class="rounded-lg border border-zinc-100 p-4">
       <div class="flex items-baseline justify-between"><span class="text-sm font-bold" style="color:${color}">${esc(it.name)}</span><span class="shrink-0 text-xs text-zinc-400">\u2B50 ${it.stars?.toLocaleString() ?? 0}</span></div>
       ${it.language ? `<span class="text-xs" style="color:${color}">${esc(it.language)}</span>` : ''}
-      ${it.description ? `<p class="mt-1 text-sm text-zinc-600">${esc(it.description)}</p>` : ''}
+      ${it.description ? `<p class="mt-1 text-sm text-zinc-600">${md(it.description)}</p>` : ''}
     </div>`).join('')}</div>`;
   }
   if (section.type === 'custom') {
     return `<div class="space-y-3">${((c as CustomContent).items || []).map((it: any) => `<div class="rounded-lg border border-zinc-100 p-4">
       <div class="flex items-baseline justify-between"><div><span class="text-sm font-bold" style="color:${color}">${esc(it.title)}</span>${it.subtitle ? `<span class="text-sm text-zinc-500"> — ${esc(it.subtitle)}</span>` : ''}</div>${it.date ? `<span class="shrink-0 text-xs text-zinc-400">${esc(it.date)}</span>` : ''}</div>
-      ${it.description ? `<p class="mt-1 text-sm text-zinc-600">${esc(it.description)}</p>` : ''}
+      ${it.description ? `<p class="mt-1 text-sm text-zinc-600">${md(it.description)}</p>` : ''}
     </div>`).join('')}</div>`;
   }
   if (section.type === 'qr_codes') return buildQrCodesHtml(section);
   if (c.items) {
-    return `<div class="space-y-2">${c.items.map((it: any) => `<div class="rounded-lg border border-zinc-100 p-3"><span class="text-sm font-medium text-zinc-800">${esc(it.name || it.title || it.language)}</span>${it.description ? `<p class="text-sm text-zinc-600">${esc(it.description)}</p>` : ''}</div>`).join('')}</div>`;
+    return `<div class="space-y-2">${c.items.map((it: any) => `<div class="rounded-lg border border-zinc-100 p-3"><span class="text-sm font-medium text-zinc-800">${esc(it.name || it.title || it.language)}</span>${it.description ? `<p class="text-sm text-zinc-600">${md(it.description)}</p>` : ''}</div>`).join('')}</div>`;
   }
   return '';
 }

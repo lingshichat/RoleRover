@@ -2,7 +2,7 @@
 
 import type { Resume, PersonalInfoContent, SummaryContent, WorkExperienceContent, EducationContent, SkillsContent, ProjectsContent, CertificationsContent, LanguagesContent, GitHubContent, CustomContent } from '@/types/resume';
 import { AvatarImage } from '../avatar-image';
-import { isSectionEmpty } from '../utils';
+import { isSectionEmpty, md } from '../utils';
 import { QrCodesPreview } from '../qr-codes-preview';
 
 const PRIMARY = '#1e3a5f';
@@ -83,9 +83,7 @@ function ArchitectSectionContent({ section, resume }: { section: any; resume: Re
 
   if (section.type === 'summary') {
     return (
-      <p className="border-l-2 pl-4 text-sm leading-relaxed" style={{ color: BODY_TEXT, borderColor: GRID }}>
-        {(content as SummaryContent).text}
-      </p>
+      <p className="border-l-2 pl-4 text-sm leading-relaxed" style={{ color: BODY_TEXT, borderColor: GRID }} dangerouslySetInnerHTML={{ __html: md((content as SummaryContent).text) }} />
     );
   }
 
@@ -107,7 +105,7 @@ function ArchitectSectionContent({ section, resume }: { section: any; resume: Re
                 {item.startDate} - {item.endDate || (item.current ? (resume.language === 'zh' ? '至今' : 'Present') : '')}
               </span>
             </div>
-            {item.description && <p className="mt-1 text-sm" style={{ color: BODY_TEXT }}>{item.description}</p>}
+            {item.description && <p className="mt-1 text-sm" style={{ color: BODY_TEXT }} dangerouslySetInnerHTML={{ __html: md(item.description) }} />}
             {item.technologies?.length > 0 && (
               <div className="mt-1 flex flex-wrap gap-1.5">
                 {item.technologies.map((t: string, i: number) => (
@@ -126,7 +124,7 @@ function ArchitectSectionContent({ section, resume }: { section: any; resume: Re
                 {item.highlights.map((h: string, i: number) => (
                   <li key={i} className="flex items-start gap-2 text-sm" style={{ color: BODY_TEXT }}>
                     <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rotate-45" style={{ backgroundColor: ACCENT }} />
-                    {h}
+                    <span dangerouslySetInnerHTML={{ __html: md(h) }} />
                   </li>
                 ))}
               </ul>
@@ -160,7 +158,7 @@ function ArchitectSectionContent({ section, resume }: { section: any; resume: Re
                 {item.highlights.map((h: string, i: number) => (
                   <li key={i} className="flex items-start gap-2 text-sm" style={{ color: BODY_TEXT }}>
                     <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rotate-45" style={{ backgroundColor: ACCENT }} />
-                    {h}
+                    <span dangerouslySetInnerHTML={{ __html: md(h) }} />
                   </li>
                 ))}
               </ul>
@@ -202,7 +200,7 @@ function ArchitectSectionContent({ section, resume }: { section: any; resume: Re
                 </span>
               )}
             </div>
-            {item.description && <p className="mt-1 text-sm" style={{ color: BODY_TEXT }}>{item.description}</p>}
+            {item.description && <p className="mt-1 text-sm" style={{ color: BODY_TEXT }} dangerouslySetInnerHTML={{ __html: md(item.description) }} />}
             {item.technologies?.length > 0 && (
               <div className="mt-1 flex flex-wrap gap-1.5">
                 {item.technologies.map((t: string, i: number) => (
@@ -221,7 +219,7 @@ function ArchitectSectionContent({ section, resume }: { section: any; resume: Re
                 {item.highlights.map((h: string, i: number) => (
                   <li key={i} className="flex items-start gap-2 text-sm" style={{ color: BODY_TEXT }}>
                     <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rotate-45" style={{ backgroundColor: ACCENT }} />
-                    {h}
+                    <span dangerouslySetInnerHTML={{ __html: md(h) }} />
                   </li>
                 ))}
               </ul>
@@ -278,7 +276,7 @@ function ArchitectSectionContent({ section, resume }: { section: any; resume: Re
             {item.language && (
               <span className="text-xs" style={{ color: ACCENT }}>{item.language}</span>
             )}
-            {item.description && <p className="mt-1 text-sm" style={{ color: BODY_TEXT }}>{item.description}</p>}
+            {item.description && <p className="mt-1 text-sm" style={{ color: BODY_TEXT }} dangerouslySetInnerHTML={{ __html: md(item.description) }} />}
           </div>
         ))}
       </div>
@@ -301,7 +299,7 @@ function ArchitectSectionContent({ section, resume }: { section: any; resume: Re
                 </span>
               )}
             </div>
-            {item.description && <p className="mt-1 text-sm" style={{ color: BODY_TEXT }}>{item.description}</p>}
+            {item.description && <p className="mt-1 text-sm" style={{ color: BODY_TEXT }} dangerouslySetInnerHTML={{ __html: md(item.description) }} />}
           </div>
         ))}
       </div>
@@ -321,7 +319,7 @@ function ArchitectSectionContent({ section, resume }: { section: any; resume: Re
             <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rotate-45" style={{ backgroundColor: ACCENT }} />
             <div>
               <span className="text-sm font-medium" style={{ color: PRIMARY }}>{item.name || item.title || item.language}</span>
-              {item.description && <p className="text-sm" style={{ color: BODY_TEXT }}>{item.description}</p>}
+              {item.description && <p className="text-sm" style={{ color: BODY_TEXT }} dangerouslySetInnerHTML={{ __html: md(item.description) }} />}
             </div>
           </div>
         ))}

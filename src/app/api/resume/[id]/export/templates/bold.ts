@@ -5,12 +5,12 @@ import type {
   CustomContent,
   GitHubContent,
 } from '@/types/resume';
-import { esc, getPersonalInfo, visibleSections, buildHighlights, buildQrCodesHtml, type ResumeWithSections, type Section } from '../utils';
+import { esc, md, getPersonalInfo, visibleSections, buildHighlights, buildQrCodesHtml, type ResumeWithSections, type Section } from '../utils';
 
 function buildBoldSectionContent(s: Section, lang: string): string {
   const c = s.content as any;
 
-  if (s.type === 'summary') return `<p class="text-sm leading-relaxed text-zinc-600">${esc(c.text)}</p>`;
+  if (s.type === 'summary') return `<p class="text-sm leading-relaxed text-zinc-600">${md(c.text)}</p>`;
 
   if (s.type === 'work_experience') {
     return `<div class="space-y-4">${(c.items || []).map((it: any) => `<div>
@@ -18,9 +18,9 @@ function buildBoldSectionContent(s: Section, lang: string): string {
         <div><span class="text-base font-bold text-black">${esc(it.position)}</span>${it.company ? `<span class="text-sm text-zinc-500"> | ${esc(it.company)}</span>` : ''}${it.location ? `<span class="text-sm text-zinc-400"> , ${esc(it.location)}</span>` : ''}</div>
         <span class="shrink-0 bg-black px-2 py-0.5 text-xs font-medium text-white">${esc(it.startDate)} – ${esc(it.endDate) || (it.current ? (lang === 'zh' ? '至今' : 'Present') : '')}</span>
       </div>
-      ${it.description ? `<p class="mt-1 text-sm text-zinc-600">${esc(it.description)}</p>` : ''}
+      ${it.description ? `<p class="mt-1 text-sm text-zinc-600">${md(it.description)}</p>` : ''}
       ${it.technologies?.length ? `<div class="mt-1 flex flex-wrap gap-1">${it.technologies.map((t: string) => `<span class="border border-zinc-300 px-2 py-0.5 text-[10px] font-medium text-zinc-500">${esc(t)}</span>`).join('')}</div>` : ''}
-      ${it.highlights?.length ? `<ul class="mt-1 list-disc pl-5">${it.highlights.map((h: string) => `<li class="text-sm text-zinc-600">${esc(h)}</li>`).join('')}</ul>` : ''}
+      ${it.highlights?.length ? `<ul class="mt-1 list-disc pl-5">${it.highlights.map((h: string) => `<li class="text-sm text-zinc-600">${md(h)}</li>`).join('')}</ul>` : ''}
     </div>`).join('')}</div>`;
   }
 
@@ -46,7 +46,7 @@ function buildBoldSectionContent(s: Section, lang: string): string {
   if (s.type === 'projects') {
     return `<div class="space-y-4">${((c as ProjectsContent).items || []).map((it: any) => `<div>
       <div class="flex items-baseline justify-between"><span class="text-base font-bold text-black">${esc(it.name)}</span>${it.startDate ? `<span class="shrink-0 text-xs text-zinc-400">${esc(it.startDate)} – ${it.endDate ? esc(it.endDate) : (lang === 'zh' ? '至今' : 'Present')}</span>` : ''}</div>
-      ${it.description ? `<p class="mt-1 text-sm text-zinc-600">${esc(it.description)}</p>` : ''}
+      ${it.description ? `<p class="mt-1 text-sm text-zinc-600">${md(it.description)}</p>` : ''}
       ${it.technologies?.length ? `<div class="mt-1 flex flex-wrap gap-1">${it.technologies.map((t: string) => `<span class="border border-zinc-300 px-2 py-0.5 text-[10px] font-medium text-zinc-500">${esc(t)}</span>`).join('')}</div>` : ''}
       ${it.highlights?.length ? `<ul class="mt-1 list-disc pl-5">${buildHighlights(it.highlights, 'text-sm text-zinc-600')}</ul>` : ''}
     </div>`).join('')}</div>`;
@@ -56,7 +56,7 @@ function buildBoldSectionContent(s: Section, lang: string): string {
     return `<div class="space-y-4">${((c as GitHubContent).items || []).map((it: any) => `<div>
       <div class="flex items-baseline justify-between"><span class="text-base font-bold text-black">${esc(it.name)}</span><span class="shrink-0 text-xs text-zinc-400">⭐ ${it.stars?.toLocaleString() ?? 0}</span></div>
       ${it.language ? `<span class="text-xs text-zinc-500">${esc(it.language)}</span>` : ''}
-      ${it.description ? `<p class="mt-1 text-sm text-zinc-600">${esc(it.description)}</p>` : ''}
+      ${it.description ? `<p class="mt-1 text-sm text-zinc-600">${md(it.description)}</p>` : ''}
     </div>`).join('')}</div>`;
   }
 
@@ -75,7 +75,7 @@ function buildBoldSectionContent(s: Section, lang: string): string {
   if (s.type === 'custom') {
     return `<div class="space-y-3">${((c as CustomContent).items || []).map((it: any) => `<div>
       <div class="flex items-baseline justify-between"><div><span class="text-base font-bold text-black">${esc(it.title)}</span>${it.subtitle ? `<span class="text-sm text-zinc-500"> — ${esc(it.subtitle)}</span>` : ''}</div>${it.date ? `<span class="shrink-0 text-xs text-zinc-400">${esc(it.date)}</span>` : ''}</div>
-      ${it.description ? `<p class="mt-1 text-sm text-zinc-600">${esc(it.description)}</p>` : ''}
+      ${it.description ? `<p class="mt-1 text-sm text-zinc-600">${md(it.description)}</p>` : ''}
     </div>`).join('')}</div>`;
   }
 
@@ -83,7 +83,7 @@ function buildBoldSectionContent(s: Section, lang: string): string {
   if (c.items) {
     return `<div class="space-y-2">${c.items.map((it: any) => `<div>
       <span class="text-sm font-bold text-black">${esc(it.name || it.title || it.language)}</span>
-      ${it.description ? `<p class="text-sm text-zinc-600">${esc(it.description)}</p>` : ''}
+      ${it.description ? `<p class="text-sm text-zinc-600">${md(it.description)}</p>` : ''}
     </div>`).join('')}</div>`;
   }
 

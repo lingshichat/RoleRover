@@ -14,7 +14,7 @@ import type {
   GitHubContent,
 } from '@/types/resume';
 import { AvatarImage } from '../avatar-image';
-import { isSectionEmpty } from '../utils';
+import { isSectionEmpty, md } from '../utils';
 import { QrCodesPreview } from '../qr-codes-preview';
 
 const BLUE = '#2563eb';
@@ -81,7 +81,7 @@ function BerlinSectionContent({ section, lang }: { section: any; lang?: string }
   if (section.type === 'summary') {
     return (
       <div className="border-l-4 pl-4" style={{ borderColor: BLUE }}>
-        <p className="text-sm leading-relaxed text-zinc-600">{(content as SummaryContent).text}</p>
+        <p className="text-sm leading-relaxed text-zinc-600" dangerouslySetInnerHTML={{ __html: md((content as SummaryContent).text) }} />
       </div>
     );
   }
@@ -96,7 +96,7 @@ function BerlinSectionContent({ section, lang }: { section: any; lang?: string }
               <span className="shrink-0 text-xs font-bold" style={{ color: BLUE }}>{item.startDate} &ndash; {item.endDate || (item.current ? (lang === 'zh' ? '至今' : 'Present') : '')}</span>
             </div>
             {item.company && <p className="text-sm font-semibold" style={{ color: BLUE }}>{item.company}{item.location ? `, ${item.location}` : ''}</p>}
-            {item.description && <p className="mt-1 text-sm text-zinc-600">{item.description}</p>}
+            {item.description && <p className="mt-1 text-sm text-zinc-600" dangerouslySetInnerHTML={{ __html: md(item.description) }} />}
             {item.technologies?.length > 0 && (
               <div className="mt-1.5 flex flex-wrap gap-1">
                 {item.technologies.map((t: string, i: number) => (
@@ -109,7 +109,7 @@ function BerlinSectionContent({ section, lang }: { section: any; lang?: string }
                 {item.highlights.map((h: string, i: number) => (
                   <li key={i} className="flex items-start gap-2 text-sm text-zinc-600">
                     <span className="mt-1.5 h-1.5 w-1.5 shrink-0" style={{ backgroundColor: RED_B }} />
-                    {h}
+                    <span dangerouslySetInnerHTML={{ __html: md(h) }} />
                   </li>
                 ))}
               </ul>
@@ -136,7 +136,7 @@ function BerlinSectionContent({ section, lang }: { section: any; lang?: string }
                 {item.highlights.map((h: string, i: number) => (
                   <li key={i} className="flex items-start gap-2 text-sm text-zinc-600">
                     <span className="mt-1.5 h-1.5 w-1.5 shrink-0" style={{ backgroundColor: RED_B }} />
-                    {h}
+                    <span dangerouslySetInnerHTML={{ __html: md(h) }} />
                   </li>
                 ))}
               </ul>
@@ -181,7 +181,7 @@ function BerlinSectionContent({ section, lang }: { section: any; lang?: string }
                 <span className="shrink-0 text-xs" style={{ color: BLUE }}>{item.startDate} {'\u2013'} {item.endDate || (lang === 'zh' ? '至今' : 'Present')}</span>
               )}
             </div>
-            {item.description && <p className="mt-0.5 text-sm text-zinc-600">{item.description}</p>}
+            {item.description && <p className="mt-0.5 text-sm text-zinc-600" dangerouslySetInnerHTML={{ __html: md(item.description) }} />}
             {item.technologies?.length > 0 && (
               <div className="mt-1.5 flex flex-wrap gap-1">
                 {item.technologies.map((t: string, i: number) => (
@@ -194,7 +194,7 @@ function BerlinSectionContent({ section, lang }: { section: any; lang?: string }
                 {item.highlights.map((h: string, i: number) => (
                   <li key={i} className="flex items-start gap-2 text-sm text-zinc-600">
                     <span className="mt-1.5 h-1.5 w-1.5 shrink-0" style={{ backgroundColor: RED_B }} />
-                    {h}
+                    <span dangerouslySetInnerHTML={{ __html: md(h) }} />
                   </li>
                 ))}
               </ul>
@@ -246,7 +246,7 @@ function BerlinSectionContent({ section, lang }: { section: any; lang?: string }
               <span className="shrink-0 text-xs font-bold" style={{ color: BLUE }}>&#11088; {item.stars?.toLocaleString()}</span>
             </div>
             {item.language && <span className="text-xs font-medium" style={{ color: TEXT }}>{item.language}</span>}
-            {item.description && <p className="mt-0.5 text-sm text-zinc-600">{item.description}</p>}
+            {item.description && <p className="mt-0.5 text-sm text-zinc-600" dangerouslySetInnerHTML={{ __html: md(item.description) }} />}
           </div>
         ))}
       </div>
@@ -263,7 +263,7 @@ function BerlinSectionContent({ section, lang }: { section: any; lang?: string }
               {item.date && <span className="shrink-0 text-xs" style={{ color: BLUE }}>{item.date}</span>}
             </div>
             {item.subtitle && <p className="text-sm font-semibold" style={{ color: YELLOW }}>{item.subtitle}</p>}
-            {item.description && <p className="mt-0.5 text-sm text-zinc-600">{item.description}</p>}
+            {item.description && <p className="mt-0.5 text-sm text-zinc-600" dangerouslySetInnerHTML={{ __html: md(item.description) }} />}
           </div>
         ))}
       </div>
@@ -281,7 +281,7 @@ function BerlinSectionContent({ section, lang }: { section: any; lang?: string }
         {content.items.map((item: any) => (
           <div key={item.id} className="border-l-4 pl-4" style={{ borderColor: BLUE }}>
             <span className="text-sm font-bold" style={{ color: TEXT }}>{item.name || item.title || item.language}</span>
-            {item.description && <p className="text-sm text-zinc-600">{item.description}</p>}
+            {item.description && <p className="text-sm text-zinc-600" dangerouslySetInnerHTML={{ __html: md(item.description) }} />}
           </div>
         ))}
       </div>

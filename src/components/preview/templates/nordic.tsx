@@ -2,7 +2,7 @@
 
 import type { Resume, PersonalInfoContent, SummaryContent, WorkExperienceContent, EducationContent, SkillsContent, ProjectsContent, CertificationsContent, LanguagesContent, CustomContent, GitHubContent } from '@/types/resume';
 import { AvatarImage } from '../avatar-image';
-import { isSectionEmpty } from '../utils';
+import { isSectionEmpty, md } from '../utils';
 import { QrCodesPreview } from '../qr-codes-preview';
 
 const SLATE_500 = '#64748b';
@@ -58,7 +58,7 @@ function NordicSectionContent({ section, resume }: { section: any; resume: Resum
   const content = section.content;
 
   if (section.type === 'summary') {
-    return <p className="text-sm font-light leading-relaxed" style={{ color: SLATE_500 }}>{(content as SummaryContent).text}</p>;
+    return <p className="text-sm font-light leading-relaxed" style={{ color: SLATE_500 }} dangerouslySetInnerHTML={{ __html: md((content as SummaryContent).text) }} />;
   }
 
   if (section.type === 'work_experience') {
@@ -73,14 +73,14 @@ function NordicSectionContent({ section, resume }: { section: any; resume: Resum
               </div>
               <span className="shrink-0 text-xs font-light" style={{ color: SLATE_400 }}>{item.startDate} - {item.endDate || (item.current ? (resume.language === 'zh' ? '至今' : 'Present') : '')}</span>
             </div>
-            {item.description && <p className="mt-1 text-sm font-light" style={{ color: SLATE_500 }}>{item.description}</p>}
+            {item.description && <p className="mt-1 text-sm font-light" style={{ color: SLATE_500 }} dangerouslySetInnerHTML={{ __html: md(item.description) }} />}
             {item.technologies?.length > 0 && (
               <p className="mt-0.5 text-xs font-light" style={{ color: SLATE_400 }}>{resume.language === 'zh' ? '技术栈' : 'Tech'}: {item.technologies.join(', ')}</p>
             )}
             {item.highlights?.length > 0 && (
               <ul className="mt-1.5 list-disc pl-4">
                 {item.highlights.map((h: string, i: number) => (
-                  <li key={i} className="text-sm font-light" style={{ color: SLATE_500 }}>{h}</li>
+                  <li key={i} className="text-sm font-light" style={{ color: SLATE_500 }} dangerouslySetInnerHTML={{ __html: md(h) }} />
                 ))}
               </ul>
             )}
@@ -106,7 +106,7 @@ function NordicSectionContent({ section, resume }: { section: any; resume: Resum
             {item.highlights?.length > 0 && (
               <ul className="mt-1.5 list-disc pl-4">
                 {item.highlights.map((h: string, i: number) => (
-                  <li key={i} className="text-sm font-light" style={{ color: SLATE_500 }}>{h}</li>
+                  <li key={i} className="text-sm font-light" style={{ color: SLATE_500 }} dangerouslySetInnerHTML={{ __html: md(h) }} />
                 ))}
               </ul>
             )}
@@ -140,14 +140,14 @@ function NordicSectionContent({ section, resume }: { section: any; resume: Resum
                 <span className="shrink-0 text-xs font-light" style={{ color: SLATE_400 }}>{item.startDate} - {item.endDate || (resume.language === 'zh' ? '至今' : 'Present')}</span>
               )}
             </div>
-            {item.description && <p className="mt-1 text-sm font-light" style={{ color: SLATE_500 }}>{item.description}</p>}
+            {item.description && <p className="mt-1 text-sm font-light" style={{ color: SLATE_500 }} dangerouslySetInnerHTML={{ __html: md(item.description) }} />}
             {item.technologies?.length > 0 && (
               <p className="mt-0.5 text-xs font-light" style={{ color: SLATE_400 }}>{resume.language === 'zh' ? '技术栈' : 'Tech'}: {item.technologies.join(', ')}</p>
             )}
             {item.highlights?.length > 0 && (
               <ul className="mt-1.5 list-disc pl-4">
                 {item.highlights.map((h: string, i: number) => (
-                  <li key={i} className="text-sm font-light" style={{ color: SLATE_500 }}>{h}</li>
+                  <li key={i} className="text-sm font-light" style={{ color: SLATE_500 }} dangerouslySetInnerHTML={{ __html: md(h) }} />
                 ))}
               </ul>
             )}
@@ -194,7 +194,7 @@ function NordicSectionContent({ section, resume }: { section: any; resume: Resum
               <span className="text-xs font-light" style={{ color: SLATE_400 }}>⭐ {item.stars?.toLocaleString()}</span>
             </div>
             {item.language && <span className="text-xs font-light" style={{ color: SLATE_400 }}>{item.language}</span>}
-            {item.description && <p className="mt-1 text-sm font-light" style={{ color: SLATE_500 }}>{item.description}</p>}
+            {item.description && <p className="mt-1 text-sm font-light" style={{ color: SLATE_500 }} dangerouslySetInnerHTML={{ __html: md(item.description) }} />}
           </div>
         ))}
       </div>
@@ -213,7 +213,7 @@ function NordicSectionContent({ section, resume }: { section: any; resume: Resum
               </div>
               {item.date && <span className="shrink-0 text-xs font-light" style={{ color: SLATE_400 }}>{item.date}</span>}
             </div>
-            {item.description && <p className="mt-0.5 text-sm font-light" style={{ color: SLATE_500 }}>{item.description}</p>}
+            {item.description && <p className="mt-0.5 text-sm font-light" style={{ color: SLATE_500 }} dangerouslySetInnerHTML={{ __html: md(item.description) }} />}
           </div>
         ))}
       </div>
@@ -231,7 +231,7 @@ function NordicSectionContent({ section, resume }: { section: any; resume: Resum
         {content.items.map((item: any) => (
           <div key={item.id}>
             <span className="text-sm font-medium" style={{ color: SLATE_500 }}>{item.name || item.title || item.language}</span>
-            {item.description && <p className="text-sm font-light" style={{ color: SLATE_400 }}>{item.description}</p>}
+            {item.description && <p className="text-sm font-light" style={{ color: SLATE_400 }} dangerouslySetInnerHTML={{ __html: md(item.description) }} />}
           </div>
         ))}
       </div>

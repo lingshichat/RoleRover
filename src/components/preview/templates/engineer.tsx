@@ -2,7 +2,7 @@
 
 import type { Resume, PersonalInfoContent, SummaryContent, WorkExperienceContent, EducationContent, SkillsContent, ProjectsContent, CertificationsContent, LanguagesContent, CustomContent, GitHubContent } from '@/types/resume';
 import { AvatarImage } from '../avatar-image';
-import { isSectionEmpty } from '../utils';
+import { isSectionEmpty, md } from '../utils';
 import { QrCodesPreview } from '../qr-codes-preview';
 
 const PRIMARY = '#1e293b';
@@ -75,9 +75,7 @@ function EngineerSectionContent({ section, resume }: { section: any; resume: Res
 
   if (section.type === 'summary') {
     return (
-      <p className="border-l-2 pl-4 text-sm leading-relaxed" style={{ color: BODY_TEXT, borderColor: ACCENT }}>
-        {(content as SummaryContent).text}
-      </p>
+      <p className="border-l-2 pl-4 text-sm leading-relaxed" style={{ color: BODY_TEXT, borderColor: ACCENT }} dangerouslySetInnerHTML={{ __html: md((content as SummaryContent).text) }} />
     );
   }
 
@@ -98,7 +96,7 @@ function EngineerSectionContent({ section, resume }: { section: any; resume: Res
                 {item.startDate} - {item.endDate || (item.current ? (resume.language === 'zh' ? '至今' : 'Present') : '')}
               </span>
             </div>
-            {item.description && <p className="mt-1 text-sm" style={{ color: BODY_TEXT }}>{item.description}</p>}
+            {item.description && <p className="mt-1 text-sm" style={{ color: BODY_TEXT }} dangerouslySetInnerHTML={{ __html: md(item.description) }} />}
             {item.technologies?.length > 0 && (
               <div className="mt-1 flex flex-wrap gap-1.5">
                 {item.technologies.map((t: string, i: number) => (
@@ -117,7 +115,7 @@ function EngineerSectionContent({ section, resume }: { section: any; resume: Res
                 {item.highlights.map((h: string, i: number) => (
                   <li key={i} className="flex items-start gap-2 text-sm" style={{ color: BODY_TEXT }}>
                     <span className="mt-1.5 h-1 w-1 shrink-0" style={{ backgroundColor: ACCENT }} />
-                    {h}
+                    <span dangerouslySetInnerHTML={{ __html: md(h) }} />
                   </li>
                 ))}
               </ul>
@@ -154,7 +152,7 @@ function EngineerSectionContent({ section, resume }: { section: any; resume: Res
                 {item.highlights.map((h: string, i: number) => (
                   <li key={i} className="flex items-start gap-2 text-sm" style={{ color: BODY_TEXT }}>
                     <span className="mt-1.5 h-1 w-1 shrink-0" style={{ backgroundColor: ACCENT }} />
-                    {h}
+                    <span dangerouslySetInnerHTML={{ __html: md(h) }} />
                   </li>
                 ))}
               </ul>
@@ -209,7 +207,7 @@ function EngineerSectionContent({ section, resume }: { section: any; resume: Res
                 </span>
               )}
             </div>
-            {item.description && <p className="mt-1 text-sm" style={{ color: BODY_TEXT }}>{item.description}</p>}
+            {item.description && <p className="mt-1 text-sm" style={{ color: BODY_TEXT }} dangerouslySetInnerHTML={{ __html: md(item.description) }} />}
             {item.technologies?.length > 0 && (
               <div className="mt-1 flex flex-wrap gap-1.5">
                 {item.technologies.map((t: string, i: number) => (
@@ -228,7 +226,7 @@ function EngineerSectionContent({ section, resume }: { section: any; resume: Res
                 {item.highlights.map((h: string, i: number) => (
                   <li key={i} className="flex items-start gap-2 text-sm" style={{ color: BODY_TEXT }}>
                     <span className="mt-1.5 h-1 w-1 shrink-0" style={{ backgroundColor: ACCENT }} />
-                    {h}
+                    <span dangerouslySetInnerHTML={{ __html: md(h) }} />
                   </li>
                 ))}
               </ul>
@@ -250,7 +248,7 @@ function EngineerSectionContent({ section, resume }: { section: any; resume: Res
               <span className="shrink-0 text-xs" style={{ fontFamily: 'JetBrains Mono, Consolas, monospace', color: SECONDARY }}>⭐ {item.stars?.toLocaleString()}</span>
             </div>
             {item.language && <span className="text-xs" style={{ fontFamily: 'JetBrains Mono, Consolas, monospace', color: ACCENT }}>{item.language}</span>}
-            {item.description && <p className="mt-1 text-sm" style={{ color: BODY_TEXT }}>{item.description}</p>}
+            {item.description && <p className="mt-1 text-sm" style={{ color: BODY_TEXT }} dangerouslySetInnerHTML={{ __html: md(item.description) }} />}
             <div className="mt-2 h-px" style={{ backgroundColor: RULE_COLOR }} />
           </div>
         ))}
@@ -305,7 +303,7 @@ function EngineerSectionContent({ section, resume }: { section: any; resume: Res
                 </span>
               )}
             </div>
-            {item.description && <p className="mt-1 text-sm" style={{ color: BODY_TEXT }}>{item.description}</p>}
+            {item.description && <p className="mt-1 text-sm" style={{ color: BODY_TEXT }} dangerouslySetInnerHTML={{ __html: md(item.description) }} />}
             <div className="mt-2 h-px" style={{ backgroundColor: RULE_COLOR }} />
           </div>
         ))}
@@ -325,7 +323,7 @@ function EngineerSectionContent({ section, resume }: { section: any; resume: Res
           <div key={item.id} className="flex items-center gap-2">
             <span className="h-1 w-1 shrink-0" style={{ backgroundColor: ACCENT }} />
             <span className="text-sm font-medium" style={{ color: PRIMARY }}>{item.name || item.title || item.language}</span>
-            {item.description && <span className="text-sm" style={{ color: BODY_TEXT }}> — {item.description}</span>}
+            {item.description && <span className="text-sm" style={{ color: BODY_TEXT }} dangerouslySetInnerHTML={{ __html: ' — ' + md(item.description) }} />}
           </div>
         ))}
       </div>

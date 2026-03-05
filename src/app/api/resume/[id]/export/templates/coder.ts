@@ -9,7 +9,7 @@ import type {
   CustomContent,
   GitHubContent,
 } from '@/types/resume';
-import { esc, getPersonalInfo, visibleSections, buildQrCodesHtml, type ResumeWithSections, type Section } from '../utils';
+import { esc, md, getPersonalInfo, visibleSections, buildQrCodesHtml, type ResumeWithSections, type Section } from '../utils';
 
 const DARK = '#0d1117';
 const BLUE = '#58a6ff';
@@ -21,7 +21,7 @@ const SIDEBAR_TYPES = new Set(['skills', 'languages', 'certifications']);
 function buildCoderHighlights(highlights: string[] | undefined): string {
   if (!highlights?.length) return '';
   return highlights.filter(Boolean).map(h =>
-    `<li class="flex items-start gap-2 text-sm text-zinc-600"><span class="mt-1 shrink-0 text-xs" style="color:${GREEN}">$</span>${esc(h)}</li>`
+    `<li class="flex items-start gap-2 text-sm text-zinc-600"><span class="mt-1 shrink-0 text-xs" style="color:${GREEN}">$</span>${md(h)}</li>`
   ).join('');
 }
 
@@ -62,12 +62,12 @@ function buildCoderSidebarContent(section: Section): string {
 function buildCoderMainContent(section: Section, lang: string): string {
   const c = section.content as any;
 
-  if (section.type === 'summary') return `<p class="text-sm leading-relaxed text-zinc-600">${esc((c as SummaryContent).text)}</p>`;
+  if (section.type === 'summary') return `<p class="text-sm leading-relaxed text-zinc-600">${md((c as SummaryContent).text)}</p>`;
 
   if (section.type === 'work_experience') {
     return `<div class="space-y-4">${((c as WorkExperienceContent).items || []).map((it: any) => `<div>
       <div class="flex items-baseline justify-between"><div><span class="text-sm font-bold" style="color:${DARK}">${esc(it.position)}</span>${it.company ? `<span class="text-sm" style="color:${BLUE}"> @ ${esc(it.company)}</span>` : ''}${it.location ? `<span class="text-xs text-zinc-400">, ${esc(it.location)}</span>` : ''}</div><span class="shrink-0 rounded px-2 py-0.5 text-[10px] font-medium" style="background-color:#f6f8fa;color:#57606a">${esc(it.startDate)} - ${esc(it.endDate) || (it.current ? (lang === 'zh' ? '至今' : 'Present') : '')}</span></div>
-      ${it.description ? `<p class="mt-1 text-sm text-zinc-600">${esc(it.description)}</p>` : ''}
+      ${it.description ? `<p class="mt-1 text-sm text-zinc-600">${md(it.description)}</p>` : ''}
       ${it.technologies?.length ? `<div class="mt-1 flex flex-wrap gap-1">${it.technologies.map((t: string) => `<span class="rounded-sm px-1.5 py-0.5 text-[10px] font-medium" style="background-color:#f6f8fa;color:#57606a;border:1px solid #d0d7de">${esc(t)}</span>`).join('')}</div>` : ''}
       ${it.highlights?.length ? `<ul class="mt-1 space-y-0.5">${buildCoderHighlights(it.highlights)}</ul>` : ''}
     </div>`).join('')}</div>`;
@@ -85,7 +85,7 @@ function buildCoderMainContent(section: Section, lang: string): string {
   if (section.type === 'projects') {
     return `<div class="space-y-3">${((c as ProjectsContent).items || []).map((it: any) => `<div>
       <div class="flex items-baseline justify-between"><h3 class="text-sm font-bold" style="color:${BLUE}">${esc(it.name)}</h3>${it.startDate ? `<span class="text-xs text-zinc-400">${esc(it.startDate)} - ${it.endDate ? esc(it.endDate) : (lang === 'zh' ? '至今' : 'Present')}</span>` : ''}</div>
-      ${it.description ? `<p class="mt-1 text-sm text-zinc-600">${esc(it.description)}</p>` : ''}
+      ${it.description ? `<p class="mt-1 text-sm text-zinc-600">${md(it.description)}</p>` : ''}
       ${it.technologies?.length ? `<div class="mt-1 flex flex-wrap gap-1">${it.technologies.map((t: string) => `<span class="rounded-sm px-1.5 py-0.5 text-[10px] font-medium" style="background-color:#f6f8fa;color:#57606a;border:1px solid #d0d7de">${esc(t)}</span>`).join('')}</div>` : ''}
       ${it.highlights?.length ? `<ul class="mt-1 space-y-0.5">${buildCoderHighlights(it.highlights)}</ul>` : ''}
     </div>`).join('')}</div>`;
@@ -95,7 +95,7 @@ function buildCoderMainContent(section: Section, lang: string): string {
     return `<div class="space-y-3">${((c as GitHubContent).items || []).map((it: any) => `<div>
       <div class="flex items-baseline justify-between"><h3 class="text-sm font-bold" style="color:${BLUE}">${esc(it.name)}</h3><span class="text-xs text-zinc-400">\u2B50 ${it.stars?.toLocaleString() ?? 0}</span></div>
       ${it.language ? `<span class="rounded-sm px-1.5 py-0.5 text-[10px] font-medium" style="background-color:#f6f8fa;color:#57606a;border:1px solid #d0d7de">${esc(it.language)}</span>` : ''}
-      ${it.description ? `<p class="mt-1 text-sm text-zinc-600">${esc(it.description)}</p>` : ''}
+      ${it.description ? `<p class="mt-1 text-sm text-zinc-600">${md(it.description)}</p>` : ''}
     </div>`).join('')}</div>`;
   }
 
@@ -103,7 +103,7 @@ function buildCoderMainContent(section: Section, lang: string): string {
     return `<div class="space-y-3">${((c as CustomContent).items || []).map((it: any) => `<div>
       <div class="flex items-baseline justify-between"><h3 class="text-sm font-bold" style="color:${DARK}">${esc(it.title)}</h3>${it.date ? `<span class="text-xs text-zinc-400">${esc(it.date)}</span>` : ''}</div>
       ${it.subtitle ? `<p class="text-sm text-zinc-500">${esc(it.subtitle)}</p>` : ''}
-      ${it.description ? `<p class="mt-1 text-sm text-zinc-600">${esc(it.description)}</p>` : ''}
+      ${it.description ? `<p class="mt-1 text-sm text-zinc-600">${md(it.description)}</p>` : ''}
     </div>`).join('')}</div>`;
   }
 

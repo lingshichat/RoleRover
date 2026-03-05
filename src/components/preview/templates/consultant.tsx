@@ -2,7 +2,7 @@
 
 import type { Resume, PersonalInfoContent, SummaryContent, WorkExperienceContent, EducationContent, SkillsContent, ProjectsContent, CertificationsContent, LanguagesContent, CustomContent, GitHubContent } from '@/types/resume';
 import { AvatarImage } from '../avatar-image';
-import { isSectionEmpty } from '../utils';
+import { isSectionEmpty, md } from '../utils';
 import { QrCodesPreview } from '../qr-codes-preview';
 
 const GRAY_700 = '#374151';
@@ -61,7 +61,7 @@ function ConsultantSectionContent({ section, resume }: { section: any; resume: R
   const content = section.content;
 
   if (section.type === 'summary') {
-    return <p className="text-sm leading-relaxed text-gray-600">{(content as SummaryContent).text}</p>;
+    return <p className="text-sm leading-relaxed text-gray-600" dangerouslySetInnerHTML={{ __html: md((content as SummaryContent).text) }} />;
   }
 
   if (section.type === 'work_experience') {
@@ -77,7 +77,7 @@ function ConsultantSectionContent({ section, resume }: { section: any; resume: R
               </div>
               <span className="shrink-0 text-xs font-medium" style={{ color: BLUE_600 }}>{item.startDate} - {item.endDate || (item.current ? (resume.language === 'zh' ? '至今' : 'Present') : '')}</span>
             </div>
-            {item.description && <p className="mt-1 text-sm text-gray-600">{item.description}</p>}
+            {item.description && <p className="mt-1 text-sm text-gray-600" dangerouslySetInnerHTML={{ __html: md(item.description) }} />}
             {item.technologies?.length > 0 && (
               <p className="mt-0.5 text-xs text-gray-400">{resume.language === 'zh' ? '技术栈' : 'Tech'}: {item.technologies.join(', ')}</p>
             )}
@@ -86,7 +86,7 @@ function ConsultantSectionContent({ section, resume }: { section: any; resume: R
                 {item.highlights.map((h: string, i: number) => (
                   <li key={i} className="flex items-start gap-2 text-sm text-gray-600">
                     <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: BLUE_600 }} />
-                    {h}
+                    <span dangerouslySetInnerHTML={{ __html: md(h) }} />
                   </li>
                 ))}
               </ul>
@@ -116,7 +116,7 @@ function ConsultantSectionContent({ section, resume }: { section: any; resume: R
                 {item.highlights.map((h: string, i: number) => (
                   <li key={i} className="flex items-start gap-2 text-sm text-gray-600">
                     <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: BLUE_600 }} />
-                    {h}
+                    <span dangerouslySetInnerHTML={{ __html: md(h) }} />
                   </li>
                 ))}
               </ul>
@@ -151,7 +151,7 @@ function ConsultantSectionContent({ section, resume }: { section: any; resume: R
                 <span className="shrink-0 text-xs font-medium" style={{ color: BLUE_600 }}>{item.startDate} - {item.endDate || (resume.language === 'zh' ? '至今' : 'Present')}</span>
               )}
             </div>
-            {item.description && <p className="mt-1 text-sm text-gray-600">{item.description}</p>}
+            {item.description && <p className="mt-1 text-sm text-gray-600" dangerouslySetInnerHTML={{ __html: md(item.description) }} />}
             {item.technologies?.length > 0 && (
               <p className="mt-0.5 text-xs text-gray-400">{resume.language === 'zh' ? '技术栈' : 'Tech'}: {item.technologies.join(', ')}</p>
             )}
@@ -160,7 +160,7 @@ function ConsultantSectionContent({ section, resume }: { section: any; resume: R
                 {item.highlights.map((h: string, i: number) => (
                   <li key={i} className="flex items-start gap-2 text-sm text-gray-600">
                     <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: BLUE_600 }} />
-                    {h}
+                    <span dangerouslySetInnerHTML={{ __html: md(h) }} />
                   </li>
                 ))}
               </ul>
@@ -208,7 +208,7 @@ function ConsultantSectionContent({ section, resume }: { section: any; resume: R
               <span className="text-xs text-gray-400">⭐ {item.stars?.toLocaleString()}</span>
             </div>
             {item.language && <span className="text-xs text-gray-400">{item.language}</span>}
-            {item.description && <p className="mt-1 text-sm text-gray-600">{item.description}</p>}
+            {item.description && <p className="mt-1 text-sm text-gray-600" dangerouslySetInnerHTML={{ __html: md(item.description) }} />}
           </div>
         ))}
       </div>
@@ -227,7 +227,7 @@ function ConsultantSectionContent({ section, resume }: { section: any; resume: R
               </div>
               {item.date && <span className="shrink-0 text-xs font-medium" style={{ color: BLUE_600 }}>{item.date}</span>}
             </div>
-            {item.description && <p className="mt-0.5 text-sm text-gray-600">{item.description}</p>}
+            {item.description && <p className="mt-0.5 text-sm text-gray-600" dangerouslySetInnerHTML={{ __html: md(item.description) }} />}
           </div>
         ))}
       </div>
@@ -245,7 +245,7 @@ function ConsultantSectionContent({ section, resume }: { section: any; resume: R
         {content.items.map((item: any) => (
           <div key={item.id}>
             <span className="text-sm font-medium" style={{ color: GRAY_700 }}>{item.name || item.title || item.language}</span>
-            {item.description && <p className="text-sm text-gray-600">{item.description}</p>}
+            {item.description && <p className="text-sm text-gray-600" dangerouslySetInnerHTML={{ __html: md(item.description) }} />}
           </div>
         ))}
       </div>

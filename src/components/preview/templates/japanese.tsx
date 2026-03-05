@@ -14,7 +14,7 @@ import type {
   GitHubContent,
 } from '@/types/resume';
 import { AvatarImage } from '../avatar-image';
-import { isSectionEmpty } from '../utils';
+import { isSectionEmpty, md } from '../utils';
 import { QrCodesPreview } from '../qr-codes-preview';
 
 const PRIMARY = '#1c1917';
@@ -66,7 +66,7 @@ function JapaneseSectionContent({ section, lang }: { section: any; lang?: string
   const content = section.content;
 
   if (section.type === 'summary') {
-    return <p className="text-sm font-light leading-loose" style={{ color: PRIMARY }}>{(content as SummaryContent).text}</p>;
+    return <p className="text-sm font-light leading-loose" style={{ color: PRIMARY }} dangerouslySetInnerHTML={{ __html: md((content as SummaryContent).text) }} />;
   }
 
   if (section.type === 'work_experience') {
@@ -79,7 +79,7 @@ function JapaneseSectionContent({ section, lang }: { section: any; lang?: string
               <span className="shrink-0 text-[10px] font-light" style={{ color: ACCENT }}>{item.startDate} &ndash; {item.endDate || (item.current ? (lang === 'zh' ? '至今' : 'Present') : '')}</span>
             </div>
             {item.company && <p className="mt-0.5 text-xs font-light" style={{ color: ACCENT }}>{item.company}{item.location ? `, ${item.location}` : ''}</p>}
-            {item.description && <p className="mt-2 text-sm font-light leading-relaxed" style={{ color: PRIMARY }}>{item.description}</p>}
+            {item.description && <p className="mt-2 text-sm font-light leading-relaxed" style={{ color: PRIMARY }} dangerouslySetInnerHTML={{ __html: md(item.description) }} />}
             {item.technologies?.length > 0 && (
               <p className="mt-1 text-xs font-light" style={{ color: ACCENT }}>{item.technologies.join(' \u00b7 ')}</p>
             )}
@@ -88,7 +88,7 @@ function JapaneseSectionContent({ section, lang }: { section: any; lang?: string
                 {item.highlights.map((h: string, i: number) => (
                   <li key={i} className="flex items-start gap-3 text-sm font-light" style={{ color: PRIMARY }}>
                     <span className="mt-2 inline-block h-px w-3 shrink-0" style={{ backgroundColor: ACCENT }} />
-                    {h}
+                    <span dangerouslySetInnerHTML={{ __html: md(h) }} />
                   </li>
                 ))}
               </ul>
@@ -116,7 +116,7 @@ function JapaneseSectionContent({ section, lang }: { section: any; lang?: string
                 {item.highlights.map((h: string, i: number) => (
                   <li key={i} className="flex items-start gap-3 text-sm font-light" style={{ color: PRIMARY }}>
                     <span className="mt-2 inline-block h-px w-3 shrink-0" style={{ backgroundColor: ACCENT }} />
-                    {h}
+                    <span dangerouslySetInnerHTML={{ __html: md(h) }} />
                   </li>
                 ))}
               </ul>
@@ -151,7 +151,7 @@ function JapaneseSectionContent({ section, lang }: { section: any; lang?: string
                 <span className="shrink-0 text-[10px] font-light" style={{ color: ACCENT }}>{item.startDate} {'\u2013'} {item.endDate || (lang === 'zh' ? '至今' : 'Present')}</span>
               )}
             </div>
-            {item.description && <p className="mt-1 text-sm font-light leading-relaxed" style={{ color: PRIMARY }}>{item.description}</p>}
+            {item.description && <p className="mt-1 text-sm font-light leading-relaxed" style={{ color: PRIMARY }} dangerouslySetInnerHTML={{ __html: md(item.description) }} />}
             {item.technologies?.length > 0 && (
               <p className="mt-1 text-xs font-light" style={{ color: ACCENT }}>{item.technologies.join(' \u00b7 ')}</p>
             )}
@@ -160,7 +160,7 @@ function JapaneseSectionContent({ section, lang }: { section: any; lang?: string
                 {item.highlights.map((h: string, i: number) => (
                   <li key={i} className="flex items-start gap-3 text-sm font-light" style={{ color: PRIMARY }}>
                     <span className="mt-2 inline-block h-px w-3 shrink-0" style={{ backgroundColor: ACCENT }} />
-                    {h}
+                    <span dangerouslySetInnerHTML={{ __html: md(h) }} />
                   </li>
                 ))}
               </ul>
@@ -211,7 +211,7 @@ function JapaneseSectionContent({ section, lang }: { section: any; lang?: string
               <span className="shrink-0 text-[10px] font-light" style={{ color: ACCENT }}>&#11088; {item.stars?.toLocaleString()}</span>
             </div>
             {item.language && <p className="mt-0.5 text-xs font-light" style={{ color: ACCENT }}>{item.language}</p>}
-            {item.description && <p className="mt-1 text-sm font-light leading-relaxed" style={{ color: PRIMARY }}>{item.description}</p>}
+            {item.description && <p className="mt-1 text-sm font-light leading-relaxed" style={{ color: PRIMARY }} dangerouslySetInnerHTML={{ __html: md(item.description) }} />}
           </div>
         ))}
       </div>
@@ -230,7 +230,7 @@ function JapaneseSectionContent({ section, lang }: { section: any; lang?: string
               </div>
               {item.date && <span className="shrink-0 text-[10px] font-light" style={{ color: ACCENT }}>{item.date}</span>}
             </div>
-            {item.description && <p className="mt-1 text-sm font-light leading-relaxed" style={{ color: PRIMARY }}>{item.description}</p>}
+            {item.description && <p className="mt-1 text-sm font-light leading-relaxed" style={{ color: PRIMARY }} dangerouslySetInnerHTML={{ __html: md(item.description) }} />}
           </div>
         ))}
       </div>
@@ -248,7 +248,7 @@ function JapaneseSectionContent({ section, lang }: { section: any; lang?: string
         {content.items.map((item: any) => (
           <div key={item.id}>
             <span className="text-sm font-normal" style={{ color: PRIMARY }}>{item.name || item.title || item.language}</span>
-            {item.description && <p className="text-sm font-light" style={{ color: PRIMARY }}>{item.description}</p>}
+            {item.description && <p className="text-sm font-light" style={{ color: PRIMARY }} dangerouslySetInnerHTML={{ __html: md(item.description) }} />}
           </div>
         ))}
       </div>

@@ -14,7 +14,7 @@ import type {
   GitHubContent,
 } from '@/types/resume';
 import { AvatarImage } from '../avatar-image';
-import { isSectionEmpty } from '../utils';
+import { isSectionEmpty, md } from '../utils';
 import { QrCodesPreview } from '../qr-codes-preview';
 
 const PRIMARY = '#4c1d95';
@@ -89,9 +89,7 @@ function WatercolorSectionContent({ section, lang }: { section: any; lang?: stri
   if (section.type === 'summary') {
     return (
       <div className="rounded-xl p-4" style={{ backgroundColor: WASH }}>
-        <p className="text-sm leading-relaxed" style={{ color: TEXT_DARK }}>
-          {(content as SummaryContent).text}
-        </p>
+        <p className="text-sm leading-relaxed" style={{ color: TEXT_DARK }} dangerouslySetInnerHTML={{ __html: md((content as SummaryContent).text) }} />
       </div>
     );
   }
@@ -109,7 +107,7 @@ function WatercolorSectionContent({ section, lang }: { section: any; lang?: stri
               </span>
             </div>
             {item.company && <p className="text-sm font-medium" style={{ color: ACCENT }}>{item.company}</p>}
-            {item.description && <p className="mt-1 text-sm" style={{ color: TEXT }}>{item.description}</p>}
+            {item.description && <p className="mt-1 text-sm" style={{ color: TEXT }} dangerouslySetInnerHTML={{ __html: md(item.description) }} />}
             {item.technologies?.length > 0 && (
               <div className="mt-2 flex flex-wrap gap-1">
                 {item.technologies.map((t: string, i: number) => (
@@ -124,7 +122,7 @@ function WatercolorSectionContent({ section, lang }: { section: any; lang?: stri
                 {item.highlights.map((h: string, i: number) => (
                   <li key={i} className="flex items-start gap-2 text-sm" style={{ color: TEXT }}>
                     <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: ACCENT }} />
-                    {h}
+                    <span dangerouslySetInnerHTML={{ __html: md(h) }} />
                   </li>
                 ))}
               </ul>
@@ -152,7 +150,7 @@ function WatercolorSectionContent({ section, lang }: { section: any; lang?: stri
                 {item.highlights.map((h: string, i: number) => (
                   <li key={i} className="flex items-start gap-2 text-sm" style={{ color: TEXT }}>
                     <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: ACCENT }} />
-                    {h}
+                    <span dangerouslySetInnerHTML={{ __html: md(h) }} />
                   </li>
                 ))}
               </ul>
@@ -201,7 +199,7 @@ function WatercolorSectionContent({ section, lang }: { section: any; lang?: stri
                 </span>
               )}
             </div>
-            {item.description && <p className="mt-0.5 text-sm" style={{ color: TEXT }}>{item.description}</p>}
+            {item.description && <p className="mt-0.5 text-sm" style={{ color: TEXT }} dangerouslySetInnerHTML={{ __html: md(item.description) }} />}
             {item.technologies?.length > 0 && (
               <div className="mt-2 flex flex-wrap gap-1">
                 {item.technologies.map((t: string, i: number) => (
@@ -216,7 +214,7 @@ function WatercolorSectionContent({ section, lang }: { section: any; lang?: stri
                 {item.highlights.map((h: string, i: number) => (
                   <li key={i} className="flex items-start gap-2 text-sm" style={{ color: TEXT }}>
                     <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: ACCENT }} />
-                    {h}
+                    <span dangerouslySetInnerHTML={{ __html: md(h) }} />
                   </li>
                 ))}
               </ul>
@@ -267,7 +265,7 @@ function WatercolorSectionContent({ section, lang }: { section: any; lang?: stri
               {item.date && <span className="text-xs" style={{ color: TEXT }}>{item.date}</span>}
             </div>
             {item.subtitle && <p className="text-sm" style={{ color: ACCENT }}>{item.subtitle}</p>}
-            {item.description && <p className="mt-1 text-sm" style={{ color: TEXT }}>{item.description}</p>}
+            {item.description && <p className="mt-1 text-sm" style={{ color: TEXT }} dangerouslySetInnerHTML={{ __html: md(item.description) }} />}
           </div>
         ))}
       </div>
@@ -285,7 +283,7 @@ function WatercolorSectionContent({ section, lang }: { section: any; lang?: stri
               <span className="shrink-0 text-xs" style={{ color: TEXT }}>{item.stars?.toLocaleString()}</span>
             </div>
             {item.language && <span className="text-xs" style={{ color: ACCENT }}>{item.language}</span>}
-            {item.description && <p className="mt-1 text-sm" style={{ color: TEXT }}>{item.description}</p>}
+            {item.description && <p className="mt-1 text-sm" style={{ color: TEXT }} dangerouslySetInnerHTML={{ __html: md(item.description) }} />}
           </div>
         ))}
       </div>
@@ -303,7 +301,7 @@ function WatercolorSectionContent({ section, lang }: { section: any; lang?: stri
         {content.items.map((item: any) => (
           <div key={item.id} className="rounded-xl p-3" style={{ backgroundColor: WASH }}>
             <span className="text-sm font-medium" style={{ color: PRIMARY }}>{item.name || item.title || item.language}</span>
-            {item.description && <p className="text-sm" style={{ color: TEXT }}>{item.description}</p>}
+            {item.description && <p className="text-sm" style={{ color: TEXT }} dangerouslySetInnerHTML={{ __html: md(item.description) }} />}
           </div>
         ))}
       </div>

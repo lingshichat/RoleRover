@@ -4,7 +4,7 @@ import { resolveUser, getUserIdFromRequest } from '@/lib/auth/helpers';
 import { generatePdf } from '@/lib/pdf/generate-pdf';
 import { generateHtml } from './builders';
 import { generatePlainText } from './plain-text';
-import { generateDocx } from './docx';
+import { generateDocxBuffer } from './docx';
 
 // Chromium download + PDF render needs more time on Vercel serverless
 export const maxDuration = 60;
@@ -60,12 +60,12 @@ export async function GET(
         });
       }
       case 'docx': {
-        const doc = generateDocx(resume);
-        return new NextResponse(doc, {
+        const docxBuffer = await generateDocxBuffer(resume);
+        return new NextResponse(new Uint8Array(docxBuffer), {
           status: 200,
           headers: {
             'Content-Type': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-            'Content-Disposition': `attachment; filename="${encodeURIComponent(filename)}.doc"`,
+            'Content-Disposition': `attachment; filename="${encodeURIComponent(filename)}.docx"`,
           },
         });
       }

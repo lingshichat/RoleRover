@@ -2,7 +2,7 @@
 
 import type { Resume, PersonalInfoContent, SummaryContent, WorkExperienceContent, EducationContent, SkillsContent, ProjectsContent, CertificationsContent, LanguagesContent, CustomContent, GitHubContent } from '@/types/resume';
 import { AvatarImage } from '../avatar-image';
-import { isSectionEmpty } from '../utils';
+import { isSectionEmpty, md } from '../utils';
 import { QrCodesPreview } from '../qr-codes-preview';
 
 const COLORS = ['#3b82f6', '#ef4444', '#f59e0b', '#10b981', '#8b5cf6', '#ec4899'];
@@ -56,7 +56,7 @@ function InfographicSectionContent({ section, colorIndex, resume }: { section: a
   const color = COLORS[colorIndex % COLORS.length];
 
   if (section.type === 'summary') {
-    return <p className="rounded-lg border-l-4 bg-zinc-50 p-4 text-sm leading-relaxed text-zinc-600" style={{ borderColor: color }}>{(content as SummaryContent).text}</p>;
+    return <p className="rounded-lg border-l-4 bg-zinc-50 p-4 text-sm leading-relaxed text-zinc-600" style={{ borderColor: color }} dangerouslySetInnerHTML={{ __html: md((content as SummaryContent).text) }} />;
   }
 
   if (section.type === 'work_experience') {
@@ -71,7 +71,7 @@ function InfographicSectionContent({ section, colorIndex, resume }: { section: a
               </span>
             </div>
             {item.company && <p className="text-sm" style={{ color }}>{item.company}</p>}
-            {item.description && <p className="mt-1 text-sm text-zinc-600">{item.description}</p>}
+            {item.description && <p className="mt-1 text-sm text-zinc-600" dangerouslySetInnerHTML={{ __html: md(item.description) }} />}
             {item.technologies?.length > 0 && (
               <div className="mt-1.5 flex flex-wrap gap-1">
                 {item.technologies.map((t: string, i: number) => (
@@ -83,7 +83,7 @@ function InfographicSectionContent({ section, colorIndex, resume }: { section: a
             )}
             {item.highlights?.length > 0 && (
               <ul className="mt-1 list-disc pl-4">
-                {item.highlights.map((h: string, i: number) => <li key={i} className="text-sm text-zinc-600">{h}</li>)}
+                {item.highlights.map((h: string, i: number) => <li key={i} className="text-sm text-zinc-600" dangerouslySetInnerHTML={{ __html: md(h) }} />)}
               </ul>
             )}
           </div>
@@ -107,7 +107,7 @@ function InfographicSectionContent({ section, colorIndex, resume }: { section: a
             {item.gpa && <p className="text-sm text-zinc-500">GPA: {item.gpa}</p>}
             {item.highlights?.length > 0 && (
               <ul className="mt-1 list-disc pl-4">
-                {item.highlights.map((h: string, i: number) => <li key={i} className="text-sm text-zinc-600">{h}</li>)}
+                {item.highlights.map((h: string, i: number) => <li key={i} className="text-sm text-zinc-600" dangerouslySetInnerHTML={{ __html: md(h) }} />)}
               </ul>
             )}
           </div>
@@ -149,7 +149,7 @@ function InfographicSectionContent({ section, colorIndex, resume }: { section: a
                 </span>
               )}
             </div>
-            {item.description && <p className="mt-1 text-sm text-zinc-600">{item.description}</p>}
+            {item.description && <p className="mt-1 text-sm text-zinc-600" dangerouslySetInnerHTML={{ __html: md(item.description) }} />}
             {item.technologies?.length > 0 && (
               <div className="mt-1.5 flex flex-wrap gap-1">
                 {item.technologies.map((t: string, i: number) => (
@@ -161,7 +161,7 @@ function InfographicSectionContent({ section, colorIndex, resume }: { section: a
             )}
             {item.highlights?.length > 0 && (
               <ul className="mt-1 list-disc pl-4">
-                {item.highlights.map((h: string, i: number) => <li key={i} className="text-sm text-zinc-600">{h}</li>)}
+                {item.highlights.map((h: string, i: number) => <li key={i} className="text-sm text-zinc-600" dangerouslySetInnerHTML={{ __html: md(h) }} />)}
               </ul>
             )}
           </div>
@@ -211,7 +211,7 @@ function InfographicSectionContent({ section, colorIndex, resume }: { section: a
               <span className="shrink-0 text-xs text-zinc-400">{'\u2B50'} {item.stars?.toLocaleString()}</span>
             </div>
             {item.language && <span className="text-xs" style={{ color }}>{item.language}</span>}
-            {item.description && <p className="mt-1 text-sm text-zinc-600">{item.description}</p>}
+            {item.description && <p className="mt-1 text-sm text-zinc-600" dangerouslySetInnerHTML={{ __html: md(item.description) }} />}
           </div>
         ))}
       </div>
@@ -231,7 +231,7 @@ function InfographicSectionContent({ section, colorIndex, resume }: { section: a
               </div>
               {item.date && <span className="shrink-0 text-xs text-zinc-400">{item.date}</span>}
             </div>
-            {item.description && <p className="mt-1 text-sm text-zinc-600">{item.description}</p>}
+            {item.description && <p className="mt-1 text-sm text-zinc-600" dangerouslySetInnerHTML={{ __html: md(item.description) }} />}
           </div>
         ))}
       </div>
@@ -248,7 +248,7 @@ function InfographicSectionContent({ section, colorIndex, resume }: { section: a
         {content.items.map((item: any) => (
           <div key={item.id} className="rounded-lg border border-zinc-100 p-3">
             <span className="text-sm font-medium text-zinc-800">{item.name || item.title || item.language}</span>
-            {item.description && <p className="text-sm text-zinc-600">{item.description}</p>}
+            {item.description && <p className="text-sm text-zinc-600" dangerouslySetInnerHTML={{ __html: md(item.description) }} />}
           </div>
         ))}
       </div>

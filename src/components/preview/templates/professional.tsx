@@ -13,7 +13,7 @@ import type {
   CustomContent,
   GitHubContent,
 } from '@/types/resume';
-import { isSectionEmpty } from '../utils';
+import { isSectionEmpty, md } from '../utils';
 import { AvatarImage } from '../avatar-image';
 import { QrCodesPreview } from '../qr-codes-preview';
 
@@ -77,7 +77,7 @@ function ProfessionalSectionContent({ section, lang }: { section: any; lang?: st
   const content = section.content;
 
   if (section.type === 'summary') {
-    return <p className="text-sm leading-relaxed text-zinc-600" style={{ fontFamily: 'Georgia, serif' }}>{(content as SummaryContent).text}</p>;
+    return <p className="text-sm leading-relaxed text-zinc-600" style={{ fontFamily: 'Georgia, serif' }} dangerouslySetInnerHTML={{ __html: md((content as SummaryContent).text) }} />;
   }
 
   if (section.type === 'work_experience') {
@@ -94,14 +94,14 @@ function ProfessionalSectionContent({ section, lang }: { section: any; lang?: st
               </div>
               <span className="shrink-0 text-xs text-zinc-400 italic">{item.startDate} – {item.endDate || (item.current ? (lang === 'zh' ? '至今' : 'Present') : '')}</span>
             </div>
-            {item.description && <p className="mt-1 text-sm text-zinc-600">{item.description}</p>}
+            {item.description && <p className="mt-1 text-sm text-zinc-600" dangerouslySetInnerHTML={{ __html: md(item.description) }} />}
             {item.technologies?.length > 0 && (
               <p className="mt-0.5 text-xs text-zinc-400">{lang === 'zh' ? '技术栈' : 'Tech'}: {item.technologies.join(', ')}</p>
             )}
             {item.highlights?.length > 0 && (
               <ul className="mt-1 list-disc pl-5">
                 {item.highlights.map((h: string, i: number) => (
-                  <li key={i} className="text-sm text-zinc-600">{h}</li>
+                  <li key={i} className="text-sm text-zinc-600" dangerouslySetInnerHTML={{ __html: md(h) }} />
                 ))}
               </ul>
             )}
@@ -129,7 +129,7 @@ function ProfessionalSectionContent({ section, lang }: { section: any; lang?: st
             {item.highlights?.length > 0 && (
               <ul className="mt-1 list-disc pl-5">
                 {item.highlights.map((h: string, i: number) => (
-                  <li key={i} className="text-sm text-zinc-600">{h}</li>
+                  <li key={i} className="text-sm text-zinc-600" dangerouslySetInnerHTML={{ __html: md(h) }} />
                 ))}
               </ul>
             )}
@@ -167,14 +167,14 @@ function ProfessionalSectionContent({ section, lang }: { section: any; lang?: st
                 </span>
               )}
             </div>
-            {item.description && <p className="mt-1 text-sm text-zinc-600">{item.description}</p>}
+            {item.description && <p className="mt-1 text-sm text-zinc-600" dangerouslySetInnerHTML={{ __html: md(item.description) }} />}
             {item.technologies?.length > 0 && (
               <p className="mt-0.5 text-xs text-zinc-400">{lang === 'zh' ? '技术栈' : 'Tech'}: {item.technologies.join(', ')}</p>
             )}
             {item.highlights?.length > 0 && (
               <ul className="mt-1 list-disc pl-5">
                 {item.highlights.map((h: string, i: number) => (
-                  <li key={i} className="text-sm text-zinc-600">{h}</li>
+                  <li key={i} className="text-sm text-zinc-600" dangerouslySetInnerHTML={{ __html: md(h) }} />
                 ))}
               </ul>
             )}
@@ -195,7 +195,7 @@ function ProfessionalSectionContent({ section, lang }: { section: any; lang?: st
               <span className="shrink-0 text-xs text-zinc-400 italic">{item.stars?.toLocaleString()}</span>
             </div>
             {item.language && <span className="text-xs text-zinc-500">{item.language}</span>}
-            {item.description && <p className="mt-1 text-sm text-zinc-600">{item.description}</p>}
+            {item.description && <p className="mt-1 text-sm text-zinc-600" dangerouslySetInnerHTML={{ __html: md(item.description) }} />}
           </div>
         ))}
       </div>
@@ -246,7 +246,7 @@ function ProfessionalSectionContent({ section, lang }: { section: any; lang?: st
               </div>
               {item.date && <span className="shrink-0 text-xs text-zinc-400 italic">{item.date}</span>}
             </div>
-            {item.description && <p className="mt-0.5 text-sm text-zinc-600">{item.description}</p>}
+            {item.description && <p className="mt-0.5 text-sm text-zinc-600" dangerouslySetInnerHTML={{ __html: md(item.description) }} />}
           </div>
         ))}
       </div>
@@ -264,7 +264,7 @@ function ProfessionalSectionContent({ section, lang }: { section: any; lang?: st
         {content.items.map((item: any) => (
           <div key={item.id}>
             <span className="text-sm font-medium" style={{ color: '#1e3a5f' }}>{item.name || item.title || item.language}</span>
-            {item.description && <p className="text-sm text-zinc-600">{item.description}</p>}
+            {item.description && <p className="text-sm text-zinc-600" dangerouslySetInnerHTML={{ __html: md(item.description) }} />}
           </div>
         ))}
       </div>

@@ -14,7 +14,7 @@ import type {
   GitHubContent,
 } from '@/types/resume';
 import { AvatarImage } from '../avatar-image';
-import { isSectionEmpty } from '../utils';
+import { isSectionEmpty, md } from '../utils';
 import { QrCodesPreview } from '../qr-codes-preview';
 
 const PRIMARY = '#78350f';
@@ -91,7 +91,7 @@ function RetroSectionContent({ section, resume }: { section: any; resume: Resume
   if (section.type === 'summary') {
     return (
       <p className="text-center text-sm italic leading-relaxed" style={{ color: ACCENT }}>
-        &ldquo;{(content as SummaryContent).text}&rdquo;
+        &ldquo;<span dangerouslySetInnerHTML={{ __html: md((content as SummaryContent).text) }} />&rdquo;
       </p>
     );
   }
@@ -109,7 +109,7 @@ function RetroSectionContent({ section, resume }: { section: any; resume: Resume
               </span>
             </div>
             {item.company && <p className="text-sm italic" style={{ color: ACCENT }}>{item.company}</p>}
-            {item.description && <p className="mt-1 text-sm" style={{ color: '#57534e' }}>{item.description}</p>}
+            {item.description && <p className="mt-1 text-sm" style={{ color: '#57534e' }} dangerouslySetInnerHTML={{ __html: md(item.description) }} />}
             {item.technologies?.length > 0 && (
               <p className="mt-1 text-xs italic" style={{ color: ACCENT }}>
                 Technologies: {item.technologies.join(', ')}
@@ -120,7 +120,7 @@ function RetroSectionContent({ section, resume }: { section: any; resume: Resume
                 {item.highlights.map((h: string, i: number) => (
                   <li key={i} className="flex items-start gap-2 text-sm" style={{ color: '#57534e' }}>
                     <span className="mt-1 shrink-0 text-xs" style={{ color: PRIMARY }}>{'\u2022'}</span>
-                    {h}
+                    <span dangerouslySetInnerHTML={{ __html: md(h) }} />
                   </li>
                 ))}
               </ul>
@@ -148,7 +148,7 @@ function RetroSectionContent({ section, resume }: { section: any; resume: Resume
                 {item.highlights.map((h: string, i: number) => (
                   <li key={i} className="flex items-start gap-2 text-sm" style={{ color: '#57534e' }}>
                     <span className="mt-1 shrink-0 text-xs" style={{ color: PRIMARY }}>{'\u2022'}</span>
-                    {h}
+                    <span dangerouslySetInnerHTML={{ __html: md(h) }} />
                   </li>
                 ))}
               </ul>
@@ -187,7 +187,7 @@ function RetroSectionContent({ section, resume }: { section: any; resume: Resume
                 </span>
               )}
             </div>
-            {item.description && <p className="mt-0.5 text-sm" style={{ color: '#57534e' }}>{item.description}</p>}
+            {item.description && <p className="mt-0.5 text-sm" style={{ color: '#57534e' }} dangerouslySetInnerHTML={{ __html: md(item.description) }} />}
             {item.technologies?.length > 0 && (
               <p className="mt-1 text-xs italic" style={{ color: ACCENT }}>
                 Technologies: {item.technologies.join(', ')}
@@ -198,7 +198,7 @@ function RetroSectionContent({ section, resume }: { section: any; resume: Resume
                 {item.highlights.map((h: string, i: number) => (
                   <li key={i} className="flex items-start gap-2 text-sm" style={{ color: '#57534e' }}>
                     <span className="mt-1 shrink-0 text-xs" style={{ color: PRIMARY }}>{'\u2022'}</span>
-                    {h}
+                    <span dangerouslySetInnerHTML={{ __html: md(h) }} />
                   </li>
                 ))}
               </ul>
@@ -249,7 +249,7 @@ function RetroSectionContent({ section, resume }: { section: any; resume: Resume
               <span className="text-xs" style={{ color: ACCENT, fontFamily: "'Courier New', monospace" }}>{'\u2B50'} {item.stars?.toLocaleString()}</span>
             </div>
             {item.language && <span className="text-xs italic" style={{ color: ACCENT }}>{item.language}</span>}
-            {item.description && <p className="mt-1 text-sm" style={{ color: '#57534e' }}>{item.description}</p>}
+            {item.description && <p className="mt-1 text-sm" style={{ color: '#57534e' }} dangerouslySetInnerHTML={{ __html: md(item.description) }} />}
           </div>
         ))}
       </div>
@@ -267,7 +267,7 @@ function RetroSectionContent({ section, resume }: { section: any; resume: Resume
               {item.date && <span className="text-xs" style={{ color: ACCENT, fontFamily: "'Courier New', monospace" }}>{item.date}</span>}
             </div>
             {item.subtitle && <p className="text-sm italic" style={{ color: ACCENT }}>{item.subtitle}</p>}
-            {item.description && <p className="mt-1 text-sm" style={{ color: '#57534e' }}>{item.description}</p>}
+            {item.description && <p className="mt-1 text-sm" style={{ color: '#57534e' }} dangerouslySetInnerHTML={{ __html: md(item.description) }} />}
           </div>
         ))}
       </div>
@@ -285,7 +285,7 @@ function RetroSectionContent({ section, resume }: { section: any; resume: Resume
         {content.items.map((item: any) => (
           <div key={item.id}>
             <span className="text-sm font-bold" style={{ color: PRIMARY }}>{item.name || item.title || item.language}</span>
-            {item.description && <p className="text-sm" style={{ color: '#57534e' }}>{item.description}</p>}
+            {item.description && <p className="text-sm" style={{ color: '#57534e' }} dangerouslySetInnerHTML={{ __html: md(item.description) }} />}
           </div>
         ))}
       </div>

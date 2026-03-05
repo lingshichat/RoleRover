@@ -9,7 +9,7 @@ import type {
   CustomContent,
   GitHubContent,
 } from '@/types/resume';
-import { esc, getPersonalInfo, visibleSections, buildQrCodesHtml, type ResumeWithSections, type Section } from '../utils';
+import { esc, md, getPersonalInfo, visibleSections, buildQrCodesHtml, type ResumeWithSections, type Section } from '../utils';
 
 const GRAY_700 = '#374151';
 const BLUE_600 = '#2563eb';
@@ -18,15 +18,15 @@ function buildConsultantSectionContent(section: Section, lang: string): string {
   const c = section.content as any;
 
   if (section.type === 'summary') {
-    return `<p class="text-sm leading-relaxed text-gray-600">${esc((c as SummaryContent).text)}</p>`;
+    return `<p class="text-sm leading-relaxed text-gray-600">${md((c as SummaryContent).text)}</p>`;
   }
 
   if (section.type === 'work_experience') {
     return `<div class="space-y-4">${((c as WorkExperienceContent).items || []).map((it: any) => `<div>
       <div class="flex items-baseline justify-between"><div><span class="text-sm font-bold" style="color:${GRAY_700}">${esc(it.position)}</span>${it.company ? `<span class="text-sm text-gray-500"> | ${esc(it.company)}</span>` : ''}${it.location ? `<span class="text-sm text-gray-400">, ${esc(it.location)}</span>` : ''}</div><span class="shrink-0 text-xs font-medium" style="color:${BLUE_600}">${esc(it.startDate)} - ${esc(it.endDate) || (it.current ? (lang === 'zh' ? '至今' : 'Present') : '')}</span></div>
-      ${it.description ? `<p class="mt-1 text-sm text-gray-600">${esc(it.description)}</p>` : ''}
+      ${it.description ? `<p class="mt-1 text-sm text-gray-600">${md(it.description)}</p>` : ''}
       ${it.technologies?.length ? `<p class="mt-0.5 text-xs text-gray-400">${lang === 'zh' ? '技术栈' : 'Tech'}: ${esc(it.technologies.join(', '))}</p>` : ''}
-      ${it.highlights?.length ? `<ul class="mt-1.5 space-y-0.5">${it.highlights.map((h: string) => `<li class="flex items-start gap-2 text-sm text-gray-600"><span class="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full" style="background-color:${BLUE_600}"></span>${esc(h)}</li>`).join('')}</ul>` : ''}
+      ${it.highlights?.length ? `<ul class="mt-1.5 space-y-0.5">${it.highlights.map((h: string) => `<li class="flex items-start gap-2 text-sm text-gray-600"><span class="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full" style="background-color:${BLUE_600}"></span>${md(h)}</li>`).join('')}</ul>` : ''}
     </div>`).join('')}</div>`;
   }
 
@@ -47,9 +47,9 @@ function buildConsultantSectionContent(section: Section, lang: string): string {
   if (section.type === 'projects') {
     return `<div class="space-y-3">${((c as ProjectsContent).items || []).map((it: any) => `<div>
       <div class="flex items-baseline justify-between"><span class="text-sm font-bold" style="color:${GRAY_700}">${esc(it.name)}</span>${it.startDate ? `<span class="shrink-0 text-xs font-medium" style="color:${BLUE_600}">${esc(it.startDate)} - ${it.endDate ? esc(it.endDate) : (lang === 'zh' ? '至今' : 'Present')}</span>` : ''}</div>
-      ${it.description ? `<p class="mt-1 text-sm text-gray-600">${esc(it.description)}</p>` : ''}
+      ${it.description ? `<p class="mt-1 text-sm text-gray-600">${md(it.description)}</p>` : ''}
       ${it.technologies?.length ? `<p class="mt-0.5 text-xs text-gray-400">${lang === 'zh' ? '技术栈' : 'Tech'}: ${esc(it.technologies.join(', '))}</p>` : ''}
-      ${it.highlights?.length ? `<ul class="mt-1.5 space-y-0.5">${it.highlights.map((h: string) => `<li class="flex items-start gap-2 text-sm text-gray-600"><span class="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full" style="background-color:${BLUE_600}"></span>${esc(h)}</li>`).join('')}</ul>` : ''}
+      ${it.highlights?.length ? `<ul class="mt-1.5 space-y-0.5">${it.highlights.map((h: string) => `<li class="flex items-start gap-2 text-sm text-gray-600"><span class="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full" style="background-color:${BLUE_600}"></span>${md(h)}</li>`).join('')}</ul>` : ''}
     </div>`).join('')}</div>`;
   }
 
@@ -69,14 +69,14 @@ function buildConsultantSectionContent(section: Section, lang: string): string {
     return `<div class="space-y-3">${((c as GitHubContent).items || []).map((it: any) => `<div>
       <div class="flex items-baseline justify-between"><span class="text-sm font-bold" style="color:${GRAY_700}">${esc(it.name)}</span><span class="text-xs text-gray-400">⭐ ${it.stars?.toLocaleString() ?? 0}</span></div>
       ${it.language ? `<span class="text-xs text-gray-400">${esc(it.language)}</span>` : ''}
-      ${it.description ? `<p class="mt-1 text-sm text-gray-600">${esc(it.description)}</p>` : ''}
+      ${it.description ? `<p class="mt-1 text-sm text-gray-600">${md(it.description)}</p>` : ''}
     </div>`).join('')}</div>`;
   }
 
   if (section.type === 'custom') {
     return `<div class="space-y-3">${((c as CustomContent).items || []).map((it: any) => `<div>
       <div class="flex items-baseline justify-between"><div><span class="text-sm font-bold" style="color:${GRAY_700}">${esc(it.title)}</span>${it.subtitle ? `<span class="text-sm text-gray-500"> — ${esc(it.subtitle)}</span>` : ''}</div>${it.date ? `<span class="shrink-0 text-xs font-medium" style="color:${BLUE_600}">${esc(it.date)}</span>` : ''}</div>
-      ${it.description ? `<p class="mt-0.5 text-sm text-gray-600">${esc(it.description)}</p>` : ''}
+      ${it.description ? `<p class="mt-0.5 text-sm text-gray-600">${md(it.description)}</p>` : ''}
     </div>`).join('')}</div>`;
   }
 
@@ -84,7 +84,7 @@ function buildConsultantSectionContent(section: Section, lang: string): string {
 
   // Generic items fallback
   if (c.items) {
-    return `<div class="space-y-2">${c.items.map((it: any) => `<div><span class="text-sm font-medium" style="color:${GRAY_700}">${esc(it.name || it.title || it.language)}</span>${it.description ? `<p class="text-sm text-gray-600">${esc(it.description)}</p>` : ''}</div>`).join('')}</div>`;
+    return `<div class="space-y-2">${c.items.map((it: any) => `<div><span class="text-sm font-medium" style="color:${GRAY_700}">${esc(it.name || it.title || it.language)}</span>${it.description ? `<p class="text-sm text-gray-600">${md(it.description)}</p>` : ''}</div>`).join('')}</div>`;
   }
 
   return '';

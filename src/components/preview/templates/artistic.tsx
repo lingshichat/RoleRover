@@ -14,7 +14,7 @@ import type {
   GitHubContent,
 } from '@/types/resume';
 import { AvatarImage } from '../avatar-image';
-import { isSectionEmpty } from '../utils';
+import { isSectionEmpty, md } from '../utils';
 import { QrCodesPreview } from '../qr-codes-preview';
 
 const PRIMARY = '#1e1b4b';
@@ -82,9 +82,7 @@ function ArtisticSectionContent({ section, resume }: { section: any; resume: Res
   if (section.type === 'summary') {
     return (
       <div className="rounded-lg p-4" style={{ border: `2px dashed ${ACCENT}30`, backgroundColor: `${PRIMARY}05` }}>
-        <p className="text-sm leading-relaxed text-zinc-600 italic">
-          {(content as SummaryContent).text}
-        </p>
+        <p className="text-sm leading-relaxed text-zinc-600 italic" dangerouslySetInnerHTML={{ __html: md((content as SummaryContent).text) }} />
       </div>
     );
   }
@@ -103,7 +101,7 @@ function ArtisticSectionContent({ section, resume }: { section: any; resume: Res
               </span>
             </div>
             {item.company && <p className="text-sm font-medium" style={{ color: ACCENT }}>{item.company}{item.location ? `, ${item.location}` : ''}</p>}
-            {item.description && <p className="mt-1 text-sm text-zinc-600">{item.description}</p>}
+            {item.description && <p className="mt-1 text-sm text-zinc-600" dangerouslySetInnerHTML={{ __html: md(item.description) }} />}
             {item.technologies?.length > 0 && (
               <div className="mt-2 flex flex-wrap gap-1">
                 {item.technologies.map((t: string, i: number) => (
@@ -118,7 +116,7 @@ function ArtisticSectionContent({ section, resume }: { section: any; resume: Res
                 {item.highlights.map((h: string, i: number) => (
                   <li key={i} className="flex items-start gap-2 text-sm text-zinc-600">
                     <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: HIGHLIGHT }} />
-                    {h}
+                    <span dangerouslySetInnerHTML={{ __html: md(h) }} />
                   </li>
                 ))}
               </ul>
@@ -146,7 +144,7 @@ function ArtisticSectionContent({ section, resume }: { section: any; resume: Res
                 {item.highlights.map((h: string, i: number) => (
                   <li key={i} className="flex items-start gap-2 text-sm text-zinc-600">
                     <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: HIGHLIGHT }} />
-                    {h}
+                    <span dangerouslySetInnerHTML={{ __html: md(h) }} />
                   </li>
                 ))}
               </ul>
@@ -196,7 +194,7 @@ function ArtisticSectionContent({ section, resume }: { section: any; resume: Res
                 </span>
               )}
             </div>
-            {item.description && <p className="mt-0.5 text-sm text-zinc-600">{item.description}</p>}
+            {item.description && <p className="mt-0.5 text-sm text-zinc-600" dangerouslySetInnerHTML={{ __html: md(item.description) }} />}
             {item.technologies?.length > 0 && (
               <div className="mt-2 flex flex-wrap gap-1">
                 {item.technologies.map((t: string, i: number) => (
@@ -211,7 +209,7 @@ function ArtisticSectionContent({ section, resume }: { section: any; resume: Res
                 {item.highlights.map((h: string, i: number) => (
                   <li key={i} className="flex items-start gap-2 text-sm text-zinc-600">
                     <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: HIGHLIGHT }} />
-                    {h}
+                    <span dangerouslySetInnerHTML={{ __html: md(h) }} />
                   </li>
                 ))}
               </ul>
@@ -262,7 +260,7 @@ function ArtisticSectionContent({ section, resume }: { section: any; resume: Res
               <span className="text-xs text-zinc-400">{'\u2B50'} {item.stars?.toLocaleString()}</span>
             </div>
             {item.language && <span className="text-xs" style={{ color: ACCENT }}>{item.language}</span>}
-            {item.description && <p className="mt-1 text-sm text-zinc-600">{item.description}</p>}
+            {item.description && <p className="mt-1 text-sm text-zinc-600" dangerouslySetInnerHTML={{ __html: md(item.description) }} />}
           </div>
         ))}
       </div>
@@ -280,7 +278,7 @@ function ArtisticSectionContent({ section, resume }: { section: any; resume: Res
               {item.date && <span className="text-xs text-zinc-400">{item.date}</span>}
             </div>
             {item.subtitle && <p className="text-sm" style={{ color: ACCENT }}>{item.subtitle}</p>}
-            {item.description && <p className="mt-1 text-sm text-zinc-600">{item.description}</p>}
+            {item.description && <p className="mt-1 text-sm text-zinc-600" dangerouslySetInnerHTML={{ __html: md(item.description) }} />}
           </div>
         ))}
       </div>
@@ -298,7 +296,7 @@ function ArtisticSectionContent({ section, resume }: { section: any; resume: Res
         {content.items.map((item: any) => (
           <div key={item.id} className="rounded-lg p-3" style={{ border: `1px dashed ${ACCENT}30` }}>
             <span className="text-sm font-medium" style={{ color: PRIMARY }}>{item.name || item.title || item.language}</span>
-            {item.description && <p className="text-sm text-zinc-600">{item.description}</p>}
+            {item.description && <p className="text-sm text-zinc-600" dangerouslySetInnerHTML={{ __html: md(item.description) }} />}
           </div>
         ))}
       </div>

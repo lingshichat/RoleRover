@@ -14,7 +14,7 @@ import type {
   GitHubContent,
 } from '@/types/resume';
 import { AvatarImage } from '../avatar-image';
-import { isSectionEmpty } from '../utils';
+import { isSectionEmpty, md } from '../utils';
 import { QrCodesPreview } from '../qr-codes-preview';
 
 const GOLD = '#d4af37';
@@ -75,7 +75,7 @@ function LuxeSectionContent({ section, lang }: { section: any; lang?: string }) 
 
   if (section.type === 'summary') {
     return (
-      <p className="text-center text-sm italic leading-relaxed" style={{ color: '#44403c' }}>{(content as SummaryContent).text}</p>
+      <p className="text-center text-sm italic leading-relaxed" style={{ color: '#44403c' }} dangerouslySetInnerHTML={{ __html: md((content as SummaryContent).text) }} />
     );
   }
 
@@ -89,7 +89,7 @@ function LuxeSectionContent({ section, lang }: { section: any; lang?: string }) 
               <span className="shrink-0 text-xs italic" style={{ color: '#a8a29e' }}>{item.startDate} &ndash; {item.endDate || (item.current ? (lang === 'zh' ? '至今' : 'Present') : '')}</span>
             </div>
             {item.company && <p className="text-sm" style={{ color: GOLD }}>{item.company}{item.location ? `, ${item.location}` : ''}</p>}
-            {item.description && <p className="mt-1 text-sm" style={{ color: '#44403c' }}>{item.description}</p>}
+            {item.description && <p className="mt-1 text-sm" style={{ color: '#44403c' }} dangerouslySetInnerHTML={{ __html: md(item.description) }} />}
             {item.technologies?.length > 0 && (
               <p className="mt-0.5 text-xs italic" style={{ color: '#a8a29e' }}>{lang === 'zh' ? '技术栈' : 'Tech'}: {item.technologies.join(', ')}</p>
             )}
@@ -98,7 +98,7 @@ function LuxeSectionContent({ section, lang }: { section: any; lang?: string }) 
                 {item.highlights.map((h: string, i: number) => (
                   <li key={i} className="flex items-start gap-2 text-sm" style={{ color: '#44403c' }}>
                     <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rotate-45" style={{ backgroundColor: GOLD }} />
-                    {h}
+                    <span dangerouslySetInnerHTML={{ __html: md(h) }} />
                   </li>
                 ))}
               </ul>
@@ -125,7 +125,7 @@ function LuxeSectionContent({ section, lang }: { section: any; lang?: string }) 
                 {item.highlights.map((h: string, i: number) => (
                   <li key={i} className="flex items-start gap-2 text-sm" style={{ color: '#44403c' }}>
                     <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rotate-45" style={{ backgroundColor: GOLD }} />
-                    {h}
+                    <span dangerouslySetInnerHTML={{ __html: md(h) }} />
                   </li>
                 ))}
               </ul>
@@ -160,7 +160,7 @@ function LuxeSectionContent({ section, lang }: { section: any; lang?: string }) 
                 <span className="shrink-0 text-xs italic" style={{ color: '#a8a29e' }}>{item.startDate} {'\u2013'} {item.endDate || (lang === 'zh' ? '至今' : 'Present')}</span>
               )}
             </div>
-            {item.description && <p className="mt-0.5 text-sm" style={{ color: '#44403c' }}>{item.description}</p>}
+            {item.description && <p className="mt-0.5 text-sm" style={{ color: '#44403c' }} dangerouslySetInnerHTML={{ __html: md(item.description) }} />}
             {item.technologies?.length > 0 && (
               <p className="mt-0.5 text-xs italic" style={{ color: '#a8a29e' }}>{lang === 'zh' ? '技术栈' : 'Tech'}: {item.technologies.join(', ')}</p>
             )}
@@ -169,7 +169,7 @@ function LuxeSectionContent({ section, lang }: { section: any; lang?: string }) 
                 {item.highlights.map((h: string, i: number) => (
                   <li key={i} className="flex items-start gap-2 text-sm" style={{ color: '#44403c' }}>
                     <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rotate-45" style={{ backgroundColor: GOLD }} />
-                    {h}
+                    <span dangerouslySetInnerHTML={{ __html: md(h) }} />
                   </li>
                 ))}
               </ul>
@@ -221,7 +221,7 @@ function LuxeSectionContent({ section, lang }: { section: any; lang?: string }) 
               <span className="shrink-0 text-xs italic" style={{ color: '#a8a29e' }}>&#11088; {item.stars?.toLocaleString()}</span>
             </div>
             {item.language && <span className="text-xs" style={{ color: GOLD }}>{item.language}</span>}
-            {item.description && <p className="mt-0.5 text-sm" style={{ color: '#44403c' }}>{item.description}</p>}
+            {item.description && <p className="mt-0.5 text-sm" style={{ color: '#44403c' }} dangerouslySetInnerHTML={{ __html: md(item.description) }} />}
           </div>
         ))}
       </div>
@@ -238,7 +238,7 @@ function LuxeSectionContent({ section, lang }: { section: any; lang?: string }) 
               {item.date && <span className="shrink-0 text-xs italic" style={{ color: GOLD }}>{item.date}</span>}
             </div>
             {item.subtitle && <p className="text-sm" style={{ color: GOLD }}>{item.subtitle}</p>}
-            {item.description && <p className="mt-0.5 text-sm" style={{ color: '#44403c' }}>{item.description}</p>}
+            {item.description && <p className="mt-0.5 text-sm" style={{ color: '#44403c' }} dangerouslySetInnerHTML={{ __html: md(item.description) }} />}
           </div>
         ))}
       </div>
@@ -256,7 +256,7 @@ function LuxeSectionContent({ section, lang }: { section: any; lang?: string }) 
         {content.items.map((item: any) => (
           <div key={item.id}>
             <span className="text-sm font-bold" style={{ color: TEXT }}>{item.name || item.title || item.language}</span>
-            {item.description && <p className="text-sm" style={{ color: '#44403c' }}>{item.description}</p>}
+            {item.description && <p className="text-sm" style={{ color: '#44403c' }} dangerouslySetInnerHTML={{ __html: md(item.description) }} />}
           </div>
         ))}
       </div>

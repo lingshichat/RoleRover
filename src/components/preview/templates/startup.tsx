@@ -2,7 +2,7 @@
 
 import type { Resume, PersonalInfoContent, SummaryContent, WorkExperienceContent, EducationContent, SkillsContent, ProjectsContent, CertificationsContent, LanguagesContent, CustomContent, GitHubContent } from '@/types/resume';
 import { AvatarImage } from '../avatar-image';
-import { isSectionEmpty } from '../utils';
+import { isSectionEmpty, md } from '../utils';
 import { QrCodesPreview } from '../qr-codes-preview';
 
 const PURPLE = '#6366f1';
@@ -54,7 +54,7 @@ function StartupSectionContent({ section, resume }: { section: any; resume: Resu
   const content = section.content;
 
   if (section.type === 'summary') {
-    return <p className="text-sm leading-relaxed text-zinc-600">{(content as SummaryContent).text}</p>;
+    return <p className="text-sm leading-relaxed text-zinc-600" dangerouslySetInnerHTML={{ __html: md((content as SummaryContent).text) }} />;
   }
 
   if (section.type === 'work_experience') {
@@ -69,7 +69,7 @@ function StartupSectionContent({ section, resume }: { section: any; resume: Resu
               </span>
             </div>
             {item.company && <p className="text-sm" style={{ color: CYAN }}>{item.company}</p>}
-            {item.description && <p className="mt-1 text-sm text-zinc-600">{item.description}</p>}
+            {item.description && <p className="mt-1 text-sm text-zinc-600" dangerouslySetInnerHTML={{ __html: md(item.description) }} />}
             {item.technologies?.length > 0 && (
               <div className="mt-1.5 flex flex-wrap gap-1">
                 {item.technologies.map((t: string, i: number) => (
@@ -79,7 +79,7 @@ function StartupSectionContent({ section, resume }: { section: any; resume: Resu
             )}
             {item.highlights?.length > 0 && (
               <ul className="mt-1 list-disc pl-4">
-                {item.highlights.map((h: string, i: number) => <li key={i} className="text-sm text-zinc-600">{h}</li>)}
+                {item.highlights.map((h: string, i: number) => <li key={i} className="text-sm text-zinc-600" dangerouslySetInnerHTML={{ __html: md(h) }} />)}
               </ul>
             )}
           </div>
@@ -103,7 +103,7 @@ function StartupSectionContent({ section, resume }: { section: any; resume: Resu
             {item.gpa && <p className="text-sm text-zinc-500">GPA: {item.gpa}</p>}
             {item.highlights?.length > 0 && (
               <ul className="mt-1 list-disc pl-4">
-                {item.highlights.map((h: string, i: number) => <li key={i} className="text-sm text-zinc-600">{h}</li>)}
+                {item.highlights.map((h: string, i: number) => <li key={i} className="text-sm text-zinc-600" dangerouslySetInnerHTML={{ __html: md(h) }} />)}
               </ul>
             )}
           </div>
@@ -137,7 +137,7 @@ function StartupSectionContent({ section, resume }: { section: any; resume: Resu
                 <span className="shrink-0 text-xs text-zinc-400">{item.startDate} – {item.endDate || (resume.language === 'zh' ? '至今' : 'Present')}</span>
               )}
             </div>
-            {item.description && <p className="mt-1 text-sm text-zinc-600">{item.description}</p>}
+            {item.description && <p className="mt-1 text-sm text-zinc-600" dangerouslySetInnerHTML={{ __html: md(item.description) }} />}
             {item.technologies?.length > 0 && (
               <div className="mt-1.5 flex flex-wrap gap-1">
                 {item.technologies.map((t: string, i: number) => (
@@ -147,7 +147,7 @@ function StartupSectionContent({ section, resume }: { section: any; resume: Resu
             )}
             {item.highlights?.length > 0 && (
               <ul className="mt-1 list-disc pl-4">
-                {item.highlights.map((h: string, i: number) => <li key={i} className="text-sm text-zinc-600">{h}</li>)}
+                {item.highlights.map((h: string, i: number) => <li key={i} className="text-sm text-zinc-600" dangerouslySetInnerHTML={{ __html: md(h) }} />)}
               </ul>
             )}
           </div>
@@ -195,7 +195,7 @@ function StartupSectionContent({ section, resume }: { section: any; resume: Resu
               <span className="shrink-0 text-xs text-zinc-400">{'\u2B50'} {item.stars?.toLocaleString()}</span>
             </div>
             {item.language && <span className="text-xs" style={{ color: CYAN }}>{item.language}</span>}
-            {item.description && <p className="mt-1 text-sm text-zinc-600">{item.description}</p>}
+            {item.description && <p className="mt-1 text-sm text-zinc-600" dangerouslySetInnerHTML={{ __html: md(item.description) }} />}
           </div>
         ))}
       </div>
@@ -214,7 +214,7 @@ function StartupSectionContent({ section, resume }: { section: any; resume: Resu
               </div>
               {item.date && <span className="shrink-0 text-xs text-zinc-400">{item.date}</span>}
             </div>
-            {item.description && <p className="mt-1 text-sm text-zinc-600">{item.description}</p>}
+            {item.description && <p className="mt-1 text-sm text-zinc-600" dangerouslySetInnerHTML={{ __html: md(item.description) }} />}
           </div>
         ))}
       </div>
@@ -232,7 +232,7 @@ function StartupSectionContent({ section, resume }: { section: any; resume: Resu
         {content.items.map((item: any) => (
           <div key={item.id}>
             <span className="text-sm font-medium text-zinc-800">{item.name || item.title || item.language}</span>
-            {item.description && <p className="text-sm text-zinc-600">{item.description}</p>}
+            {item.description && <p className="text-sm text-zinc-600" dangerouslySetInnerHTML={{ __html: md(item.description) }} />}
           </div>
         ))}
       </div>

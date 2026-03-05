@@ -14,7 +14,7 @@ import type {
   GitHubContent,
 } from '@/types/resume';
 import { AvatarImage } from '../avatar-image';
-import { isSectionEmpty } from '../utils';
+import { isSectionEmpty, md } from '../utils';
 import { QrCodesPreview } from '../qr-codes-preview';
 
 const PRIMARY = '#1e293b';
@@ -82,9 +82,7 @@ function MetroSectionContent({ section, resume }: { section: any; resume: Resume
 
   if (section.type === 'summary') {
     return (
-      <p className="border-l-3 pl-4 text-sm leading-relaxed text-zinc-600" style={{ borderColor: AMBER }}>
-        {(content as SummaryContent).text}
-      </p>
+      <p className="border-l-3 pl-4 text-sm leading-relaxed text-zinc-600" style={{ borderColor: AMBER }} dangerouslySetInnerHTML={{ __html: md((content as SummaryContent).text) }} />
     );
   }
 
@@ -101,7 +99,7 @@ function MetroSectionContent({ section, resume }: { section: any; resume: Resume
               </span>
             </div>
             {item.company && <p className="text-sm font-semibold" style={{ color: AMBER }}>{item.company}</p>}
-            {item.description && <p className="mt-1 text-sm text-zinc-600">{item.description}</p>}
+            {item.description && <p className="mt-1 text-sm text-zinc-600" dangerouslySetInnerHTML={{ __html: md(item.description) }} />}
             {item.technologies?.length > 0 && (
               <div className="mt-1 flex flex-wrap gap-1">
                 {item.technologies.map((t: string, i: number) => (
@@ -114,7 +112,7 @@ function MetroSectionContent({ section, resume }: { section: any; resume: Resume
             {item.highlights?.length > 0 && (
               <ul className="mt-1 list-disc pl-4">
                 {item.highlights.map((h: string, i: number) => (
-                  <li key={i} className="text-sm text-zinc-600">{h}</li>
+                  <li key={i} className="text-sm text-zinc-600" dangerouslySetInnerHTML={{ __html: md(h) }} />
                 ))}
               </ul>
             )}
@@ -139,7 +137,7 @@ function MetroSectionContent({ section, resume }: { section: any; resume: Resume
             {item.highlights?.length > 0 && (
               <ul className="mt-1 list-disc pl-4">
                 {item.highlights.map((h: string, i: number) => (
-                  <li key={i} className="text-sm text-zinc-600">{h}</li>
+                  <li key={i} className="text-sm text-zinc-600" dangerouslySetInnerHTML={{ __html: md(h) }} />
                 ))}
               </ul>
             )}
@@ -187,7 +185,7 @@ function MetroSectionContent({ section, resume }: { section: any; resume: Resume
                 </span>
               )}
             </div>
-            {item.description && <p className="mt-1 text-sm text-zinc-600">{item.description}</p>}
+            {item.description && <p className="mt-1 text-sm text-zinc-600" dangerouslySetInnerHTML={{ __html: md(item.description) }} />}
             {item.technologies?.length > 0 && (
               <div className="mt-1 flex flex-wrap gap-1">
                 {item.technologies.map((t: string, i: number) => (
@@ -200,7 +198,7 @@ function MetroSectionContent({ section, resume }: { section: any; resume: Resume
             {item.highlights?.length > 0 && (
               <ul className="mt-1 list-disc pl-4">
                 {item.highlights.map((h: string, i: number) => (
-                  <li key={i} className="text-sm text-zinc-600">{h}</li>
+                  <li key={i} className="text-sm text-zinc-600" dangerouslySetInnerHTML={{ __html: md(h) }} />
                 ))}
               </ul>
             )}
@@ -249,7 +247,7 @@ function MetroSectionContent({ section, resume }: { section: any; resume: Resume
               <span className="text-xs text-zinc-400">{'\u2B50'} {item.stars?.toLocaleString()}</span>
             </div>
             {item.language && <span className="text-xs" style={{ color: AMBER }}>{item.language}</span>}
-            {item.description && <p className="mt-1 text-sm text-zinc-600">{item.description}</p>}
+            {item.description && <p className="mt-1 text-sm text-zinc-600" dangerouslySetInnerHTML={{ __html: md(item.description) }} />}
           </div>
         ))}
       </div>
@@ -267,7 +265,7 @@ function MetroSectionContent({ section, resume }: { section: any; resume: Resume
               {item.date && <span className="text-xs text-zinc-400">{item.date}</span>}
             </div>
             {item.subtitle && <p className="text-sm text-zinc-500">{item.subtitle}</p>}
-            {item.description && <p className="mt-1 text-sm text-zinc-600">{item.description}</p>}
+            {item.description && <p className="mt-1 text-sm text-zinc-600" dangerouslySetInnerHTML={{ __html: md(item.description) }} />}
           </div>
         ))}
       </div>
@@ -285,7 +283,7 @@ function MetroSectionContent({ section, resume }: { section: any; resume: Resume
         {content.items.map((item: any) => (
           <div key={item.id} className="border-l-3 pl-4" style={{ borderColor: AMBER }}>
             <span className="text-sm font-semibold" style={{ color: PRIMARY }}>{item.name || item.title || item.language}</span>
-            {item.description && <p className="text-sm text-zinc-600">{item.description}</p>}
+            {item.description && <p className="text-sm text-zinc-600" dangerouslySetInnerHTML={{ __html: md(item.description) }} />}
           </div>
         ))}
       </div>

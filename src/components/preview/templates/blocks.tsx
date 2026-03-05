@@ -14,7 +14,7 @@ import type {
   GitHubContent,
 } from '@/types/resume';
 import { AvatarImage } from '../avatar-image';
-import { isSectionEmpty } from '../utils';
+import { isSectionEmpty, md } from '../utils';
 import { QrCodesPreview } from '../qr-codes-preview';
 
 const PRIMARY = '#37352f';
@@ -85,7 +85,7 @@ function BlocksSectionContent({ section, resume }: { section: any; resume: Resum
   if (section.type === 'summary') {
     return (
       <div className="rounded-md p-3" style={{ backgroundColor: SUBTLE_BG }}>
-        <p className="text-sm leading-relaxed" style={{ color: PRIMARY }}>{(content as SummaryContent).text}</p>
+        <p className="text-sm leading-relaxed" style={{ color: PRIMARY }} dangerouslySetInnerHTML={{ __html: md((content as SummaryContent).text) }} />
       </div>
     );
   }
@@ -103,7 +103,7 @@ function BlocksSectionContent({ section, resume }: { section: any; resume: Resum
               </span>
             </div>
             {item.company && <p className="text-sm" style={{ color: ACCENT }}>{item.company}{item.location ? ` , ${item.location}` : ''}</p>}
-            {item.description && <p className="mt-1 text-sm" style={{ color: '#787774' }}>{item.description}</p>}
+            {item.description && <p className="mt-1 text-sm" style={{ color: '#787774' }} dangerouslySetInnerHTML={{ __html: md(item.description) }} />}
             {item.technologies?.length > 0 && (
               <div className="mt-1.5 flex flex-wrap gap-1">
                 {item.technologies.map((t: string, i: number) => (
@@ -116,7 +116,7 @@ function BlocksSectionContent({ section, resume }: { section: any; resume: Resum
             {item.highlights?.length > 0 && (
               <ul className="mt-1 list-disc pl-4">
                 {item.highlights.map((h: string, i: number) => (
-                  <li key={i} className="text-sm" style={{ color: '#787774' }}>{h}</li>
+                  <li key={i} className="text-sm" style={{ color: '#787774' }} dangerouslySetInnerHTML={{ __html: md(h) }} />
                 ))}
               </ul>
             )}
@@ -141,7 +141,7 @@ function BlocksSectionContent({ section, resume }: { section: any; resume: Resum
             {item.highlights?.length > 0 && (
               <ul className="mt-1 list-disc pl-4">
                 {item.highlights.map((h: string, i: number) => (
-                  <li key={i} className="text-sm" style={{ color: '#787774' }}>{h}</li>
+                  <li key={i} className="text-sm" style={{ color: '#787774' }} dangerouslySetInnerHTML={{ __html: md(h) }} />
                 ))}
               </ul>
             )}
@@ -193,7 +193,7 @@ function BlocksSectionContent({ section, resume }: { section: any; resume: Resum
                 </span>
               )}
             </div>
-            {item.description && <p className="mt-1 text-sm" style={{ color: '#787774' }}>{item.description}</p>}
+            {item.description && <p className="mt-1 text-sm" style={{ color: '#787774' }} dangerouslySetInnerHTML={{ __html: md(item.description) }} />}
             {item.technologies?.length > 0 && (
               <div className="mt-1.5 flex flex-wrap gap-1">
                 {item.technologies.map((t: string, i: number) => (
@@ -206,7 +206,7 @@ function BlocksSectionContent({ section, resume }: { section: any; resume: Resum
             {item.highlights?.length > 0 && (
               <ul className="mt-1 list-disc pl-4">
                 {item.highlights.map((h: string, i: number) => (
-                  <li key={i} className="text-sm" style={{ color: '#787774' }}>{h}</li>
+                  <li key={i} className="text-sm" style={{ color: '#787774' }} dangerouslySetInnerHTML={{ __html: md(h) }} />
                 ))}
               </ul>
             )}
@@ -227,7 +227,7 @@ function BlocksSectionContent({ section, resume }: { section: any; resume: Resum
               <span className="text-xs" style={{ color: '#9b9a97' }}>⭐ {item.stars?.toLocaleString()}</span>
             </div>
             {item.language && <span className="text-xs" style={{ color: '#9b9a97' }}>{item.language}</span>}
-            {item.description && <p className="mt-1 text-sm" style={{ color: '#787774' }}>{item.description}</p>}
+            {item.description && <p className="mt-1 text-sm" style={{ color: '#787774' }} dangerouslySetInnerHTML={{ __html: md(item.description) }} />}
           </div>
         ))}
       </div>
@@ -277,7 +277,7 @@ function BlocksSectionContent({ section, resume }: { section: any; resume: Resum
               {item.date && <span className="text-xs" style={{ color: '#9b9a97' }}>{item.date}</span>}
             </div>
             {item.subtitle && <p className="text-sm" style={{ color: '#9b9a97' }}>{item.subtitle}</p>}
-            {item.description && <p className="mt-1 text-sm" style={{ color: '#787774' }}>{item.description}</p>}
+            {item.description && <p className="mt-1 text-sm" style={{ color: '#787774' }} dangerouslySetInnerHTML={{ __html: md(item.description) }} />}
           </div>
         ))}
       </div>
@@ -295,7 +295,7 @@ function BlocksSectionContent({ section, resume }: { section: any; resume: Resum
         {content.items.map((item: any) => (
           <div key={item.id} className="rounded-md border px-3 py-2" style={{ borderColor: '#e3e2de' }}>
             <span className="text-sm font-medium" style={{ color: PRIMARY }}>{item.name || item.title || item.language}</span>
-            {item.description && <p className="text-sm" style={{ color: '#787774' }}>{item.description}</p>}
+            {item.description && <p className="text-sm" style={{ color: '#787774' }} dangerouslySetInnerHTML={{ __html: md(item.description) }} />}
           </div>
         ))}
       </div>

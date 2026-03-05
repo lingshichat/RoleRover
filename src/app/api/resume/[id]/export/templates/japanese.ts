@@ -9,7 +9,7 @@ import type {
   CustomContent,
   GitHubContent,
 } from '@/types/resume';
-import { esc, getPersonalInfo, visibleSections, buildQrCodesHtml, type ResumeWithSections, type Section } from '../utils';
+import { esc, md, getPersonalInfo, visibleSections, buildQrCodesHtml, type ResumeWithSections, type Section } from '../utils';
 
 const PRIMARY = '#1c1917';
 const ACCENT = '#a8a29e';
@@ -17,7 +17,7 @@ const ACCENT = '#a8a29e';
 function buildJapaneseSectionContent(section: Section, lang: string): string {
   const c = section.content as any;
 
-  if (section.type === 'summary') return `<p class="text-sm font-light leading-loose" style="color:#57534e">${esc((c as SummaryContent).text)}</p>`;
+  if (section.type === 'summary') return `<p class="text-sm font-light leading-loose" style="color:#57534e">${md((c as SummaryContent).text)}</p>`;
 
   if (section.type === 'work_experience') {
     return `<div class="space-y-6">${((c as WorkExperienceContent).items || []).map((it: any) => `<div>
@@ -26,9 +26,9 @@ function buildJapaneseSectionContent(section: Section, lang: string): string {
         <span class="shrink-0 text-[10px] font-light" style="color:${ACCENT}">${esc(it.startDate)} &ndash; ${esc(it.endDate) || (it.current ? (lang === 'zh' ? '至今' : 'Present') : '')}</span>
       </div>
       ${it.company ? `<p class="mt-0.5 text-xs font-light" style="color:${ACCENT}">${esc(it.company)}${it.location ? `, ${esc(it.location)}` : ''}</p>` : ''}
-      ${it.description ? `<p class="mt-2 text-sm font-light leading-relaxed" style="color:#57534e">${esc(it.description)}</p>` : ''}
+      ${it.description ? `<p class="mt-2 text-sm font-light leading-relaxed" style="color:#57534e">${md(it.description)}</p>` : ''}
       ${it.technologies?.length ? `<p class="mt-1 text-xs font-light" style="color:${ACCENT}">${esc(it.technologies.join(' \u00b7 '))}</p>` : ''}
-      ${it.highlights?.length ? `<ul class="mt-2 space-y-1">${it.highlights.filter(Boolean).map((h: string) => `<li class="flex items-start gap-3 text-sm font-light" style="color:#57534e"><span class="mt-2 inline-block h-px w-3 shrink-0" style="background-color:${ACCENT}"></span>${esc(h)}</li>`).join('')}</ul>` : ''}
+      ${it.highlights?.length ? `<ul class="mt-2 space-y-1">${it.highlights.filter(Boolean).map((h: string) => `<li class="flex items-start gap-3 text-sm font-light" style="color:#57534e"><span class="mt-2 inline-block h-px w-3 shrink-0" style="background-color:${ACCENT}"></span>${md(h)}</li>`).join('')}</ul>` : ''}
       <div class="mt-4 h-px" style="background-color:${ACCENT};opacity:0.2"></div>
     </div>`).join('')}</div>`;
   }
@@ -41,7 +41,7 @@ function buildJapaneseSectionContent(section: Section, lang: string): string {
       </div>
       ${it.institution ? `<p class="mt-0.5 text-xs font-light" style="color:${ACCENT}">${esc(it.institution)}${it.location ? `, ${esc(it.location)}` : ''}</p>` : ''}
       ${it.gpa ? `<p class="mt-1 text-xs font-light" style="color:${ACCENT}">GPA: ${esc(it.gpa)}</p>` : ''}
-      ${it.highlights?.length ? `<ul class="mt-2 space-y-1">${it.highlights.filter(Boolean).map((h: string) => `<li class="flex items-start gap-3 text-sm font-light" style="color:#57534e"><span class="mt-2 inline-block h-px w-3 shrink-0" style="background-color:${ACCENT}"></span>${esc(h)}</li>`).join('')}</ul>` : ''}
+      ${it.highlights?.length ? `<ul class="mt-2 space-y-1">${it.highlights.filter(Boolean).map((h: string) => `<li class="flex items-start gap-3 text-sm font-light" style="color:#57534e"><span class="mt-2 inline-block h-px w-3 shrink-0" style="background-color:${ACCENT}"></span>${md(h)}</li>`).join('')}</ul>` : ''}
     </div>`).join('')}</div>`;
   }
 
@@ -57,9 +57,9 @@ function buildJapaneseSectionContent(section: Section, lang: string): string {
         <h3 class="text-sm font-normal" style="color:${PRIMARY}">${esc(it.name)}</h3>
         ${it.startDate ? `<span class="shrink-0 text-[10px] font-light" style="color:${ACCENT}">${esc(it.startDate)} \u2013 ${it.endDate ? esc(it.endDate) : (lang === 'zh' ? '至今' : 'Present')}</span>` : ''}
       </div>
-      ${it.description ? `<p class="mt-1 text-sm font-light leading-relaxed" style="color:#57534e">${esc(it.description)}</p>` : ''}
+      ${it.description ? `<p class="mt-1 text-sm font-light leading-relaxed" style="color:#57534e">${md(it.description)}</p>` : ''}
       ${it.technologies?.length ? `<p class="mt-1 text-xs font-light" style="color:${ACCENT}">${esc(it.technologies.join(' \u00b7 '))}</p>` : ''}
-      ${it.highlights?.length ? `<ul class="mt-2 space-y-1">${it.highlights.filter(Boolean).map((h: string) => `<li class="flex items-start gap-3 text-sm font-light" style="color:#57534e"><span class="mt-2 inline-block h-px w-3 shrink-0" style="background-color:${ACCENT}"></span>${esc(h)}</li>`).join('')}</ul>` : ''}
+      ${it.highlights?.length ? `<ul class="mt-2 space-y-1">${it.highlights.filter(Boolean).map((h: string) => `<li class="flex items-start gap-3 text-sm font-light" style="color:#57534e"><span class="mt-2 inline-block h-px w-3 shrink-0" style="background-color:${ACCENT}"></span>${md(h)}</li>`).join('')}</ul>` : ''}
     </div>`).join('')}</div>`;
   }
 
@@ -82,7 +82,7 @@ function buildJapaneseSectionContent(section: Section, lang: string): string {
         <span class="shrink-0 text-[10px] font-light" style="color:${ACCENT}">&#11088; ${it.stars?.toLocaleString() ?? 0}</span>
       </div>
       ${it.language ? `<p class="mt-0.5 text-xs font-light" style="color:${ACCENT}">${esc(it.language)}</p>` : ''}
-      ${it.description ? `<p class="mt-1 text-sm font-light leading-relaxed" style="color:#57534e">${esc(it.description)}</p>` : ''}
+      ${it.description ? `<p class="mt-1 text-sm font-light leading-relaxed" style="color:#57534e">${md(it.description)}</p>` : ''}
     </div>`).join('')}</div>`;
   }
 
@@ -92,14 +92,14 @@ function buildJapaneseSectionContent(section: Section, lang: string): string {
         <h3 class="text-sm font-normal" style="color:${PRIMARY}">${esc(it.title)}</h3>
         ${it.subtitle ? `<span class="text-xs font-light" style="color:${ACCENT}">${esc(it.subtitle)}</span>` : ''}
       </div>${it.date ? `<span class="shrink-0 text-[10px] font-light" style="color:${ACCENT}">${esc(it.date)}</span>` : ''}</div>
-      ${it.description ? `<p class="mt-1 text-sm font-light leading-relaxed" style="color:#57534e">${esc(it.description)}</p>` : ''}
+      ${it.description ? `<p class="mt-1 text-sm font-light leading-relaxed" style="color:#57534e">${md(it.description)}</p>` : ''}
     </div>`).join('')}</div>`;
   }
 
   if (section.type === 'qr_codes') return buildQrCodesHtml(section);
 
   if (c.items) {
-    return `<div class="space-y-2">${c.items.map((it: any) => `<div><span class="text-sm font-normal" style="color:${PRIMARY}">${esc(it.name || it.title || it.language)}</span>${it.description ? `<p class="text-sm font-light" style="color:#57534e">${esc(it.description)}</p>` : ''}</div>`).join('')}</div>`;
+    return `<div class="space-y-2">${c.items.map((it: any) => `<div><span class="text-sm font-normal" style="color:${PRIMARY}">${esc(it.name || it.title || it.language)}</span>${it.description ? `<p class="text-sm font-light" style="color:#57534e">${md(it.description)}</p>` : ''}</div>`).join('')}</div>`;
   }
 
   return '';

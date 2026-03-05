@@ -24,6 +24,42 @@ export function safe(val: unknown): string {
   return val != null ? String(val) : '';
 }
 
+/** Lightweight markdown → HTML for resume text fields (summary, descriptions, highlights).
+ *  Supports: **bold**, `code`, line breaks, and "- item" lists. */
+export function md(text: unknown): string {
+  if (text == null) return '';
+  let s = String(text);
+  // 1. Escape HTML
+  s = s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  // 2. Bold: **text**
+  s = s.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  // 3. Inline code: `text`
+  s = s.replace(/`([^`]+)`/g, '<code>$1</code>');
+  // 4. No newlines → return inline
+  if (!s.includes('\n')) return s;
+  // 5. Process lines for lists and line breaks
+  const lines = s.split('\n');
+  let html = '';
+  let inList = false;
+  for (const raw of lines) {
+    const line = raw.trim();
+    if (!line) {
+      if (inList) { html += '</ul>'; inList = false; }
+      continue;
+    }
+    const lm = line.match(/^[-–•]\s+(.*)/);
+    if (lm) {
+      if (!inList) { html += '<ul style="margin:2px 0;padding-left:1.5em;list-style-type:disc">'; inList = true; }
+      html += `<li>${lm[1]}</li>`;
+    } else {
+      if (inList) { html += '</ul>'; inList = false; }
+      html += (html && !html.endsWith('>') ? '<br>' : '') + line;
+    }
+  }
+  if (inList) html += '</ul>';
+  return html;
+}
+
 // ─── Section empty check ──────────────────────────────────────
 
 export function isSectionEmpty(section: Section): boolean {
@@ -52,10 +88,10 @@ export function buildHighlights(highlights: string[] | undefined, liClass: strin
   if (!highlights?.length) return '';
   if (bulletStyle === 'custom-dot') {
     return highlights.map(h =>
-      `<li class="flex items-start gap-2 text-sm text-zinc-600"><span class="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full" style="background:linear-gradient(135deg,#7c3aed,#f97316)"></span>${esc(h)}</li>`
+      `<li class="flex items-start gap-2 text-sm text-zinc-600"><span class="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full" style="background:linear-gradient(135deg,#7c3aed,#f97316)"></span>${md(h)}</li>`
     ).join('');
   }
-  return highlights.filter(Boolean).map(h => `<li class="${liClass}">${esc(h)}</li>`).join('');
+  return highlights.filter(Boolean).map(h => `<li class="${liClass}">${md(h)}</li>`).join('');
 }
 
 // ─── QR codes inline HTML (SVGs pre-generated in builders.ts) ─

@@ -2,7 +2,7 @@
 
 import type { Resume, PersonalInfoContent, SummaryContent, WorkExperienceContent, EducationContent, SkillsContent, ProjectsContent, CertificationsContent, LanguagesContent, CustomContent, GitHubContent } from '@/types/resume';
 import { AvatarImage } from '../avatar-image';
-import { isSectionEmpty } from '../utils';
+import { isSectionEmpty, md } from '../utils';
 import { QrCodesPreview } from '../qr-codes-preview';
 
 const LEFT_TYPES = new Set(['skills', 'languages', 'certifications', 'custom']);
@@ -111,7 +111,7 @@ function CompactLeftContent({ section }: { section: any }) {
             <p className="text-[10px] font-semibold text-zinc-700">{item.title}</p>
             {item.subtitle && <p className="text-[9px] text-zinc-500">{item.subtitle}</p>}
             {item.date && <p className="text-[9px] text-zinc-400">{item.date}</p>}
-            {item.description && <p className="text-[9px] text-zinc-400">{item.description}</p>}
+            {item.description && <p className="text-[9px] text-zinc-400" dangerouslySetInnerHTML={{ __html: md(item.description) }} />}
           </div>
         ))}
       </div>
@@ -128,7 +128,7 @@ function CompactLeftContent({ section }: { section: any }) {
         {content.items.map((item: any) => (
           <div key={item.id}>
             <span className="text-[10px] font-medium text-zinc-700">{item.name || item.title || item.language}</span>
-            {item.description && <p className="text-[9px] text-zinc-400">{item.description}</p>}
+            {item.description && <p className="text-[9px] text-zinc-400" dangerouslySetInnerHTML={{ __html: md(item.description) }} />}
           </div>
         ))}
       </div>
@@ -142,7 +142,7 @@ function CompactRightContent({ section, resume }: { section: any; resume: Resume
   const content = section.content;
 
   if (section.type === 'summary') {
-    return <p className="text-xs leading-relaxed text-zinc-600">{(content as SummaryContent).text}</p>;
+    return <p className="text-xs leading-relaxed text-zinc-600" dangerouslySetInnerHTML={{ __html: md((content as SummaryContent).text) }} />;
   }
 
   if (section.type === 'work_experience') {
@@ -158,13 +158,13 @@ function CompactRightContent({ section, resume }: { section: any; resume: Resume
               </div>
               <span className="shrink-0 text-[10px] text-zinc-400">{item.startDate} – {item.endDate || (item.current ? (resume.language === 'zh' ? '至今' : 'Present') : '')}</span>
             </div>
-            {item.description && <p className="mt-0.5 text-xs text-zinc-600">{item.description}</p>}
+            {item.description && <p className="mt-0.5 text-xs text-zinc-600" dangerouslySetInnerHTML={{ __html: md(item.description) }} />}
             {item.technologies?.length > 0 && (
               <p className="mt-0.5 text-[10px] text-zinc-400">{resume.language === 'zh' ? '技术栈' : 'Tech'}: {item.technologies.join(', ')}</p>
             )}
             {item.highlights?.length > 0 && (
               <ul className="mt-0.5 list-disc pl-3.5">
-                {item.highlights.map((h: string, i: number) => <li key={i} className="text-xs text-zinc-600">{h}</li>)}
+                {item.highlights.map((h: string, i: number) => <li key={i} className="text-xs text-zinc-600" dangerouslySetInnerHTML={{ __html: md(h) }} />)}
               </ul>
             )}
           </div>
@@ -189,7 +189,7 @@ function CompactRightContent({ section, resume }: { section: any; resume: Resume
             {item.gpa && <p className="text-[10px] text-zinc-500">GPA: {item.gpa}</p>}
             {item.highlights?.length > 0 && (
               <ul className="mt-0.5 list-disc pl-3.5">
-                {item.highlights.map((h: string, i: number) => <li key={i} className="text-xs text-zinc-600">{h}</li>)}
+                {item.highlights.map((h: string, i: number) => <li key={i} className="text-xs text-zinc-600" dangerouslySetInnerHTML={{ __html: md(h) }} />)}
               </ul>
             )}
           </div>
@@ -207,13 +207,13 @@ function CompactRightContent({ section, resume }: { section: any; resume: Resume
               <span className="text-xs font-bold text-zinc-800">{item.name}</span>
               {item.startDate && <span className="shrink-0 text-[10px] text-zinc-400">{item.startDate} – {item.endDate || (resume.language === 'zh' ? '至今' : 'Present')}</span>}
             </div>
-            {item.description && <p className="mt-0.5 text-xs text-zinc-600">{item.description}</p>}
+            {item.description && <p className="mt-0.5 text-xs text-zinc-600" dangerouslySetInnerHTML={{ __html: md(item.description) }} />}
             {item.technologies?.length > 0 && (
               <p className="mt-0.5 text-[10px] text-zinc-400">{resume.language === 'zh' ? '技术栈' : 'Tech'}: {item.technologies.join(', ')}</p>
             )}
             {item.highlights?.length > 0 && (
               <ul className="mt-0.5 list-disc pl-3.5">
-                {item.highlights.map((h: string, i: number) => <li key={i} className="text-xs text-zinc-600">{h}</li>)}
+                {item.highlights.map((h: string, i: number) => <li key={i} className="text-xs text-zinc-600" dangerouslySetInnerHTML={{ __html: md(h) }} />)}
               </ul>
             )}
           </div>
@@ -233,7 +233,7 @@ function CompactRightContent({ section, resume }: { section: any; resume: Resume
               <span className="text-[10px] text-zinc-400">{'\u2B50'} {item.stars?.toLocaleString()}</span>
             </div>
             {item.language && <span className="text-[10px] text-zinc-500">{item.language}</span>}
-            {item.description && <p className="mt-0.5 text-xs text-zinc-600">{item.description}</p>}
+            {item.description && <p className="mt-0.5 text-xs text-zinc-600" dangerouslySetInnerHTML={{ __html: md(item.description) }} />}
           </div>
         ))}
       </div>
@@ -250,7 +250,7 @@ function CompactRightContent({ section, resume }: { section: any; resume: Resume
         {content.items.map((item: any) => (
           <div key={item.id}>
             <span className="text-xs font-medium text-zinc-700">{item.name || item.title || item.language}</span>
-            {item.description && <p className="text-xs text-zinc-600">{item.description}</p>}
+            {item.description && <p className="text-xs text-zinc-600" dangerouslySetInnerHTML={{ __html: md(item.description) }} />}
           </div>
         ))}
       </div>

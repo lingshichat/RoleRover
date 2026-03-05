@@ -14,7 +14,7 @@ import type {
   GitHubContent,
 } from '@/types/resume';
 import { AvatarImage } from '../avatar-image';
-import { isSectionEmpty } from '../utils';
+import { isSectionEmpty, md } from '../utils';
 import { QrCodesPreview } from '../qr-codes-preview';
 
 const BG = '#111827';
@@ -92,9 +92,7 @@ function NeonSectionContent({ section, resume }: { section: any; resume: Resume 
   if (section.type === 'summary') {
     return (
       <div className="rounded-lg p-4" style={{ border: `1px solid ${CYAN}20`, backgroundColor: `${CYAN}08` }}>
-        <p className="text-sm leading-relaxed" style={{ color: TEXT }}>
-          {(content as SummaryContent).text}
-        </p>
+        <p className="text-sm leading-relaxed" style={{ color: TEXT }} dangerouslySetInnerHTML={{ __html: md((content as SummaryContent).text) }} />
       </div>
     );
   }
@@ -112,7 +110,7 @@ function NeonSectionContent({ section, resume }: { section: any; resume: Resume 
               </span>
             </div>
             {item.company && <p className="text-sm font-medium" style={{ color: VIOLET }}>{item.company}</p>}
-            {item.description && <p className="mt-1 text-sm" style={{ color: TEXT }}>{item.description}</p>}
+            {item.description && <p className="mt-1 text-sm" style={{ color: TEXT }} dangerouslySetInnerHTML={{ __html: md(item.description) }} />}
             {item.technologies?.length > 0 && (
               <div className="mt-2 flex flex-wrap gap-1">
                 {item.technologies.map((t: string, i: number) => (
@@ -127,7 +125,7 @@ function NeonSectionContent({ section, resume }: { section: any; resume: Resume 
                 {item.highlights.map((h: string, i: number) => (
                   <li key={i} className="flex items-start gap-2 text-sm" style={{ color: TEXT }}>
                     <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: CYAN, boxShadow: `0 0 6px ${CYAN}` }} />
-                    {h}
+                    <span dangerouslySetInnerHTML={{ __html: md(h) }} />
                   </li>
                 ))}
               </ul>
@@ -155,7 +153,7 @@ function NeonSectionContent({ section, resume }: { section: any; resume: Resume 
                 {item.highlights.map((h: string, i: number) => (
                   <li key={i} className="flex items-start gap-2 text-sm" style={{ color: TEXT }}>
                     <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: VIOLET, boxShadow: `0 0 6px ${VIOLET}` }} />
-                    {h}
+                    <span dangerouslySetInnerHTML={{ __html: md(h) }} />
                   </li>
                 ))}
               </ul>
@@ -208,7 +206,7 @@ function NeonSectionContent({ section, resume }: { section: any; resume: Resume 
                 </span>
               )}
             </div>
-            {item.description && <p className="mt-0.5 text-sm" style={{ color: TEXT }}>{item.description}</p>}
+            {item.description && <p className="mt-0.5 text-sm" style={{ color: TEXT }} dangerouslySetInnerHTML={{ __html: md(item.description) }} />}
             {item.technologies?.length > 0 && (
               <div className="mt-2 flex flex-wrap gap-1">
                 {item.technologies.map((t: string, i: number) => (
@@ -223,7 +221,7 @@ function NeonSectionContent({ section, resume }: { section: any; resume: Resume 
                 {item.highlights.map((h: string, i: number) => (
                   <li key={i} className="flex items-start gap-2 text-sm" style={{ color: TEXT }}>
                     <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: CYAN, boxShadow: `0 0 6px ${CYAN}` }} />
-                    {h}
+                    <span dangerouslySetInnerHTML={{ __html: md(h) }} />
                   </li>
                 ))}
               </ul>
@@ -274,7 +272,7 @@ function NeonSectionContent({ section, resume }: { section: any; resume: Resume 
               <span className="text-xs" style={{ color: TEXT_DIM }}>{'\u2B50'} {item.stars?.toLocaleString()}</span>
             </div>
             {item.language && <span className="text-xs" style={{ color: VIOLET }}>{item.language}</span>}
-            {item.description && <p className="mt-1 text-sm" style={{ color: TEXT }}>{item.description}</p>}
+            {item.description && <p className="mt-1 text-sm" style={{ color: TEXT }} dangerouslySetInnerHTML={{ __html: md(item.description) }} />}
           </div>
         ))}
       </div>
@@ -292,7 +290,7 @@ function NeonSectionContent({ section, resume }: { section: any; resume: Resume 
               {item.date && <span className="text-xs" style={{ color: TEXT_DIM }}>{item.date}</span>}
             </div>
             {item.subtitle && <p className="text-sm" style={{ color: VIOLET }}>{item.subtitle}</p>}
-            {item.description && <p className="mt-1 text-sm" style={{ color: TEXT }}>{item.description}</p>}
+            {item.description && <p className="mt-1 text-sm" style={{ color: TEXT }} dangerouslySetInnerHTML={{ __html: md(item.description) }} />}
           </div>
         ))}
       </div>
@@ -310,7 +308,7 @@ function NeonSectionContent({ section, resume }: { section: any; resume: Resume 
         {content.items.map((item: any) => (
           <div key={item.id} className="rounded-lg p-3" style={{ border: `1px solid ${CYAN}20` }}>
             <span className="text-sm font-medium" style={{ color: CYAN }}>{item.name || item.title || item.language}</span>
-            {item.description && <p className="text-sm" style={{ color: TEXT }}>{item.description}</p>}
+            {item.description && <p className="text-sm" style={{ color: TEXT }} dangerouslySetInnerHTML={{ __html: md(item.description) }} />}
           </div>
         ))}
       </div>

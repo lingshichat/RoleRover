@@ -14,7 +14,7 @@ import type {
   GitHubContent,
 } from '@/types/resume';
 import { AvatarImage } from '../avatar-image';
-import { isSectionEmpty } from '../utils';
+import { isSectionEmpty, md } from '../utils';
 import { QrCodesPreview } from '../qr-codes-preview';
 
 const PRIMARY = '#881337';
@@ -73,9 +73,8 @@ function RoseSectionContent({ section, resume }: { section: any; resume: Resume 
 
   if (section.type === 'summary') {
     return (
-      <p className="rounded-xl px-4 py-3 text-sm italic leading-relaxed" style={{ backgroundColor: ROSE_50, color: '#57534e' }}>
-        {(content as SummaryContent).text}
-      </p>
+      <p className="rounded-xl px-4 py-3 text-sm italic leading-relaxed" style={{ backgroundColor: ROSE_50, color: '#57534e' }}
+        dangerouslySetInnerHTML={{ __html: md((content as SummaryContent).text) }} />
     );
   }
 
@@ -91,7 +90,7 @@ function RoseSectionContent({ section, resume }: { section: any; resume: Resume 
               </span>
             </div>
             {item.company && <p className="text-sm" style={{ color: ACCENT }}>{item.company}</p>}
-            {item.description && <p className="mt-1 text-sm text-zinc-600">{item.description}</p>}
+            {item.description && <p className="mt-1 text-sm text-zinc-600" dangerouslySetInnerHTML={{ __html: md(item.description) }} />}
             {item.technologies?.length > 0 && (
               <div className="mt-1.5 flex flex-wrap gap-1">
                 {item.technologies.map((t: string, i: number) => (
@@ -104,7 +103,7 @@ function RoseSectionContent({ section, resume }: { section: any; resume: Resume 
                 {item.highlights.map((h: string, i: number) => (
                   <li key={i} className="flex items-start gap-2 text-sm text-zinc-600">
                     <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: ACCENT }} />
-                    {h}
+                    <span dangerouslySetInnerHTML={{ __html: md(h) }} />
                   </li>
                 ))}
               </ul>
@@ -131,7 +130,7 @@ function RoseSectionContent({ section, resume }: { section: any; resume: Resume 
                 {item.highlights.map((h: string, i: number) => (
                   <li key={i} className="flex items-start gap-2 text-sm text-zinc-600">
                     <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: ACCENT }} />
-                    {h}
+                    <span dangerouslySetInnerHTML={{ __html: md(h) }} />
                   </li>
                 ))}
               </ul>
@@ -176,7 +175,7 @@ function RoseSectionContent({ section, resume }: { section: any; resume: Resume 
                 <span className="shrink-0 text-xs" style={{ color: ACCENT }}>{item.startDate} {'\u2013'} {item.endDate || (resume.language === 'zh' ? '至今' : 'Present')}</span>
               )}
             </div>
-            {item.description && <p className="mt-0.5 text-sm text-zinc-600">{item.description}</p>}
+            {item.description && <p className="mt-0.5 text-sm text-zinc-600" dangerouslySetInnerHTML={{ __html: md(item.description) }} />}
             {item.technologies?.length > 0 && (
               <div className="mt-1.5 flex flex-wrap gap-1">
                 {item.technologies.map((t: string, i: number) => (
@@ -189,7 +188,7 @@ function RoseSectionContent({ section, resume }: { section: any; resume: Resume 
                 {item.highlights.map((h: string, i: number) => (
                   <li key={i} className="flex items-start gap-2 text-sm text-zinc-600">
                     <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: ACCENT }} />
-                    {h}
+                    <span dangerouslySetInnerHTML={{ __html: md(h) }} />
                   </li>
                 ))}
               </ul>
@@ -238,7 +237,7 @@ function RoseSectionContent({ section, resume }: { section: any; resume: Resume 
               <span className="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium" style={{ backgroundColor: ROSE_50, color: ACCENT }}>&#11088; {item.stars?.toLocaleString()}</span>
             </div>
             {item.language && <span className="text-xs font-medium" style={{ color: ACCENT }}>{item.language}</span>}
-            {item.description && <p className="mt-0.5 text-sm text-zinc-600">{item.description}</p>}
+            {item.description && <p className="mt-0.5 text-sm text-zinc-600" dangerouslySetInnerHTML={{ __html: md(item.description) }} />}
           </div>
         ))}
       </div>
@@ -255,7 +254,7 @@ function RoseSectionContent({ section, resume }: { section: any; resume: Resume 
               {item.date && <span className="shrink-0 text-xs" style={{ color: ACCENT }}>{item.date}</span>}
             </div>
             {item.subtitle && <p className="text-sm" style={{ color: ACCENT }}>{item.subtitle}</p>}
-            {item.description && <p className="mt-0.5 text-sm text-zinc-600">{item.description}</p>}
+            {item.description && <p className="mt-0.5 text-sm text-zinc-600" dangerouslySetInnerHTML={{ __html: md(item.description) }} />}
           </div>
         ))}
       </div>
@@ -273,7 +272,7 @@ function RoseSectionContent({ section, resume }: { section: any; resume: Resume 
         {content.items.map((item: any) => (
           <div key={item.id} className="rounded-xl border p-3" style={{ borderColor: ROSE_100 }}>
             <span className="text-sm font-medium" style={{ color: PRIMARY }}>{item.name || item.title || item.language}</span>
-            {item.description && <p className="text-sm text-zinc-600">{item.description}</p>}
+            {item.description && <p className="text-sm text-zinc-600" dangerouslySetInnerHTML={{ __html: md(item.description) }} />}
           </div>
         ))}
       </div>

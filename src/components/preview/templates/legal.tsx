@@ -2,7 +2,7 @@
 
 import type { Resume, PersonalInfoContent, SummaryContent, WorkExperienceContent, EducationContent, SkillsContent, ProjectsContent, CertificationsContent, LanguagesContent, GitHubContent, CustomContent } from '@/types/resume';
 import { AvatarImage } from '../avatar-image';
-import { isSectionEmpty } from '../utils';
+import { isSectionEmpty, md } from '../utils';
 import { QrCodesPreview } from '../qr-codes-preview';
 
 const PRIMARY = '#1a472a';
@@ -67,9 +67,7 @@ function LegalSectionContent({ section, resume }: { section: any; resume: Resume
 
   if (section.type === 'summary') {
     return (
-      <p className="text-sm italic leading-relaxed" style={{ color: BODY_TEXT }}>
-        {(content as SummaryContent).text}
-      </p>
+      <p className="text-sm italic leading-relaxed" style={{ color: BODY_TEXT }} dangerouslySetInnerHTML={{ __html: md((content as SummaryContent).text) }} />
     );
   }
 
@@ -88,14 +86,14 @@ function LegalSectionContent({ section, resume }: { section: any; resume: Resume
                 {item.startDate} - {item.endDate || (item.current ? (resume.language === 'zh' ? '至今' : 'Present') : '')}
               </span>
             </div>
-            {item.description && <p className="mt-1 text-sm" style={{ color: BODY_TEXT }}>{item.description}</p>}
+            {item.description && <p className="mt-1 text-sm" style={{ color: BODY_TEXT }} dangerouslySetInnerHTML={{ __html: md(item.description) }} />}
             {item.technologies?.length > 0 && (
               <p className="mt-0.5 text-xs italic" style={{ color: MUTED }}>{resume.language === 'zh' ? '技术栈' : 'Technologies'}: {item.technologies.join(', ')}</p>
             )}
             {item.highlights?.length > 0 && (
               <ul className="mt-1.5 list-disc pl-5 space-y-0.5">
                 {item.highlights.map((h: string, i: number) => (
-                  <li key={i} className="text-sm" style={{ color: BODY_TEXT }}>{h}</li>
+                  <li key={i} className="text-sm" style={{ color: BODY_TEXT }} dangerouslySetInnerHTML={{ __html: md(h) }} />
                 ))}
               </ul>
             )}
@@ -126,7 +124,7 @@ function LegalSectionContent({ section, resume }: { section: any; resume: Resume
             {item.highlights?.length > 0 && (
               <ul className="mt-1 list-disc pl-5 space-y-0.5">
                 {item.highlights.map((h: string, i: number) => (
-                  <li key={i} className="text-sm" style={{ color: BODY_TEXT }}>{h}</li>
+                  <li key={i} className="text-sm" style={{ color: BODY_TEXT }} dangerouslySetInnerHTML={{ __html: md(h) }} />
                 ))}
               </ul>
             )}
@@ -162,14 +160,14 @@ function LegalSectionContent({ section, resume }: { section: any; resume: Resume
                 </span>
               )}
             </div>
-            {item.description && <p className="mt-1 text-sm" style={{ color: BODY_TEXT }}>{item.description}</p>}
+            {item.description && <p className="mt-1 text-sm" style={{ color: BODY_TEXT }} dangerouslySetInnerHTML={{ __html: md(item.description) }} />}
             {item.technologies?.length > 0 && (
               <p className="mt-0.5 text-xs italic" style={{ color: MUTED }}>{resume.language === 'zh' ? '技术栈' : 'Technologies'}: {item.technologies.join(', ')}</p>
             )}
             {item.highlights?.length > 0 && (
               <ul className="mt-1 list-disc pl-5 space-y-0.5">
                 {item.highlights.map((h: string, i: number) => (
-                  <li key={i} className="text-sm" style={{ color: BODY_TEXT }}>{h}</li>
+                  <li key={i} className="text-sm" style={{ color: BODY_TEXT }} dangerouslySetInnerHTML={{ __html: md(h) }} />
                 ))}
               </ul>
             )}
@@ -218,7 +216,7 @@ function LegalSectionContent({ section, resume }: { section: any; resume: Resume
             {item.language && (
               <span className="text-xs" style={{ color: ACCENT }}>{item.language}</span>
             )}
-            {item.description && <p className="mt-1 text-sm" style={{ color: BODY_TEXT }}>{item.description}</p>}
+            {item.description && <p className="mt-1 text-sm" style={{ color: BODY_TEXT }} dangerouslySetInnerHTML={{ __html: md(item.description) }} />}
           </div>
         ))}
       </div>
@@ -237,7 +235,7 @@ function LegalSectionContent({ section, resume }: { section: any; resume: Resume
               </div>
               {item.date && <span className="shrink-0 text-xs italic" style={{ color: MUTED }}>{item.date}</span>}
             </div>
-            {item.description && <p className="mt-1 text-sm" style={{ color: BODY_TEXT }}>{item.description}</p>}
+            {item.description && <p className="mt-1 text-sm" style={{ color: BODY_TEXT }} dangerouslySetInnerHTML={{ __html: md(item.description) }} />}
           </div>
         ))}
       </div>
@@ -255,7 +253,7 @@ function LegalSectionContent({ section, resume }: { section: any; resume: Resume
         {content.items.map((item: any) => (
           <div key={item.id}>
             <span className="text-sm font-bold" style={{ color: PRIMARY }}>{item.name || item.title || item.language}</span>
-            {item.description && <p className="text-sm" style={{ color: BODY_TEXT }}>{item.description}</p>}
+            {item.description && <p className="text-sm" style={{ color: BODY_TEXT }} dangerouslySetInnerHTML={{ __html: md(item.description) }} />}
           </div>
         ))}
       </div>

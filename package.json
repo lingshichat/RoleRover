@@ -40,6 +40,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "drizzle-orm": "^0.45.1",
+    "docx": "^9.0.0",
     "jsonrepair": "^3.13.2",
     "lucide-react": "^0.563.0",
     "mupdf": "^1.27.0",

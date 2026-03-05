@@ -14,7 +14,7 @@ import type {
   GitHubContent,
 } from '@/types/resume';
 import { AvatarImage } from '../avatar-image';
-import { isSectionEmpty } from '../utils';
+import { isSectionEmpty, md } from '../utils';
 import { QrCodesPreview } from '../qr-codes-preview';
 
 const RED = '#dc2626';
@@ -67,7 +67,7 @@ function SwissSectionContent({ section, lang }: { section: any; lang?: string })
   const content = section.content;
 
   if (section.type === 'summary') {
-    return <p className="text-sm leading-relaxed" style={{ color: '#3f3f46' }}>{(content as SummaryContent).text}</p>;
+    return <p className="text-sm leading-relaxed" style={{ color: '#3f3f46' }} dangerouslySetInnerHTML={{ __html: md((content as SummaryContent).text) }} />;
   }
 
   if (section.type === 'work_experience') {
@@ -81,7 +81,7 @@ function SwissSectionContent({ section, lang }: { section: any; lang?: string })
             <div>
               <h3 className="text-sm font-bold" style={{ color: TEXT }}>{item.position}</h3>
               {item.company && <p className="text-sm" style={{ color: RED }}>{item.company}</p>}
-              {item.description && <p className="mt-1 text-sm" style={{ color: '#3f3f46' }}>{item.description}</p>}
+              {item.description && <p className="mt-1 text-sm" style={{ color: '#3f3f46' }} dangerouslySetInnerHTML={{ __html: md(item.description) }} />}
               {item.technologies?.length > 0 && (
                 <p className="mt-0.5 text-xs" style={{ color: '#52525b' }}>{lang === 'zh' ? '技术栈' : 'Tech'}: {item.technologies.join(', ')}</p>
               )}
@@ -90,7 +90,7 @@ function SwissSectionContent({ section, lang }: { section: any; lang?: string })
                   {item.highlights.map((h: string, i: number) => (
                     <li key={i} className="flex items-start gap-2 text-sm" style={{ color: '#3f3f46' }}>
                       <span className="mt-1.5 inline-block h-1 w-1 shrink-0" style={{ backgroundColor: RED }} />
-                      {h}
+                      <span dangerouslySetInnerHTML={{ __html: md(h) }} />
                     </li>
                   ))}
                 </ul>
@@ -117,7 +117,7 @@ function SwissSectionContent({ section, lang }: { section: any; lang?: string })
                   {item.highlights.map((h: string, i: number) => (
                     <li key={i} className="flex items-start gap-2 text-sm" style={{ color: '#3f3f46' }}>
                       <span className="mt-1.5 inline-block h-1 w-1 shrink-0" style={{ backgroundColor: RED }} />
-                      {h}
+                      <span dangerouslySetInnerHTML={{ __html: md(h) }} />
                     </li>
                   ))}
                 </ul>
@@ -152,7 +152,7 @@ function SwissSectionContent({ section, lang }: { section: any; lang?: string })
             ) : <span />}
             <div>
               <h3 className="text-sm font-bold" style={{ color: TEXT }}>{item.name}</h3>
-              {item.description && <p className="mt-0.5 text-sm" style={{ color: '#3f3f46' }}>{item.description}</p>}
+              {item.description && <p className="mt-0.5 text-sm" style={{ color: '#3f3f46' }} dangerouslySetInnerHTML={{ __html: md(item.description) }} />}
               {item.technologies?.length > 0 && (
                 <p className="mt-0.5 text-xs" style={{ color: '#52525b' }}>{lang === 'zh' ? '技术栈' : 'Tech'}: {item.technologies.join(', ')}</p>
               )}
@@ -161,7 +161,7 @@ function SwissSectionContent({ section, lang }: { section: any; lang?: string })
                   {item.highlights.map((h: string, i: number) => (
                     <li key={i} className="flex items-start gap-2 text-sm" style={{ color: '#3f3f46' }}>
                       <span className="mt-1.5 inline-block h-1 w-1 shrink-0" style={{ backgroundColor: RED }} />
-                      {h}
+                      <span dangerouslySetInnerHTML={{ __html: md(h) }} />
                     </li>
                   ))}
                 </ul>
@@ -212,7 +212,7 @@ function SwissSectionContent({ section, lang }: { section: any; lang?: string })
             <div>
               <h3 className="text-sm font-bold" style={{ color: TEXT }}>{item.name}</h3>
               {item.language && <span className="text-xs" style={{ color: RED }}>{item.language}</span>}
-              {item.description && <p className="mt-0.5 text-sm" style={{ color: '#3f3f46' }}>{item.description}</p>}
+              {item.description && <p className="mt-0.5 text-sm" style={{ color: '#3f3f46' }} dangerouslySetInnerHTML={{ __html: md(item.description) }} />}
             </div>
           </div>
         ))}
@@ -229,7 +229,7 @@ function SwissSectionContent({ section, lang }: { section: any; lang?: string })
             <div>
               <h3 className="text-sm font-bold" style={{ color: TEXT }}>{item.title}</h3>
               {item.subtitle && <p className="text-sm" style={{ color: RED }}>{item.subtitle}</p>}
-              {item.description && <p className="mt-0.5 text-sm" style={{ color: '#3f3f46' }}>{item.description}</p>}
+              {item.description && <p className="mt-0.5 text-sm" style={{ color: '#3f3f46' }} dangerouslySetInnerHTML={{ __html: md(item.description) }} />}
             </div>
           </div>
         ))}
@@ -248,7 +248,7 @@ function SwissSectionContent({ section, lang }: { section: any; lang?: string })
         {content.items.map((item: any) => (
           <div key={item.id}>
             <span className="text-sm font-bold" style={{ color: TEXT }}>{item.name || item.title || item.language}</span>
-            {item.description && <p className="text-sm" style={{ color: '#3f3f46' }}>{item.description}</p>}
+            {item.description && <p className="text-sm" style={{ color: '#3f3f46' }} dangerouslySetInnerHTML={{ __html: md(item.description) }} />}
           </div>
         ))}
       </div>

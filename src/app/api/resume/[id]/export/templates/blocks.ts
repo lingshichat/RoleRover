@@ -9,7 +9,7 @@ import type {
   CustomContent,
   GitHubContent,
 } from '@/types/resume';
-import { esc, getPersonalInfo, visibleSections, buildHighlights, buildQrCodesHtml, type ResumeWithSections, type Section } from '../utils';
+import { esc, md, getPersonalInfo, visibleSections, buildHighlights, buildQrCodesHtml, type ResumeWithSections, type Section } from '../utils';
 
 const PRIMARY = '#37352f';
 const ACCENT = '#2383e2';
@@ -18,13 +18,13 @@ const SUBTLE_BG = '#f7f6f3';
 function buildBlocksSectionContent(section: Section, lang: string): string {
   const c = section.content as any;
 
-  if (section.type === 'summary') return `<div class="rounded-md p-3" style="background-color:${SUBTLE_BG}"><p class="text-sm leading-relaxed" style="color:${PRIMARY}">${esc((c as SummaryContent).text)}</p></div>`;
+  if (section.type === 'summary') return `<div class="rounded-md p-3" style="background-color:${SUBTLE_BG}"><p class="text-sm leading-relaxed" style="color:${PRIMARY}">${md((c as SummaryContent).text)}</p></div>`;
 
   if (section.type === 'work_experience') {
     return `<div class="space-y-3">${((c as WorkExperienceContent).items || []).map((it: any) => `<div class="rounded-md border p-3" style="border-color:#e3e2de">
       <div class="flex items-baseline justify-between"><h3 class="text-sm font-semibold" style="color:${PRIMARY}">${esc(it.position)}</h3><span class="shrink-0 text-xs" style="color:#9b9a97">${esc(it.startDate)} - ${esc(it.endDate) || (it.current ? (lang === 'zh' ? '至今' : 'Present') : '')}</span></div>
       ${it.company ? `<p class="text-sm" style="color:${ACCENT}">${esc(it.company)}${it.location ? ` , ${esc(it.location)}` : ''}</p>` : ''}
-      ${it.description ? `<p class="mt-1 text-sm" style="color:#787774">${esc(it.description)}</p>` : ''}
+      ${it.description ? `<p class="mt-1 text-sm" style="color:#787774">${md(it.description)}</p>` : ''}
       ${it.technologies?.length ? `<div class="mt-1.5 flex flex-wrap gap-1">${it.technologies.map((t: string) => `<span class="rounded-sm px-1.5 py-0.5 text-[10px]" style="background-color:${SUBTLE_BG};color:#787774">${esc(t)}</span>`).join('')}</div>` : ''}
       ${it.highlights?.length ? `<ul class="mt-1 list-disc pl-4">${buildHighlights(it.highlights, 'text-sm" style="color:#787774')}</ul>` : ''}
     </div>`).join('')}</div>`;
@@ -50,7 +50,7 @@ function buildBlocksSectionContent(section: Section, lang: string): string {
   if (section.type === 'projects') {
     return `<div class="space-y-3">${((c as ProjectsContent).items || []).map((it: any) => `<div class="rounded-md border p-3" style="border-color:#e3e2de">
       <div class="flex items-baseline justify-between"><h3 class="text-sm font-semibold" style="color:${ACCENT}">${esc(it.name)}</h3>${it.startDate ? `<span class="text-xs" style="color:#9b9a97">${esc(it.startDate)} - ${it.endDate ? esc(it.endDate) : (lang === 'zh' ? '至今' : 'Present')}</span>` : ''}</div>
-      ${it.description ? `<p class="mt-1 text-sm" style="color:#787774">${esc(it.description)}</p>` : ''}
+      ${it.description ? `<p class="mt-1 text-sm" style="color:#787774">${md(it.description)}</p>` : ''}
       ${it.technologies?.length ? `<div class="mt-1.5 flex flex-wrap gap-1">${it.technologies.map((t: string) => `<span class="rounded-sm px-1.5 py-0.5 text-[10px]" style="background-color:${SUBTLE_BG};color:#787774">${esc(t)}</span>`).join('')}</div>` : ''}
       ${it.highlights?.length ? `<ul class="mt-1 list-disc pl-4">${buildHighlights(it.highlights, 'text-sm" style="color:#787774')}</ul>` : ''}
     </div>`).join('')}</div>`;
@@ -60,7 +60,7 @@ function buildBlocksSectionContent(section: Section, lang: string): string {
     return `<div class="space-y-3">${((c as GitHubContent).items || []).map((it: any) => `<div class="rounded-md border p-3" style="border-color:#e3e2de">
       <div class="flex items-baseline justify-between"><span class="text-sm font-semibold" style="color:${ACCENT}">${esc(it.name)}</span><span class="text-xs" style="color:#9b9a97">⭐ ${it.stars?.toLocaleString() ?? 0}</span></div>
       ${it.language ? `<span class="text-xs" style="color:#9b9a97">${esc(it.language)}</span>` : ''}
-      ${it.description ? `<p class="mt-1 text-sm" style="color:#787774">${esc(it.description)}</p>` : ''}
+      ${it.description ? `<p class="mt-1 text-sm" style="color:#787774">${md(it.description)}</p>` : ''}
     </div>`).join('')}</div>`;
   }
 
@@ -81,7 +81,7 @@ function buildBlocksSectionContent(section: Section, lang: string): string {
     return `<div class="space-y-3">${((c as CustomContent).items || []).map((it: any) => `<div class="rounded-md border p-3" style="border-color:#e3e2de">
       <div class="flex items-baseline justify-between"><h3 class="text-sm font-semibold" style="color:${PRIMARY}">${esc(it.title)}</h3>${it.date ? `<span class="text-xs" style="color:#9b9a97">${esc(it.date)}</span>` : ''}</div>
       ${it.subtitle ? `<p class="text-sm" style="color:#9b9a97">${esc(it.subtitle)}</p>` : ''}
-      ${it.description ? `<p class="mt-1 text-sm" style="color:#787774">${esc(it.description)}</p>` : ''}
+      ${it.description ? `<p class="mt-1 text-sm" style="color:#787774">${md(it.description)}</p>` : ''}
     </div>`).join('')}</div>`;
   }
 

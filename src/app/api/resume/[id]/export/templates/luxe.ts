@@ -9,7 +9,7 @@ import type {
   CustomContent,
   GitHubContent,
 } from '@/types/resume';
-import { esc, getPersonalInfo, visibleSections, buildQrCodesHtml, type ResumeWithSections, type Section } from '../utils';
+import { esc, md, getPersonalInfo, visibleSections, buildQrCodesHtml, type ResumeWithSections, type Section } from '../utils';
 
 const GOLD = '#d4af37';
 const TEXT = '#000000';
@@ -18,15 +18,15 @@ const BG = '#fafaf9';
 function buildLuxeSectionContent(section: Section, lang: string): string {
   const c = section.content as any;
 
-  if (section.type === 'summary') return `<p class="text-center text-sm italic leading-relaxed" style="color:#44403c">${esc((c as SummaryContent).text)}</p>`;
+  if (section.type === 'summary') return `<p class="text-center text-sm italic leading-relaxed" style="color:#44403c">${md((c as SummaryContent).text)}</p>`;
 
   if (section.type === 'work_experience') {
     return `<div class="space-y-5">${((c as WorkExperienceContent).items || []).map((it: any) => `<div class="border-l-2 pl-4" style="border-color:${GOLD}">
       <div class="flex items-baseline justify-between"><h3 class="text-sm font-bold" style="color:${TEXT}">${esc(it.position)}</h3><span class="shrink-0 text-xs italic" style="color:#a8a29e">${esc(it.startDate)} &ndash; ${esc(it.endDate) || (it.current ? (lang === 'zh' ? '至今' : 'Present') : '')}</span></div>
       ${it.company ? `<p class="text-sm" style="color:${GOLD}">${esc(it.company)}${it.location ? `, ${esc(it.location)}` : ''}</p>` : ''}
-      ${it.description ? `<p class="mt-1 text-sm" style="color:#44403c">${esc(it.description)}</p>` : ''}
+      ${it.description ? `<p class="mt-1 text-sm" style="color:#44403c">${md(it.description)}</p>` : ''}
       ${it.technologies?.length ? `<p class="mt-0.5 text-xs italic" style="color:#a8a29e">${lang === 'zh' ? '技术栈' : 'Tech'}: ${esc(it.technologies.join(', '))}</p>` : ''}
-      ${it.highlights?.length ? `<ul class="mt-1.5 list-none space-y-0.5">${it.highlights.filter(Boolean).map((h: string) => `<li class="flex items-start gap-2 text-sm" style="color:#44403c"><span class="mt-1.5 h-1.5 w-1.5 shrink-0 rotate-45" style="background-color:${GOLD}"></span>${esc(h)}</li>`).join('')}</ul>` : ''}
+      ${it.highlights?.length ? `<ul class="mt-1.5 list-none space-y-0.5">${it.highlights.filter(Boolean).map((h: string) => `<li class="flex items-start gap-2 text-sm" style="color:#44403c"><span class="mt-1.5 h-1.5 w-1.5 shrink-0 rotate-45" style="background-color:${GOLD}"></span>${md(h)}</li>`).join('')}</ul>` : ''}
     </div>`).join('')}</div>`;
   }
 
@@ -35,7 +35,7 @@ function buildLuxeSectionContent(section: Section, lang: string): string {
       <div class="flex items-baseline justify-between"><h3 class="text-sm font-bold" style="color:${TEXT}">${esc(it.degree)}${it.field ? ` in ${esc(it.field)}` : ''}</h3><span class="shrink-0 text-xs italic" style="color:#a8a29e">${esc(it.startDate)} &ndash; ${esc(it.endDate) || (lang === 'zh' ? '至今' : 'Present')}</span></div>
       ${it.institution ? `<p class="text-sm" style="color:${GOLD}">${esc(it.institution)}${it.location ? `, ${esc(it.location)}` : ''}</p>` : ''}
       ${it.gpa ? `<p class="text-xs" style="color:#a8a29e">GPA: ${esc(it.gpa)}</p>` : ''}
-      ${it.highlights?.length ? `<ul class="mt-1 list-none space-y-0.5">${it.highlights.filter(Boolean).map((h: string) => `<li class="flex items-start gap-2 text-sm" style="color:#44403c"><span class="mt-1.5 h-1.5 w-1.5 shrink-0 rotate-45" style="background-color:${GOLD}"></span>${esc(h)}</li>`).join('')}</ul>` : ''}
+      ${it.highlights?.length ? `<ul class="mt-1 list-none space-y-0.5">${it.highlights.filter(Boolean).map((h: string) => `<li class="flex items-start gap-2 text-sm" style="color:#44403c"><span class="mt-1.5 h-1.5 w-1.5 shrink-0 rotate-45" style="background-color:${GOLD}"></span>${md(h)}</li>`).join('')}</ul>` : ''}
     </div>`).join('')}</div>`;
   }
 
@@ -48,9 +48,9 @@ function buildLuxeSectionContent(section: Section, lang: string): string {
   if (section.type === 'projects') {
     return `<div class="space-y-4">${((c as ProjectsContent).items || []).map((it: any) => `<div class="border-l-2 pl-4" style="border-color:${GOLD}">
       <div class="flex items-baseline justify-between"><h3 class="text-sm font-bold" style="color:${TEXT}">${esc(it.name)}</h3>${it.startDate ? `<span class="shrink-0 text-xs italic" style="color:#a8a29e">${esc(it.startDate)} \u2013 ${it.endDate ? esc(it.endDate) : (lang === 'zh' ? '至今' : 'Present')}</span>` : ''}</div>
-      ${it.description ? `<p class="mt-0.5 text-sm" style="color:#44403c">${esc(it.description)}</p>` : ''}
+      ${it.description ? `<p class="mt-0.5 text-sm" style="color:#44403c">${md(it.description)}</p>` : ''}
       ${it.technologies?.length ? `<p class="mt-0.5 text-xs italic" style="color:#a8a29e">${lang === 'zh' ? '技术栈' : 'Tech'}: ${esc(it.technologies.join(', '))}</p>` : ''}
-      ${it.highlights?.length ? `<ul class="mt-1 list-none space-y-0.5">${it.highlights.filter(Boolean).map((h: string) => `<li class="flex items-start gap-2 text-sm" style="color:#44403c"><span class="mt-1.5 h-1.5 w-1.5 shrink-0 rotate-45" style="background-color:${GOLD}"></span>${esc(h)}</li>`).join('')}</ul>` : ''}
+      ${it.highlights?.length ? `<ul class="mt-1 list-none space-y-0.5">${it.highlights.filter(Boolean).map((h: string) => `<li class="flex items-start gap-2 text-sm" style="color:#44403c"><span class="mt-1.5 h-1.5 w-1.5 shrink-0 rotate-45" style="background-color:${GOLD}"></span>${md(h)}</li>`).join('')}</ul>` : ''}
     </div>`).join('')}</div>`;
   }
 
@@ -70,7 +70,7 @@ function buildLuxeSectionContent(section: Section, lang: string): string {
     return `<div class="space-y-4">${((c as GitHubContent).items || []).map((it: any) => `<div class="border-l-2 pl-4" style="border-color:${GOLD}">
       <div class="flex items-baseline justify-between"><h3 class="text-sm font-bold" style="color:${TEXT}">${esc(it.name)}</h3><span class="shrink-0 text-xs italic" style="color:#a8a29e">&#11088; ${it.stars?.toLocaleString() ?? 0}</span></div>
       ${it.language ? `<span class="text-xs" style="color:${GOLD}">${esc(it.language)}</span>` : ''}
-      ${it.description ? `<p class="mt-0.5 text-sm" style="color:#44403c">${esc(it.description)}</p>` : ''}
+      ${it.description ? `<p class="mt-0.5 text-sm" style="color:#44403c">${md(it.description)}</p>` : ''}
     </div>`).join('')}</div>`;
   }
 
@@ -78,14 +78,14 @@ function buildLuxeSectionContent(section: Section, lang: string): string {
     return `<div class="space-y-4">${((c as CustomContent).items || []).map((it: any) => `<div class="border-l-2 pl-4" style="border-color:${GOLD}">
       <div class="flex items-baseline justify-between"><h3 class="text-sm font-bold" style="color:${TEXT}">${esc(it.title)}</h3>${it.date ? `<span class="shrink-0 text-xs italic" style="color:${GOLD}">${esc(it.date)}</span>` : ''}</div>
       ${it.subtitle ? `<p class="text-sm" style="color:${GOLD}">${esc(it.subtitle)}</p>` : ''}
-      ${it.description ? `<p class="mt-0.5 text-sm" style="color:#44403c">${esc(it.description)}</p>` : ''}
+      ${it.description ? `<p class="mt-0.5 text-sm" style="color:#44403c">${md(it.description)}</p>` : ''}
     </div>`).join('')}</div>`;
   }
 
   if (section.type === 'qr_codes') return buildQrCodesHtml(section);
 
   if (c.items) {
-    return `<div class="space-y-2">${c.items.map((it: any) => `<div><span class="text-sm font-bold" style="color:${TEXT}">${esc(it.name || it.title || it.language)}</span>${it.description ? `<p class="text-sm" style="color:#44403c">${esc(it.description)}</p>` : ''}</div>`).join('')}</div>`;
+    return `<div class="space-y-2">${c.items.map((it: any) => `<div><span class="text-sm font-bold" style="color:${TEXT}">${esc(it.name || it.title || it.language)}</span>${it.description ? `<p class="text-sm" style="color:#44403c">${md(it.description)}</p>` : ''}</div>`).join('')}</div>`;
   }
 
   return '';
