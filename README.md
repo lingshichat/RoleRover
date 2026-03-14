@@ -18,6 +18,16 @@ Build professional resumes with drag-and-drop editing, real-time AI optimization
 
 ---
 
+## Community
+
+Join our groups for discussion and support:
+
+| QQ Group | WeChat Group | Lark Group |
+|:---:|:---:|:---:|
+| <img src="images/chat-group.jpg" width="200" alt="QQ Group QR Code" /> | <img src="images/wchat-group.jpg" width="200" alt="WeChat Group QR Code" /> | <img src="images/lark-chat.png" width="200" alt="Lark Group QR Code" /> |
+
+---
+
 ## Screenshots
 
 | Template Gallery | Resume Editor |
@@ -390,14 +400,6 @@ Contributions are welcome! Here's how to get started:
 3. Commit your changes: `git commit -m 'feat: add your feature'`
 4. Push to the branch: `git push origin feat/your-feature`
 5. Open a Pull Request
-
-## Community
-
-Join our groups for discussion and support:
-
-| QQ Group | WeChat Group |
-|:---:|:---:|
-| <img src="images/chat-group.jpg" width="200" alt="QQ Group QR Code" /> | <img src="images/wchat-group.jpg" width="200" alt="WeChat Group QR Code" /> |
 
 ## FAQ
 
