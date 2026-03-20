@@ -5,6 +5,21 @@ import { getModel, getJsonProviderOptions, type AIConfig } from '@/lib/ai/provid
 import { jdAnalysisOutputSchema } from '@/lib/ai/jd-analysis-schema';
 import { extractJson } from '@/lib/ai/extract-json';
 
+function unwrapListField(parsedValue: unknown, fieldName: 'items' | 'categories') {
+  if (Array.isArray(parsedValue)) {
+    return parsedValue;
+  }
+
+  if (parsedValue && typeof parsedValue === 'object') {
+    const nested = (parsedValue as Record<string, unknown>)[fieldName];
+    if (Array.isArray(nested)) {
+      return nested;
+    }
+  }
+
+  return parsedValue;
+}
+
 export function createExecutableTools(resumeId: string, aiConfig: AIConfig) {
   return {
     updateSection: tool({
@@ -57,6 +72,10 @@ Use field="items" or field="categories" to update list sections. Each item MUST 
         }
         if (section.type === 'skills' && field !== 'categories') {
           actualField = 'categories';
+        }
+
+        if (actualField === 'items' || actualField === 'categories') {
+          parsedValue = unwrapListField(parsedValue, actualField);
         }
 
         // Ensure items/categories always have id fields

@@ -227,6 +227,8 @@ NEXT_PUBLIC_AUTH_ENABLED=false
 ```
 
 > **AI 配置：** 无需服务端环境变量。每位用户在应用内的 **设置 > AI** 中自行配置 API Key、Base URL 和模型。
+>
+> **本地网页工具：** 现在 `pnpm dev` 会同时启动 Next.js 应用和本地 Exa Pool MCP sidecar。请在应用内 **设置 > AI > 网页工具** 中填写 Exa Pool 地址和 API Key；这些值只保存在当前浏览器，并会在每次请求时转发给本地 MCP sidecar。
 
 查看 `.env.example` 了解所有可用选项（Google OAuth、PostgreSQL 等）。
 
@@ -260,12 +262,15 @@ pnpm dev
 | `NEXT_PUBLIC_APP_NAME` | 否 | `JadeAI` | 应用显示名称 |
 | `NEXT_PUBLIC_APP_URL` | 否 | `http://localhost:3000` | 应用 URL |
 | `NEXT_PUBLIC_DEFAULT_LOCALE` | 否 | `zh` | 默认语言：`zh` 或 `en` |
+| `EXA_POOL_MCP_PORT` | 否 | `3334` | 本地 Exa Pool MCP sidecar 使用的端口 |
 
 ## 常用命令
 
 | 命令 | 说明 |
 |------|------|
-| `pnpm dev` | 启动开发服务器（Turbopack） |
+| `pnpm dev` | 同时启动 Next.js 开发服务器和本地 Exa Pool MCP sidecar |
+| `pnpm dev:web` | 仅启动 Next.js 开发服务器 |
+| `pnpm dev:mcp` | 仅启动本地 Exa Pool MCP sidecar |
 | `pnpm build` | 生产构建 |
 | `pnpm start` | 启动生产服务器 |
 | `pnpm lint` | 运行 ESLint 检查 |

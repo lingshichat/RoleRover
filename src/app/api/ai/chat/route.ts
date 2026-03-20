@@ -6,11 +6,26 @@ import { resumeRepository } from '@/lib/db/repositories/resume.repository';
 import { chatRepository } from '@/lib/db/repositories/chat.repository';
 import { getSystemPrompt } from '@/lib/ai/prompts';
 import { createExecutableTools } from '@/lib/ai/tools';
+import { getExaPoolMcpTools } from '@/lib/ai/mcp/client';
+import { extractExaPoolHeaderConfig } from '@/lib/ai/exa-pool';
 
 const MAX_ROUNDS = 10;
 const MAX_MESSAGES = MAX_ROUNDS * 2; // 10 rounds = 20 messages (user + assistant)
 
+export const runtime = 'nodejs';
+
+interface OrderedToolCall {
+  toolName?: string;
+  input?: unknown;
+}
+
+interface OrderedToolResult {
+  output?: unknown;
+}
+
 export async function POST(request: NextRequest) {
+  let mcpClient: Awaited<ReturnType<typeof getExaPoolMcpTools>>['mcpClient'] = null;
+
   try {
     const fingerprint = getUserIdFromRequest(request);
     const user = await resolveUser(fingerprint);
@@ -57,16 +72,33 @@ export async function POST(request: NextRequest) {
 
     // Truncate to last N rounds for LLM context
     const truncatedMessages = modelMessages.slice(-MAX_MESSAGES);
+    const exaPoolConfig = extractExaPoolHeaderConfig(request.headers);
 
-    const tools = resumeId ? createExecutableTools(resumeId, aiConfig) : undefined;
+    const resumeTools = resumeId ? createExecutableTools(resumeId, aiConfig) : {};
+    let webTools: Record<string, unknown> = {};
+    let hasWebTools = false;
+
+    try {
+      const mcpResult = await getExaPoolMcpTools(exaPoolConfig);
+      mcpClient = mcpResult.mcpClient;
+      webTools = mcpResult.tools;
+      hasWebTools = mcpResult.hasWebTools;
+    } catch (error) {
+      console.error('Failed to initialize Exa Pool MCP tools:', error);
+    }
+
+    const allTools = { ...resumeTools, ...webTools };
+    const tools = Object.keys(allTools).length > 0 ? allTools : undefined;
 
     const result = streamText({
       model,
-      system: getSystemPrompt(resumeContext),
+      system: getSystemPrompt(resumeContext, { hasWebTools }),
       messages: truncatedMessages,
       tools,
       stopWhen: tools ? stepCountIs(25) : undefined,
       onFinish: async ({ text, steps }) => {
+        await mcpClient?.close();
+
         if (!sessionId) return;
 
         // Build ordered parts array preserving the interleaving of text and tool calls
@@ -76,14 +108,14 @@ export async function POST(request: NextRequest) {
           if (step.text) {
             orderedParts.push({ type: 'text', text: step.text });
           }
-          const tcs = step.toolCalls ?? [];
-          const trs = step.toolResults ?? [];
+          const tcs = (step.toolCalls ?? []) as OrderedToolCall[];
+          const trs = (step.toolResults ?? []) as OrderedToolResult[];
           for (let i = 0; i < tcs.length; i++) {
             orderedParts.push({
-              type: 'tool',
-              toolName: (tcs[i] as any).toolName,
-              args: (tcs[i] as any).input,
-              result: (trs[i] as any)?.output,
+              type: 'tool' as const,
+              toolName: tcs[i]?.toolName ?? 'unknown',
+              args: tcs[i]?.input,
+              result: trs[i]?.output,
             });
           }
         }
@@ -102,6 +134,10 @@ export async function POST(request: NextRequest) {
 
     return result.toUIMessageStreamResponse();
   } catch (error) {
+    await mcpClient?.close().catch((closeError) => {
+      console.error('Failed to close Exa Pool MCP client after chat error:', closeError);
+    });
+
     if (error instanceof AIConfigError) {
       return new Response(JSON.stringify({ error: error.message }), { status: 401 });
     }

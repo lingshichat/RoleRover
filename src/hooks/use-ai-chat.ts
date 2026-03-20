@@ -19,17 +19,11 @@ export function useAIChat({ resumeId, sessionId, initialMessages, selectedModel 
   const [input, setInput] = useState('');
   const [localMessages, setLocalMessages] = useState<UIMessage[]>([]);
 
-  const modelRef = useRef(selectedModel);
-  modelRef.current = selectedModel;
-
-  const sessionIdRef = useRef(sessionId);
-  sessionIdRef.current = sessionId;
-
   const transport = useMemo(
     () =>
       new DefaultChatTransport({
         api: '/api/ai/chat',
-        body: () => ({ resumeId, model: modelRef.current, sessionId: sessionIdRef.current }),
+        body: () => ({ resumeId, model: selectedModel, sessionId }),
         // headers must be a function — useChat never updates the transport ref,
         // so a static object would freeze stale values from before store hydration.
         headers: () => {
@@ -37,7 +31,7 @@ export function useAIChat({ resumeId, sessionId, initialMessages, selectedModel 
           return { ...(fp ? { 'x-fingerprint': fp } : {}), ...getAIHeaders() };
         },
       }),
-    [resumeId]
+    [resumeId, selectedModel, sessionId]
   );
 
   const { messages, sendMessage, status, error, setMessages } = useChat({
@@ -74,8 +68,11 @@ export function useAIChat({ resumeId, sessionId, initialMessages, selectedModel 
   useEffect(() => {
     const completedToolCount = messages.reduce((count, m) => {
       if (m.role !== 'assistant' || !m.parts) return count;
-      return count + m.parts.filter((p: any) =>
-        typeof p.type === 'string' && p.type.startsWith('tool-') && p.state === 'output-available'
+      return count + m.parts.filter((part) =>
+        typeof part.type === 'string'
+        && part.type.startsWith('tool-')
+        && 'state' in part
+        && part.state === 'output-available'
       ).length;
     }, 0);
 
@@ -91,8 +88,11 @@ export function useAIChat({ resumeId, sessionId, initialMessages, selectedModel 
       // Pre-calculate tool count from initial messages to avoid triggering a redundant reload
       const initialToolCount = initialMessages.reduce((count, m) => {
         if (m.role !== 'assistant' || !m.parts) return count;
-        return count + m.parts.filter((p: any) =>
-          typeof p.type === 'string' && p.type.startsWith('tool-') && p.state === 'output-available'
+        return count + m.parts.filter((part) =>
+          typeof part.type === 'string'
+          && part.type.startsWith('tool-')
+          && 'state' in part
+          && part.state === 'output-available'
         ).length;
       }, 0);
       completedToolCountRef.current = initialToolCount;

@@ -52,12 +52,16 @@ export function SettingsDialog() {
     aiApiKey,
     aiBaseURL,
     aiModel,
+    exaPoolBaseURL,
+    exaPoolApiKey,
     autoSave,
     autoSaveInterval,
     setAIProvider,
     setAIApiKey,
     setAIBaseURL,
     setAIModel,
+    setExaPoolBaseURL,
+    setExaPoolApiKey,
     setAutoSave,
     setAutoSaveInterval,
     hydrate,
@@ -66,6 +70,7 @@ export function SettingsDialog() {
 
   const startTour = useTourStore((s) => s.startTour);
   const [showApiKey, setShowApiKey] = useState(false);
+  const [showExaPoolApiKey, setShowExaPoolApiKey] = useState(false);
   const isOpen = activeModal === 'settings';
 
   // Model combobox state
@@ -294,6 +299,49 @@ export function SettingsDialog() {
                   </div>
                 </PopoverContent>
               </Popover>
+            </div>
+
+            <Separator />
+
+            <div className="space-y-1">
+              <div className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
+                {t('ai.webToolsTitle')}
+              </div>
+              <p className="text-xs leading-relaxed text-zinc-400">
+                {t('ai.webToolsDescription')}
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label>{t('ai.exaPoolBaseURL')}</Label>
+              <Input
+                value={exaPoolBaseURL}
+                onChange={(e) => setExaPoolBaseURL(e.target.value)}
+                placeholder={t('ai.exaPoolBaseURLPlaceholder')}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>{t('ai.exaPoolApiKey')}</Label>
+              <div className="relative">
+                <Input
+                  type={showExaPoolApiKey ? 'text' : 'password'}
+                  value={exaPoolApiKey}
+                  onChange={(e) => setExaPoolApiKey(e.target.value)}
+                  placeholder={t('ai.exaPoolApiKeyPlaceholder')}
+                  className="pr-10"
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-xs"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 cursor-pointer"
+                  onClick={() => setShowExaPoolApiKey(!showExaPoolApiKey)}
+                >
+                  {showExaPoolApiKey ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                </Button>
+              </div>
+              <p className="text-xs text-zinc-400">{t('ai.exaPoolApiKeyHint')}</p>
             </div>
           </TabsContent>
 

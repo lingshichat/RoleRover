@@ -1,4 +1,4 @@
-export function getSystemPrompt(resumeContext: string): string {
+export function getSystemPrompt(resumeContext: string, options?: { hasWebTools?: boolean }): string {
   // Parse sections to build an explicit list for the AI
   let sectionList = '';
   if (resumeContext) {
@@ -6,7 +6,10 @@ export function getSystemPrompt(resumeContext: string): string {
       const sections = JSON.parse(resumeContext);
       if (Array.isArray(sections)) {
         sectionList = sections
-          .map((s: any) => `  - [${s.type}] "${s.title}" (sectionId: ${s.id})`)
+          .map((section) => {
+            const record = section as { type?: string; title?: string; id?: string };
+            return `  - [${record.type ?? 'unknown'}] "${record.title ?? 'Untitled'}" (sectionId: ${record.id ?? 'unknown'})`;
+          })
           .join('\n');
       }
     } catch { /* ignore parse errors */ }
@@ -29,12 +32,16 @@ You have tools to directly modify resume sections. When the user asks to update,
 - **suggestSkills**: Add suggested skills to the skills section
 - **analyzeJdMatch**: Analyze how well the resume matches a job description. Use this when the user pastes a JD or asks about job fit.
 - **translateResume**: Translate the entire resume to a different language (Chinese or English). Use this when the user asks to translate their resume.
+${options?.hasWebTools ? `- **searchWeb**: Search the public web when the user asks you to look something up or find external information.
+- **fetchWebPage**: Read the contents of a specific URL when the user shares a webpage and wants you to inspect it.` : ''}
 
 When using tools:
 1. Always explain what you're about to change and why before calling the tool
 2. After a tool call succeeds, confirm what was changed
 3. Use the exact sectionId values from the resume data
 4. For complex field values (arrays, objects), pass them as JSON strings in the "value" parameter
+${options?.hasWebTools ? `5. When using web tools, cite the source URLs you relied on in your answer
+6. Use searchWeb for open-ended lookup requests, and fetchWebPage when the user gives you a URL or asks about one specific page` : ''}
 
 ## CRITICAL RULES — Section Handling
 - You MUST NEVER remove, delete, or skip any existing section. The user has manually chosen which sections to include.

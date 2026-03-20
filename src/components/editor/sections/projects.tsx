@@ -20,7 +20,12 @@ interface Props {
 export function ProjectsSection({ section, onUpdate }: Props) {
   const t = useTranslations('editor.fields');
   const content = section.content as ProjectsContent;
-  const items = content.items || [];
+  const rawItems = content.items as ProjectItem[] | { items?: ProjectItem[] } | undefined;
+  const items = Array.isArray(rawItems)
+    ? rawItems
+    : Array.isArray(rawItems?.items)
+      ? rawItems.items
+      : [];
 
   const addItem = () => {
     const newItem: ProjectItem = {
@@ -30,16 +35,16 @@ export function ProjectsSection({ section, onUpdate }: Props) {
       technologies: [],
       highlights: [],
     };
-    onUpdate({ items: [...items, newItem] } as any);
+    onUpdate({ items: [...items, newItem] });
   };
 
   const updateItem = (index: number, data: Partial<ProjectItem>) => {
     const updated = items.map((item, i) => (i === index ? { ...item, ...data } : item));
-    onUpdate({ items: updated } as any);
+    onUpdate({ items: updated });
   };
 
   const removeItem = (index: number) => {
-    onUpdate({ items: items.filter((_, i) => i !== index) } as any);
+    onUpdate({ items: items.filter((_, i) => i !== index) });
   };
 
   return (

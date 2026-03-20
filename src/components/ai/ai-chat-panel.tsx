@@ -215,6 +215,20 @@ export function AIChatContent({ resumeId, hideTitle }: AIChatContentProps) {
     return [...olderOnly, ...chatMessages];
   }, [historicalMessages, chatMessages]);
 
+  const renderedMessages = useMemo(() => {
+    const seen = new Map<string, number>();
+
+    return displayMessages.map((message, index) => {
+      const occurrence = seen.get(message.id) ?? 0;
+      seen.set(message.id, occurrence + 1);
+
+      return {
+        message,
+        renderKey: occurrence === 0 ? message.id : `${message.id}-${occurrence}-${index}`,
+      };
+    });
+  }, [displayMessages]);
+
   // Wrap handleSubmit to update session title on first message
   const handleSubmit = useCallback((e: React.FormEvent<HTMLFormElement>) => {
     const activeSession = sessions.find((s) => s.id === activeSessionId);
@@ -343,8 +357,8 @@ export function AIChatContent({ resumeId, hideTitle }: AIChatContentProps) {
               {t('defaultGreeting')}
             </div>
           )}
-          {displayMessages.map((message) => (
-            <AIMessage key={message.id} message={message} />
+          {renderedMessages.map(({ message, renderKey }) => (
+            <AIMessage key={renderKey} message={message} />
           ))}
           {status === 'submitted' && (
             <div className="flex items-center gap-2 text-xs text-zinc-400">

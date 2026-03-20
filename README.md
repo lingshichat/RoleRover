@@ -227,6 +227,8 @@ NEXT_PUBLIC_AUTH_ENABLED=false
 ```
 
 > **AI Configuration:** No server-side env vars needed. Each user configures their own API Key, Base URL, and Model in **Settings > AI** within the app.
+>
+> **Local Web Tools:** `pnpm dev` now starts both the Next.js app and the local Exa Pool MCP sidecar. Configure your Exa Pool Base URL and API Key inside **Settings > AI > Web Tools**. Those values stay in the current browser and are forwarded to the local MCP sidecar per request.
 
 See `.env.example` for all available options (Google OAuth, PostgreSQL, etc.).
 
@@ -260,12 +262,15 @@ Open [http://localhost:3000](http://localhost:3000).
 | `NEXT_PUBLIC_APP_NAME` | No | `JadeAI` | Application display name |
 | `NEXT_PUBLIC_APP_URL` | No | `http://localhost:3000` | Application URL |
 | `NEXT_PUBLIC_DEFAULT_LOCALE` | No | `zh` | Default language: `zh` or `en` |
+| `EXA_POOL_MCP_PORT` | No | `3334` | Local port used by the Exa Pool MCP sidecar |
 
 ## Scripts
 
 | Command | Description |
 |---------|-------------|
-| `pnpm dev` | Start dev server with Turbopack |
+| `pnpm dev` | Start the Next.js dev server and local Exa Pool MCP sidecar |
+| `pnpm dev:web` | Start only the Next.js dev server |
+| `pnpm dev:mcp` | Start only the local Exa Pool MCP sidecar |
 | `pnpm build` | Production build |
 | `pnpm start` | Start production server |
 | `pnpm lint` | Run ESLint |

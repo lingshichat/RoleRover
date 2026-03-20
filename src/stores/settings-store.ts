@@ -8,6 +8,8 @@ interface SettingsStore {
   aiApiKey: string; // stored locally only, never sent to server
   aiBaseURL: string;
   aiModel: string;
+  exaPoolBaseURL: string;
+  exaPoolApiKey: string;
   // Editor settings
   autoSave: boolean;
   autoSaveInterval: number; // in milliseconds
@@ -21,12 +23,15 @@ interface SettingsStore {
   setAIApiKey: (key: string) => void;
   setAIBaseURL: (url: string) => void;
   setAIModel: (model: string) => void;
+  setExaPoolBaseURL: (url: string) => void;
+  setExaPoolApiKey: (key: string) => void;
   setAutoSave: (enabled: boolean) => void;
   setAutoSaveInterval: (interval: number) => void;
   hydrate: () => void;
 }
 
 const API_KEY_STORAGE_KEY = 'jade_api_key';
+const EXA_POOL_CONFIG_STORAGE_KEY = 'jade_exa_pool_config';
 const PROVIDER_CONFIGS_KEY = 'jade_provider_configs';
 
 interface ProviderConfig {
@@ -121,13 +126,43 @@ function loadApiKeyLocally(): string {
   }
 }
 
+function loadExaPoolConfigLocally(): { baseURL: string; apiKey: string } {
+  if (typeof window === 'undefined') return { baseURL: '', apiKey: '' };
+  try {
+    const raw = localStorage.getItem(EXA_POOL_CONFIG_STORAGE_KEY);
+    if (!raw) return { baseURL: '', apiKey: '' };
+
+    const parsed = JSON.parse(raw) as { baseURL?: string; apiKey?: string };
+    return {
+      baseURL: parsed.baseURL || '',
+      apiKey: parsed.apiKey || '',
+    };
+  } catch {
+    return { baseURL: '', apiKey: '' };
+  }
+}
+
+function saveExaPoolConfigLocally(config: { baseURL: string; apiKey: string }) {
+  if (typeof window === 'undefined') return;
+  try {
+    if (!config.baseURL && !config.apiKey) {
+      localStorage.removeItem(EXA_POOL_CONFIG_STORAGE_KEY);
+      return;
+    }
+
+    localStorage.setItem(EXA_POOL_CONFIG_STORAGE_KEY, JSON.stringify(config));
+  } catch { /* ignore */ }
+}
+
 export function getAIHeaders(): Record<string, string> {
-  const { aiProvider, aiApiKey, aiBaseURL, aiModel } = useSettingsStore.getState();
+  const { aiProvider, aiApiKey, aiBaseURL, aiModel, exaPoolBaseURL, exaPoolApiKey } = useSettingsStore.getState();
   const headers: Record<string, string> = {};
   if (aiProvider) headers['x-provider'] = aiProvider;
   if (aiApiKey) headers['x-api-key'] = aiApiKey;
   if (aiBaseURL) headers['x-base-url'] = aiBaseURL;
   if (aiModel) headers['x-model'] = aiModel;
+  if (exaPoolBaseURL) headers['x-exa-pool-base-url'] = exaPoolBaseURL;
+  if (exaPoolApiKey) headers['x-exa-pool-api-key'] = exaPoolApiKey;
   return headers;
 }
 
@@ -136,6 +171,8 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
   aiApiKey: '',
   aiBaseURL: 'https://api.openai.com/v1',
   aiModel: 'gpt-4o',
+  exaPoolBaseURL: '',
+  exaPoolApiKey: '',
   autoSave: true,
   autoSaveInterval: 500,
   _hydrated: false,
@@ -182,6 +219,18 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
     syncProviderConfig(get());
   },
 
+  setExaPoolBaseURL: (url) => {
+    set({ exaPoolBaseURL: url });
+    const { exaPoolApiKey } = get();
+    saveExaPoolConfigLocally({ baseURL: url, apiKey: exaPoolApiKey });
+  },
+
+  setExaPoolApiKey: (key) => {
+    set({ exaPoolApiKey: key });
+    const { exaPoolBaseURL } = get();
+    saveExaPoolConfigLocally({ baseURL: exaPoolBaseURL, apiKey: key });
+  },
+
   setAutoSave: (enabled) => {
     set({ autoSave: enabled });
     syncToServer(get());
@@ -197,7 +246,12 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
 
     // Load API key from localStorage immediately
     const apiKey = loadApiKeyLocally();
-    set({ aiApiKey: apiKey });
+    const exaPoolConfig = loadExaPoolConfigLocally();
+    set({
+      aiApiKey: apiKey,
+      exaPoolBaseURL: exaPoolConfig.baseURL,
+      exaPoolApiKey: exaPoolConfig.apiKey,
+    });
 
     // Load other settings from server
     try {
