@@ -1,6 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { resolveUser, getUserIdFromRequest } from '@/lib/auth/helpers';
 import { chatRepository } from '@/lib/db/repositories/chat.repository';
+import { resumeRepository } from '@/lib/db/repositories/resume.repository';
+
+async function findAuthorizedSession(sessionId: string, userId: string) {
+  const session = await chatRepository.findSession(sessionId);
+  if (!session) return null;
+
+  const resume = await resumeRepository.findById(session.resumeId);
+  if (!resume || resume.userId !== userId) return null;
+
+  return session;
+}
 
 export async function GET(
   request: NextRequest,
@@ -17,7 +28,7 @@ export async function GET(
     const limitParam = request.nextUrl.searchParams.get('limit');
     const limit = limitParam ? Math.min(parseInt(limitParam, 10) || 20, 50) : 20;
 
-    const session = await chatRepository.findSession(sessionId);
+    const session = await findAuthorizedSession(sessionId, user.id);
     if (!session) return new Response('Not found', { status: 404 });
 
     const { messages, hasMore, nextCursor } = await chatRepository.findPaginatedMessages(sessionId, { cursor, limit });
@@ -39,6 +50,9 @@ export async function DELETE(
     if (!user) return new Response('Unauthorized', { status: 401 });
 
     const { sessionId } = await params;
+    const session = await findAuthorizedSession(sessionId, user.id);
+    if (!session) return new Response('Not found', { status: 404 });
+
     await chatRepository.deleteSession(sessionId);
     return NextResponse.json({ success: true });
   } catch (error) {

@@ -33,14 +33,28 @@ export async function POST(request: NextRequest) {
       return new Response('Unauthorized', { status: 401 });
     }
 
-    const { messages, resumeId, model: modelId, sessionId } = await request.json();
+    const { messages, resumeId: requestedResumeId, model: modelId, sessionId } = await request.json();
+
+    let effectiveResumeId: string | undefined = requestedResumeId;
+    if (sessionId) {
+      const session = await chatRepository.findSession(sessionId);
+      if (!session) {
+        return new Response('Not found', { status: 404 });
+      }
+
+      effectiveResumeId ||= session.resumeId;
+      if (effectiveResumeId !== session.resumeId) {
+        return new Response('Session does not belong to resume', { status: 400 });
+      }
+    }
 
     let resumeContext = '';
-    if (resumeId) {
-      const resume = await resumeRepository.findById(resumeId);
-      if (resume) {
-        resumeContext = JSON.stringify(resume.sections);
+    if (effectiveResumeId) {
+      const resume = await resumeRepository.findById(effectiveResumeId);
+      if (!resume || resume.userId !== user.id) {
+        return new Response('Not found', { status: 404 });
       }
+      resumeContext = JSON.stringify(resume.sections);
     }
 
     // Save user message to DB before streaming
@@ -74,7 +88,7 @@ export async function POST(request: NextRequest) {
     const truncatedMessages = modelMessages.slice(-MAX_MESSAGES);
     const exaPoolConfig = extractExaPoolHeaderConfig(request.headers);
 
-    const resumeTools = resumeId ? createExecutableTools(resumeId, aiConfig) : {};
+    const resumeTools = effectiveResumeId ? createExecutableTools(effectiveResumeId, aiConfig) : {};
     let webTools: Record<string, unknown> = {};
     let hasWebTools = false;
 

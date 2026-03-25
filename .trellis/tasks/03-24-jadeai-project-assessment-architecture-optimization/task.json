@@ -1,0 +1,49 @@
+{
+  "id": "jadeai-project-assessment-architecture-optimization",
+  "name": "jadeai-project-assessment-architecture-optimization",
+  "title": "JadeAI 求职场景 AI 体验优先级梳理",
+  "description": "围绕真实求职与海投场景，梳理 JadeAI 在 AI 写简历、JD 定制与版本管理上的 P0 / P1 / P2 优先级。",
+  "status": "done",
+  "dev_type": "docs",
+  "scope": null,
+  "priority": "P1",
+  "creator": "lingshichat",
+  "assignee": "lingshichat",
+  "createdAt": "2026-03-24",
+  "completedAt": "2026-03-25",
+  "branch": null,
+  "base_branch": "main",
+  "worktree_path": null,
+  "current_phase": 0,
+  "next_action": [
+    {
+      "phase": 1,
+      "action": "implement"
+    },
+    {
+      "phase": 2,
+      "action": "check"
+    },
+    {
+      "phase": 3,
+      "action": "finish"
+    },
+    {
+      "phase": 4,
+      "action": "create-pr"
+    }
+  ],
+  "commit": null,
+  "pr_url": null,
+  "subtasks": [],
+  "children": [],
+  "parent": null,
+  "relatedFiles": [
+    "AGENTS.md",
+    ".trellis/workflow.md",
+    "README.zh-CN.md",
+    ".trellis/tasks/03-24-jadeai-project-assessment-architecture-optimization/prd.md"
+  ],
+  "notes": "已完成脑暴与收敛，当前结论：P0 聚焦 JD 定制闭环，P1 聚焦 AI 共写体验，P2 聚焦更可信的 AI 初稿。",
+  "meta": {}
+}
