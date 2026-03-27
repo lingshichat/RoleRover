@@ -2,7 +2,7 @@
 
 import { useTranslations } from 'next-intl';
 import { useRouter } from '@/i18n/routing';
-import { ArrowLeft, Undo2, Redo2, Download, Upload, Settings, Palette, Save, FileSearch, Languages, FileText, SpellCheck, Share2, Copy } from 'lucide-react';
+import { ArrowLeft, Undo2, Redo2, Download, Upload, Settings, Palette, Save, FileSearch, Languages, FileText, SpellCheck, Copy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ResumeTargetBadge } from '@/components/resume/resume-target-badge';
 import { Separator } from '@/components/ui/separator';
@@ -112,16 +112,6 @@ export function EditorToolbar() {
         >
           <Upload className="h-4 w-4" />
           <span className="ml-1 text-xs hidden sm:inline">{t('import')}</span>
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => openModal('share')}
-          className="cursor-pointer"
-          title={t('share')}
-        >
-          <Share2 className="h-4 w-4" />
-          <span className="ml-1 text-xs hidden sm:inline">{t('share')}</span>
         </Button>
         <Separator orientation="vertical" className="h-6" />
         <Button

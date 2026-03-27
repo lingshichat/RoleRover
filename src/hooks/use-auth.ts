@@ -1,16 +1,17 @@
 'use client';
 
-import { useSession, signIn, signOut } from 'next-auth/react';
+import { useContext } from 'react';
+import { SessionContext, signIn, signOut } from 'next-auth/react';
 import { config } from '@/lib/config';
 import { useFingerprint } from './use-fingerprint';
 
 export function useAuth() {
-  const session = useSession();
+  const session = useContext(SessionContext);
   const { fingerprint, isLoading: fpLoading } = useFingerprint();
 
   if (config.auth.enabled) {
     return {
-      user: session.data?.user
+      user: session?.data?.user
         ? {
             id: session.data.user.id || '',
             name: session.data.user.name,
@@ -19,8 +20,8 @@ export function useAuth() {
             authType: 'oauth' as const,
           }
         : null,
-      isLoading: session.status === 'loading',
-      isAuthenticated: session.status === 'authenticated',
+      isLoading: session?.status === 'loading',
+      isAuthenticated: session?.status === 'authenticated',
       signIn: () => signIn('google'),
       signOut: () => signOut(),
     };

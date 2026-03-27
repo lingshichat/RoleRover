@@ -16,7 +16,6 @@ import { JdAnalysisDialog } from '@/components/editor/jd-analysis-dialog';
 import { TranslateDialog } from '@/components/editor/translate-dialog';
 import { ExportDialog } from '@/components/editor/export-dialog';
 import { ImportDialog } from '@/components/editor/import-dialog';
-import { ShareDialog } from '@/components/editor/share-dialog';
 import { CoverLetterDialog } from '@/components/editor/cover-letter-dialog';
 import { GrammarCheckDialog } from '@/components/editor/grammar-check-dialog';
 import { TourOverlay, type TourStepConfig } from '@/components/tour/tour-overlay';
@@ -134,11 +133,6 @@ export default function EditorPage({ params }: { params: Promise<{ id: string }>
       <ImportDialog
         open={activeModal === 'import'}
         onOpenChange={(open) => open ? openModal('import') : closeModal()}
-        resumeId={id}
-      />
-      <ShareDialog
-        open={activeModal === 'share'}
-        onOpenChange={(open) => open ? openModal('share') : closeModal()}
         resumeId={id}
       />
       <CoverLetterDialog

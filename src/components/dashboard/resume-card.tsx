@@ -3,7 +3,7 @@
 import { useTranslations } from 'next-intl';
 import { useRouter } from '@/i18n/routing';
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { BriefcaseBusiness, Copy, Trash2, MoreVertical, Share2, Pencil } from 'lucide-react';
+import { BriefcaseBusiness, Copy, Trash2, MoreVertical, Pencil } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -25,7 +25,7 @@ interface ResumeCardProps {
   onShare?: () => void;
 }
 
-export function ResumeCard({ resume, onDelete, onDuplicate, onCreateJdVersion, onRename, onShare }: ResumeCardProps) {
+export function ResumeCard({ resume, onDelete, onDuplicate, onCreateJdVersion, onRename }: ResumeCardProps) {
   const t = useTranslations();
   const router = useRouter();
   const [isRenaming, setIsRenaming] = useState(false);
@@ -178,18 +178,6 @@ export function ResumeCard({ resume, onDelete, onDuplicate, onCreateJdVersion, o
                 <BriefcaseBusiness className="mr-2 h-4 w-4" />
                 {t('jdVersion.createAction')}
               </DropdownMenuItem>
-              {onShare && (
-                <DropdownMenuItem
-                  className="cursor-pointer"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onShare();
-                  }}
-                >
-                  <Share2 className="mr-2 h-4 w-4" />
-                  {t('share.title')}
-                </DropdownMenuItem>
-              )}
               <DropdownMenuItem
                 className="cursor-pointer text-red-600"
                 onClick={(e) => {

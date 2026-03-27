@@ -1,4 +1,9 @@
 import { create } from 'zustand';
+import {
+  loadSensitiveSettings,
+  persistExaPoolApiKey,
+  persistProviderApiKey,
+} from '@/lib/desktop/secure-settings-client';
 
 export type AIProvider = 'openai' | 'anthropic' | 'gemini';
 
@@ -30,21 +35,22 @@ interface SettingsStore {
   hydrate: () => void;
 }
 
-const API_KEY_STORAGE_KEY = 'jade_api_key';
 const EXA_POOL_CONFIG_STORAGE_KEY = 'jade_exa_pool_config';
 const PROVIDER_CONFIGS_KEY = 'jade_provider_configs';
 
 interface ProviderConfig {
   baseURL: string;
   model: string;
-  apiKey: string;
 }
 
 const PROVIDER_DEFAULTS: Record<AIProvider, ProviderConfig> = {
-  openai: { baseURL: 'https://api.openai.com/v1', model: 'gpt-4o', apiKey: '' },
-  anthropic: { baseURL: 'https://api.anthropic.com', model: 'claude-sonnet-4-20250514', apiKey: '' },
-  gemini: { baseURL: 'https://generativelanguage.googleapis.com/v1beta', model: 'gemini-2.0-flash', apiKey: '' },
+  openai: { baseURL: 'https://api.openai.com/v1', model: 'gpt-4o' },
+  anthropic: { baseURL: 'https://api.anthropic.com', model: 'claude-sonnet-4-20250514' },
+  gemini: { baseURL: 'https://generativelanguage.googleapis.com/v1beta', model: 'gemini-2.0-flash' },
 };
+
+let providerApiKeyCache: Partial<Record<AIProvider, string>> = {};
+let hydratedSensitiveSettings = false;
 
 function loadProviderConfigs(): Partial<Record<AIProvider, ProviderConfig>> {
   if (typeof window === 'undefined') return {};
@@ -101,56 +107,32 @@ function syncProviderConfig(state: SettingsStore) {
   configs[state.aiProvider] = {
     baseURL: state.aiBaseURL,
     model: state.aiModel,
-    apiKey: state.aiApiKey,
   };
   saveProviderConfigs(configs);
 }
 
-function saveApiKeyLocally(key: string) {
-  if (typeof window === 'undefined') return;
-  try {
-    if (key) {
-      localStorage.setItem(API_KEY_STORAGE_KEY, key);
-    } else {
-      localStorage.removeItem(API_KEY_STORAGE_KEY);
-    }
-  } catch { /* ignore */ }
-}
-
-function loadApiKeyLocally(): string {
+function loadExaPoolBaseURLLocally(): string {
   if (typeof window === 'undefined') return '';
   try {
-    return localStorage.getItem(API_KEY_STORAGE_KEY) || '';
+    const raw = localStorage.getItem(EXA_POOL_CONFIG_STORAGE_KEY);
+    if (!raw) return '';
+
+    const parsed = JSON.parse(raw) as { baseURL?: string };
+    return parsed.baseURL || '';
   } catch {
     return '';
   }
 }
 
-function loadExaPoolConfigLocally(): { baseURL: string; apiKey: string } {
-  if (typeof window === 'undefined') return { baseURL: '', apiKey: '' };
-  try {
-    const raw = localStorage.getItem(EXA_POOL_CONFIG_STORAGE_KEY);
-    if (!raw) return { baseURL: '', apiKey: '' };
-
-    const parsed = JSON.parse(raw) as { baseURL?: string; apiKey?: string };
-    return {
-      baseURL: parsed.baseURL || '',
-      apiKey: parsed.apiKey || '',
-    };
-  } catch {
-    return { baseURL: '', apiKey: '' };
-  }
-}
-
-function saveExaPoolConfigLocally(config: { baseURL: string; apiKey: string }) {
+function saveExaPoolBaseURLLocally(baseURL: string) {
   if (typeof window === 'undefined') return;
   try {
-    if (!config.baseURL && !config.apiKey) {
+    if (!baseURL) {
       localStorage.removeItem(EXA_POOL_CONFIG_STORAGE_KEY);
       return;
     }
 
-    localStorage.setItem(EXA_POOL_CONFIG_STORAGE_KEY, JSON.stringify(config));
+    localStorage.setItem(EXA_POOL_CONFIG_STORAGE_KEY, JSON.stringify({ baseURL }));
   } catch { /* ignore */ }
 }
 
@@ -183,27 +165,31 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
 
     // Save current provider's config before switching
     const configs = loadProviderConfigs();
-    configs[prev] = { baseURL: aiBaseURL, model: aiModel, apiKey: aiApiKey };
+    configs[prev] = { baseURL: aiBaseURL, model: aiModel };
     saveProviderConfigs(configs);
+    providerApiKeyCache[prev] = aiApiKey;
+    void persistProviderApiKey(prev, aiApiKey);
 
     // Restore target provider's cached config, or use defaults
     const cached = configs[provider];
     const defaults = PROVIDER_DEFAULTS[provider];
     const restored = cached || defaults;
+    const restoredApiKey = providerApiKeyCache[provider] || '';
 
     set({
       aiProvider: provider,
       aiBaseURL: restored.baseURL,
       aiModel: restored.model,
-      aiApiKey: restored.apiKey,
+      aiApiKey: restoredApiKey,
     });
-    saveApiKeyLocally(restored.apiKey);
     syncToServer(get());
   },
 
   setAIApiKey: (key) => {
     set({ aiApiKey: key });
-    saveApiKeyLocally(key);
+    const { aiProvider } = get();
+    providerApiKeyCache[aiProvider] = key;
+    void persistProviderApiKey(aiProvider, key);
     syncProviderConfig(get());
   },
 
@@ -221,14 +207,12 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
 
   setExaPoolBaseURL: (url) => {
     set({ exaPoolBaseURL: url });
-    const { exaPoolApiKey } = get();
-    saveExaPoolConfigLocally({ baseURL: url, apiKey: exaPoolApiKey });
+    saveExaPoolBaseURLLocally(url);
   },
 
   setExaPoolApiKey: (key) => {
     set({ exaPoolApiKey: key });
-    const { exaPoolBaseURL } = get();
-    saveExaPoolConfigLocally({ baseURL: exaPoolBaseURL, apiKey: key });
+    void persistExaPoolApiKey(key);
   },
 
   setAutoSave: (enabled) => {
@@ -244,13 +228,19 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
   hydrate: async () => {
     if (get()._hydrated) return;
 
-    // Load API key from localStorage immediately
-    const apiKey = loadApiKeyLocally();
-    const exaPoolConfig = loadExaPoolConfigLocally();
+    if (!hydratedSensitiveSettings) {
+      const sensitive = await loadSensitiveSettings();
+      providerApiKeyCache = sensitive.providerApiKeys as Partial<Record<AIProvider, string>>;
+      hydratedSensitiveSettings = true;
+      set({
+        aiApiKey: providerApiKeyCache[get().aiProvider] || '',
+        exaPoolApiKey: sensitive.exaPoolApiKey,
+      });
+    }
+
+    const exaPoolBaseURL = loadExaPoolBaseURLLocally();
     set({
-      aiApiKey: apiKey,
-      exaPoolBaseURL: exaPoolConfig.baseURL,
-      exaPoolApiKey: exaPoolConfig.apiKey,
+      exaPoolBaseURL,
     });
 
     // Load other settings from server
@@ -260,8 +250,10 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
         const data = await res.json();
         // Backward compat: map legacy 'custom' provider to 'openai'
         const provider = (data.aiProvider === 'custom' || data.aiProvider === 'azure') ? 'openai' : data.aiProvider;
+        const nextProvider = provider as AIProvider | undefined;
         set({
           ...(provider && { aiProvider: provider }),
+          ...(nextProvider && { aiApiKey: providerApiKeyCache[nextProvider] || '' }),
           ...(data.aiBaseURL && { aiBaseURL: data.aiBaseURL }),
           ...(data.aiModel && { aiModel: data.aiModel }),
           ...(typeof data.autoSave === 'boolean' && { autoSave: data.autoSave }),

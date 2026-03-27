@@ -41,6 +41,15 @@ Examples:
   loading older AI messages and restoring scroll position.
 - `src/hooks/use-auth.ts`: hides whether auth comes from OAuth or fingerprint mode.
 
+### Auth Hook Rule
+
+- Treat `useAuth()` as the app-level auth contract.
+- Do not call `useSession()` directly in components that must also work in
+  desktop/fingerprint mode. In that mode `SessionProvider` may be skipped on
+  purpose, so `useSession()` will throw.
+- If you need NextAuth-specific state for a web-only affordance, read
+  `SessionContext` defensively and gate it behind `config.auth.enabled`.
+
 ---
 
 ## Data Fetching

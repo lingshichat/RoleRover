@@ -10,10 +10,11 @@ JadeAI supports two authentication modes controlled by the `NEXT_PUBLIC_AUTH_ENA
 environment variable:
 
 - **OAuth mode** (`NEXT_PUBLIC_AUTH_ENABLED=true`): Full NextAuth.js with Google
-  OAuth. Users sign in with Google. Production mode.
-- **Fingerprint mode** (`NEXT_PUBLIC_AUTH_ENABLED=false` or unset): Anonymous
-  mode where a browser-generated fingerprint is sent via the `x-fingerprint`
-  header. Used for local development.
+  OAuth. Users sign in with Google.
+- **Fingerprint/Desktop mode** (`NEXT_PUBLIC_AUTH_ENABLED=false` or unset):
+  anonymous single-user mode where a browser-generated fingerprint is sent via
+  the `x-fingerprint` header. This is the active desktop flow and the default
+  local-development flow.
 
 ---
 
@@ -135,42 +136,57 @@ export async function GET(request: NextRequest) {
 
 ## Middleware
 
-The Next.js middleware in `src/middleware.ts` handles page-level auth
-redirects (not API routes):
+The Next.js middleware in `src/middleware.ts` is now **locale routing only**:
 
 ```typescript
 // src/middleware.ts
 export default async function middleware(request: NextRequest) {
-  const response = intlMiddleware(request);
-
-  const authEnabled = process.env.NEXT_PUBLIC_AUTH_ENABLED === 'true';
-  if (!authEnabled) return response;
-
-  // Skip auth check for API routes and public paths
-  if (pathname.startsWith('/api/')) return response;
-  if (isPublicPath(pathname)) return response;
-
-  const token = request.cookies.get('authjs.session-token')?.value
-    || request.cookies.get('__Secure-authjs.session-token')?.value;
-
-  if (!token) {
-    // redirect to login
-  }
-
-  return response;
+  return intlMiddleware(request);
 }
 
 export const config = {
-  matcher: ['/', '/(zh|en)/:path*', '/share/:path*'],
+  matcher: ['/', '/(zh|en)/:path*'],
 };
 ```
 
-API routes are **excluded** from middleware auth — each route handler performs
-its own auth check via `resolveUser`.
+There are no middleware-level auth redirects in the desktop flow. API routes
+and server helpers must resolve authorization explicitly via `resolveUser()`.
 
-> **Warning**: Middleware only checks that a NextAuth session token cookie is
-> present. Authorization still happens inside each route handler via
-> `resolveUser()` and resource ownership checks.
+> **Desktop rule**: Do not reintroduce page-level auth redirects in middleware
+> for the desktop build. Desktop entry goes straight to the dashboard.
+
+## Client-Side Session Rule
+
+When `NEXT_PUBLIC_AUTH_ENABLED=false`, client components may render without a
+NextAuth `SessionProvider`.
+
+- Use `useAuth()` from `src/hooks/use-auth.ts` for product auth state.
+- If a component truly needs raw NextAuth session state, read `SessionContext`
+  defensively instead of calling `useSession()` directly.
+- Do not assume `/api/auth/session` returns JSON in desktop mode; the desktop
+  runtime intentionally avoids booting that client fetch path.
+
+Good:
+
+```typescript
+const { user, isAuthenticated } = useAuth();
+```
+
+Also acceptable when integrating with NextAuth-specific UI:
+
+```typescript
+const session = useContext(SessionContext);
+const isLoggedIn = config.auth.enabled && !!session?.data?.user;
+```
+
+Bad:
+
+```typescript
+const { data: session } = useSession();
+```
+
+This will throw when `SessionProvider` is intentionally omitted for the
+desktop/fingerprint flow.
 
 ---
 

@@ -1,0 +1,34 @@
+appId: com.rolerover.desktop
+productName: RoleRover
+
+directories:
+  output: release-installer
+  buildResources: resources
+
+files:
+  - package.json
+  - electron/**/*
+  - .next/standalone/**/*
+  - .next/static/**/*
+  - public/**/*
+  - drizzle/**/*
+  - messages/**/*
+
+asarUnpack:
+  - '**/*.node'
+  - '**/better-sqlite3/**/*'
+
+publish:
+  provider: github
+  owner: your-github-owner
+  repo: your-github-repo
+
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true

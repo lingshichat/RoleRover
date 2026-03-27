@@ -1,13 +1,14 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useContext, useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { useSession } from 'next-auth/react';
+import { SessionContext } from 'next-auth/react';
 import Image from 'next/image';
 import { Link } from '@/i18n/routing';
 import { Menu, Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { LocaleSwitcher } from '@/components/layout/locale-switcher';
+import { config } from '@/lib/config';
 import {
   Sheet,
   SheetContent,
@@ -15,7 +16,6 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet';
 
-const AUTH_ENABLED = process.env.NEXT_PUBLIC_AUTH_ENABLED === 'true';
 const GITHUB_REPO = 'lingshichat/JadeAI';
 
 function useGitHubStars() {
@@ -40,10 +40,10 @@ export function LandingHeader() {
   const t = useTranslations('landing.header');
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
-  const { data: session } = useSession();
+  const session = useContext(SessionContext);
   const stars = useGitHubStars();
 
-  const isLoggedIn = AUTH_ENABLED && !!session?.user;
+  const isLoggedIn = config.auth.enabled && !!session?.data?.user;
   const ctaLabel = isLoggedIn ? t('dashboard') : t('getStarted');
 
   useEffect(() => {
