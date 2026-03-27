@@ -9,6 +9,7 @@ import { EditableDate } from '../fields/editable-date';
 import { EditableRichText } from '../fields/editable-rich-text';
 import { EditableList } from '../fields/editable-list';
 import { FieldWrapper } from '../fields/field-wrapper';
+import { getSectionCollection } from '@/lib/section-content';
 import { generateId } from '@/lib/utils';
 import type { ResumeSection, WorkExperienceContent, WorkExperienceItem } from '@/types/resume';
 
@@ -20,7 +21,7 @@ interface Props {
 export function WorkExperienceSection({ section, onUpdate }: Props) {
   const t = useTranslations('editor.fields');
   const content = section.content as WorkExperienceContent;
-  const items = content.items || [];
+  const items = getSectionCollection<WorkExperienceItem>(content.items, 'items');
 
   const addItem = () => {
     const newItem: WorkExperienceItem = {
@@ -74,7 +75,7 @@ export function WorkExperienceSection({ section, onUpdate }: Props) {
             </FieldWrapper>
             <EditableRichText label={t('description')} value={item.description} onChange={(v) => updateItem(index, { description: v })} />
             <EditableList label={t('technologies')} items={item.technologies || []} onChange={(v) => updateItem(index, { technologies: v })} />
-            <EditableList label={t('highlights')} items={item.highlights} onChange={(v) => updateItem(index, { highlights: v })} />
+            <EditableList label={t('highlights')} items={item.highlights || []} onChange={(v) => updateItem(index, { highlights: v })} />
           </div>
         </div>
       ))}

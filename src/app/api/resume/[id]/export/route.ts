@@ -41,20 +41,24 @@ export async function GET(
       }
       case 'html': {
         const html = await generateHtml(resume);
+        const body = Buffer.from(html, 'utf8');
         return new NextResponse(html, {
           status: 200,
           headers: {
             'Content-Type': 'text/html; charset=utf-8',
+            'Content-Length': String(body.byteLength),
             'Content-Disposition': `attachment; filename="${encodeURIComponent(filename)}.html"`,
           },
         });
       }
       case 'txt': {
         const text = generatePlainText(resume);
+        const body = Buffer.from(text, 'utf8');
         return new NextResponse(text, {
           status: 200,
           headers: {
             'Content-Type': 'text/plain; charset=utf-8',
+            'Content-Length': String(body.byteLength),
             'Content-Disposition': `attachment; filename="${encodeURIComponent(filename)}.txt"`,
           },
         });
@@ -65,6 +69,7 @@ export async function GET(
           status: 200,
           headers: {
             'Content-Type': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'Content-Length': String(docxBuffer.length),
             'Content-Disposition': `attachment; filename="${encodeURIComponent(filename)}.docx"`,
           },
         });
@@ -77,6 +82,7 @@ export async function GET(
           status: 200,
           headers: {
             'Content-Type': 'application/pdf',
+            'Content-Length': String(pdfBuffer.length),
             'Content-Disposition': `attachment; filename="${encodeURIComponent(filename)}.pdf"`,
           },
         });

@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { downloadFromUrl } from '@/lib/utils/download';
 import { useResumeStore } from '@/stores/resume-store';
 import {
   FileDown,
@@ -73,24 +74,8 @@ export function ExportDialog({ open, onOpenChange, resumeId }: ExportDialogProps
       // Save first if dirty
       if (isDirty) await save();
 
-      const fingerprint = localStorage.getItem('jade_fingerprint');
       const queryFormat = selectedFormat === 'pdf-one-page' ? 'pdf' : selectedFormat;
       const fitParam = selectedFormat === 'pdf-one-page' ? '&fitOnePage=true' : '';
-      const res = await fetch(`/api/resume/${resumeId}/export?format=${queryFormat}${fitParam}`, {
-        headers: {
-          ...(fingerprint ? { 'x-fingerprint': fingerprint } : {}),
-        },
-      });
-
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || 'Export failed');
-      }
-
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
 
       const title = currentResume?.title || 'resume';
       const now = new Date();
@@ -103,11 +88,10 @@ export function ExportDialog({ open, onOpenChange, resumeId }: ExportDialogProps
         'txt': 'txt',
         'json': 'json',
       };
-      a.download = `${title}-${ts}.${extMap[selectedFormat]}`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      downloadFromUrl(
+        `/api/resume/${resumeId}/export?format=${queryFormat}${fitParam}`,
+        `${title}-${ts}.${extMap[selectedFormat]}`,
+      );
 
       setState('success');
       setTimeout(() => onOpenChange(false), 1500);

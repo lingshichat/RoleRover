@@ -3,6 +3,7 @@
 import { useId } from 'react';
 import type { Resume, ThemeConfig } from '@/types/resume';
 import { BACKGROUND_TEMPLATES } from '@/lib/constants';
+import { normalizeSectionContentForRender } from '@/lib/section-content';
 import { ClassicTemplate } from './templates/classic';
 import { ModernTemplate } from './templates/modern';
 import { MinimalTemplate } from './templates/minimal';
@@ -240,6 +241,13 @@ export function ResumePreview({ resume }: ResumePreviewProps) {
   const Template = templateMap[resume.template] || ClassicTemplate;
   const scopeId = useId();
   const theme: ThemeConfig = { ...DEFAULT_THEME, ...(resume.themeConfig || {}) };
+  const normalizedResume: Resume = {
+    ...resume,
+    sections: resume.sections.map((section) => ({
+      ...section,
+      content: normalizeSectionContentForRender(section.type, section.content) as unknown as typeof section.content,
+    })),
+  };
 
   return (
     <>
@@ -250,7 +258,7 @@ export function ResumePreview({ resume }: ResumePreviewProps) {
       <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Noto+Sans+SC:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
       <div data-theme-scope={scopeId}>
         <style dangerouslySetInnerHTML={{ __html: buildThemeCSS(scopeId, theme, resume.template) }} />
-        <Template resume={resume} />
+        <Template resume={normalizedResume} />
       </div>
     </>
   );

@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import type { Resume, ResumeSection, SectionContent } from '@/types/resume';
 import { AUTOSAVE_DELAY } from '@/lib/constants';
 import { generateId } from '@/lib/utils';
+import { getSectionCollection, normalizeSectionContentForRender } from '@/lib/section-content';
 import { useSettingsStore } from '@/stores/settings-store';
 
 interface ResumeStore {
@@ -25,6 +26,29 @@ interface ResumeStore {
   reset: () => void;
 }
 
+function ensureSectionEntryIds<T extends object>(entries: T[]): T[] {
+  return entries.map((entry) => {
+    const record = entry as T & { id?: unknown };
+    return typeof record.id === 'string' && record.id.trim()
+      ? entry
+      : { ...record, id: generateId() } as T;
+  });
+}
+
+function normalizeSectionContent(section: { type: string; content: unknown }): SectionContent {
+  const content = normalizeSectionContentForRender(section.type, section.content);
+
+  if ('items' in content) {
+    content.items = ensureSectionEntryIds(getSectionCollection(content.items, 'items'));
+  }
+
+  if ('categories' in content) {
+    content.categories = ensureSectionEntryIds(getSectionCollection(content.categories, 'categories'));
+  }
+
+  return content as unknown as SectionContent;
+}
+
 export const useResumeStore = create<ResumeStore>((set, get) => ({
   currentResume: null,
   sections: [],
@@ -37,25 +61,10 @@ export const useResumeStore = create<ResumeStore>((set, get) => ({
     const { _saveTimeout } = get();
     if (_saveTimeout) clearTimeout(_saveTimeout);
 
-    // Normalize: ensure all items/categories in section content have id fields
-    const sections = resume.sections.map((s) => {
-      const content = s.content as unknown as Record<string, unknown>;
-      if (Array.isArray(content?.items)) {
-        content.items = (content.items as any[]).map((item) =>
-          typeof item === 'object' && item !== null && !item.id
-            ? { ...item, id: generateId() }
-            : item
-        );
-      }
-      if (Array.isArray(content?.categories)) {
-        content.categories = (content.categories as any[]).map((cat) =>
-          typeof cat === 'object' && cat !== null && !cat.id
-            ? { ...cat, id: generateId() }
-            : cat
-        );
-      }
-      return { ...s, content: content as unknown as typeof s.content };
-    });
+    const sections = resume.sections.map((section) => ({
+      ...section,
+      content: normalizeSectionContent(section),
+    }));
 
     set({
       currentResume: { ...resume, sections },
@@ -68,7 +77,18 @@ export const useResumeStore = create<ResumeStore>((set, get) => ({
   updateSection: (sectionId, content) => {
     set((state) => {
       const sections = state.sections.map((s) =>
-        s.id === sectionId ? { ...s, content: { ...s.content, ...content } as SectionContent } : s
+        s.id === sectionId
+          ? {
+              ...s,
+              content: normalizeSectionContent({
+                type: s.type,
+                content: {
+                  ...(typeof s.content === 'object' && s.content !== null ? s.content as unknown as Record<string, unknown> : {}),
+                  ...(typeof content === 'object' && content !== null ? content as unknown as Record<string, unknown> : {}),
+                },
+              }),
+            }
+          : s
       );
       return {
         sections,
@@ -95,7 +115,7 @@ export const useResumeStore = create<ResumeStore>((set, get) => ({
 
   addSection: (section) => {
     set((state) => {
-      const sections = [...state.sections, section];
+      const sections = [...state.sections, { ...section, content: normalizeSectionContent(section) }];
       return {
         sections,
         currentResume: state.currentResume ? { ...state.currentResume, sections } : null,

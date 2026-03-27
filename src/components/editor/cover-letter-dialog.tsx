@@ -15,6 +15,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { LanguageSelect } from '@/components/ui/language-select';
 import { cn } from '@/lib/utils';
+import { downloadBlob } from '@/lib/utils/download';
 import { getAIHeaders } from '@/stores/settings-store';
 
 interface CoverLetterDialogProps {
@@ -86,14 +87,7 @@ export function CoverLetterDialog({ open, onOpenChange, resumeId }: CoverLetterD
   const handleDownload = () => {
     if (!result) return;
     const blob = new Blob([result.content], { type: 'text/plain;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${result.title || 'cover-letter'}.txt`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    downloadBlob(blob, `${result.title || 'cover-letter'}.txt`);
   };
 
   const handleGenerateAgain = () => {

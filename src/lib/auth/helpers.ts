@@ -36,5 +36,10 @@ export async function resolveUser(fingerprint?: string | null) {
 }
 
 export function getUserIdFromRequest(request: Request): string | null {
-  return request.headers.get('x-fingerprint') || null;
+  const headerFingerprint = request.headers.get('x-fingerprint');
+  if (headerFingerprint) return headerFingerprint;
+
+  const cookieHeader = request.headers.get('cookie') || '';
+  const match = cookieHeader.match(/(?:^|;\s*)jade_fingerprint=([^;]+)/);
+  return match ? decodeURIComponent(match[1]) : null;
 }

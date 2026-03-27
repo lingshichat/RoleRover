@@ -10,11 +10,13 @@ interface PdfOptions {
 }
 
 async function getBrowser() {
+  const launchArgs = ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu'];
+
   // Docker / self-hosted: use system Chromium via CHROME_PATH
   if (process.env.CHROME_PATH) {
     return puppeteer.launch({
       executablePath: process.env.CHROME_PATH,
-      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu'],
+      args: launchArgs,
       headless: true,
     });
   }
@@ -32,18 +34,25 @@ async function getBrowser() {
   }
 
   // Dev: use local Chrome/Chromium
-  const candidates = [
-    '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
-    '/usr/bin/google-chrome',
-    '/usr/bin/chromium-browser',
-    '/usr/bin/chromium',
-  ];
+  const candidates = process.platform === 'win32'
+    ? [
+        'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
+        'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
+        'C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe',
+        'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',
+      ]
+    : [
+        '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+        '/usr/bin/google-chrome',
+        '/usr/bin/chromium-browser',
+        '/usr/bin/chromium',
+      ];
 
   for (const path of candidates) {
     try {
       const { accessSync } = await import('fs');
       accessSync(path);
-      return puppeteer.launch({ executablePath: path, headless: true });
+      return puppeteer.launch({ executablePath: path, args: launchArgs, headless: true });
     } catch {
       continue;
     }
