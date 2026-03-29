@@ -9,6 +9,31 @@ const resources = {
         "Tauri + Rust bootstrap shell for the desktop-first rewrite.",
       branch: "Working branch",
       runtime: "Runtime",
+      runtimeBoundaryLabel: "Runtime boundary",
+      runtimeBoundaryTitle: "Desktop shell availability",
+      runtimeStatusLabel: "Runtime status",
+      runtimeModeLabel: "Runtime mode",
+      runtimeModeNative: "Native Tauri shell",
+      runtimeModeFallback: "Browser fallback",
+      runtimeNativeBadge: "Native shell",
+      runtimeFallbackBadge: "Fallback shell",
+      runtimeNativeCommandsReady: "Native commands available",
+      runtimeNativeCommandsUnavailable: "Native commands unavailable",
+      runtimeNativeSummary:
+        "Rust commands are active in this shell, so workspace, storage, settings, and importer state come from the desktop runtime.",
+      runtimeFallbackSummary:
+        "This screen is using browser fallback for shell development. Filesystem, secrets, and importer commands are not running through Tauri here.",
+      runtimeNativeBannerTitle: "Native runtime is active",
+      runtimeNativeBannerBody:
+        "This shell is talking to the Rust command surface, so the bootstrap data you see here comes from the desktop runtime boundary.",
+      runtimeFallbackBannerTitle: "Browser fallback is active",
+      runtimeFallbackBannerBody:
+        "This shell is rendering in fallback mode for development, so the snapshots below are helpful for layout and contract work but not proof of native readiness.",
+      runtimeLimitationsTitle: "Current limitations",
+      runtimeFallbackAction:
+        "Launch the desktop shell before treating these snapshots as real migration or storage readiness signals.",
+      runtimeNativeAction:
+        "This native shell is ready for staged PR1 hardening, but the product flow is still intentionally limited while later PRs land.",
       frontend: "Frontend shell",
       platform: "Platform",
       mode: "Mode",
@@ -21,6 +46,14 @@ const resources = {
       libraryTitle: "Desktop library scaffold",
       libraryBody:
         "This route is the first desktop dashboard surface where resumes, sessions, and templates will converge.",
+      libraryBodyFallback:
+        "This route is still a browser fallback shell. It shows the intended dashboard structure, but it is not a trustworthy signal for native storage or migration readiness yet.",
+      libraryRuntimeNativeTitle: "Library shell is reading native runtime state",
+      libraryRuntimeNativeBody:
+        "The library surface is wired to the desktop runtime, so the storage and workspace signals here can be used for PR1 hardening work.",
+      libraryRuntimeFallbackTitle: "Library shell is still in browser fallback",
+      libraryRuntimeFallbackBody:
+        "The library surface can show intended queues and layout here, but its workspace and storage status should not be treated as proof that the native desktop path is ready.",
       libraryFocus: "Work lanes",
       libraryFocusTitle: "Primary desktop queues",
       libraryQueueTitle: "Import queue",
@@ -117,6 +150,14 @@ const resources = {
       settingsTitle: "Runtime and provider controls",
       settingsBody:
         "This stub centralizes provider credentials, storage location, language, and desktop behavior controls.",
+      settingsBodyFallback:
+        "This settings surface is still running as a browser shell. It can preview the contract, but desktop-native secrets and filesystem behavior are not active here.",
+      settingsRuntimeNativeTitle: "Settings are reading desktop runtime state",
+      settingsRuntimeNativeBody:
+        "Provider, vault, and workspace controls are now backed by the desktop runtime boundary for PR1 shell validation.",
+      settingsRuntimeFallbackTitle: "Settings are still in browser fallback",
+      settingsRuntimeFallbackBody:
+        "This page can preview the settings contract, but credentials, vault readiness, and filesystem paths should not be treated as native desktop proof while fallback mode is active.",
       settingsProvidersTitle: "AI providers",
       settingsProvidersHeader: "Provider credentials",
       settingsProvidersBody:
@@ -158,6 +199,7 @@ const resources = {
       storageBody:
         "The storage bootstrap now creates the desktop-native SQLite foundation and records seed metadata for the single workspace.",
       storageHealth: "Storage health",
+      storageHealthFallback: "Native storage unavailable",
       storageReady: "Initialized",
       storageNeedsAttention: "Needs attention",
       sqliteVersion: "SQLite version",
@@ -175,8 +217,10 @@ const resources = {
       workspaceHint:
         "Rust now owns the desktop storage root, manifest, and legacy import discovery surface.",
       workspaceState: "Workspace state",
+      workspaceStateFallback: "Fallback placeholder only",
       schemaVersion: "Schema version",
       migrationState: "Migration state",
+      migrationStateNeedsDesktop: "Needs native desktop runtime",
       storageRoot: "Storage root",
       manifestPath: "Manifest path",
       databasePath: "Database path",
@@ -219,6 +263,31 @@ const resources = {
       subtitle: "桌面端重构的 Tauri + Rust 启动壳。",
       branch: "当前分支",
       runtime: "运行时",
+      runtimeBoundaryLabel: "运行边界",
+      runtimeBoundaryTitle: "桌面壳可用性",
+      runtimeStatusLabel: "运行状态",
+      runtimeModeLabel: "运行模式",
+      runtimeModeNative: "原生 Tauri 壳",
+      runtimeModeFallback: "浏览器兜底模式",
+      runtimeNativeBadge: "原生壳",
+      runtimeFallbackBadge: "兜底壳",
+      runtimeNativeCommandsReady: "原生命令可用",
+      runtimeNativeCommandsUnavailable: "原生命令不可用",
+      runtimeNativeSummary:
+        "当前壳层已经跑在 Rust 命令面上，所以 workspace、storage、settings 和 importer 状态都来自真实桌面运行时。",
+      runtimeFallbackSummary:
+        "当前页面处于浏览器 fallback，只适合壳层开发查看；文件系统、secrets 和 importer 命令并没有真正走 Tauri。",
+      runtimeNativeBannerTitle: "原生运行时已激活",
+      runtimeNativeBannerBody:
+        "当前壳层已经连上 Rust 命令面，所以这里看到的 bootstrap 数据来自真实桌面运行时边界。",
+      runtimeFallbackBannerTitle: "浏览器 fallback 已激活",
+      runtimeFallbackBannerBody:
+        "当前壳层仍在 fallback 模式下渲染，更适合做布局和契约联调；下面这些快照不能当成原生就绪度的证明。",
+      runtimeLimitationsTitle: "当前限制",
+      runtimeFallbackAction:
+        "在把这些快照当成真实迁移或存储就绪信号之前，请先启动桌面壳进行验证。",
+      runtimeNativeAction:
+        "这个原生壳已经可以继续做 PR1 的阶段性加固，但整体产品流程仍然会在后续 PR 中逐步补齐。",
       frontend: "前端壳",
       platform: "平台",
       mode: "模式",
@@ -231,6 +300,14 @@ const resources = {
       libraryTitle: "桌面资料库骨架",
       libraryBody:
         "这个路由是桌面 Dashboard 的第一层骨架，后续会在这里汇总简历、会话和模板。",
+      libraryBodyFallback:
+        "这个路由目前仍是浏览器 fallback 壳，只能展示预期的 dashboard 结构，还不能作为原生存储或迁移就绪度的可信信号。",
+      libraryRuntimeNativeTitle: "资料库壳已读取原生运行时状态",
+      libraryRuntimeNativeBody:
+        "当前资料库页面已经接到桌面运行时，所以这里的 storage 和 workspace 信号可以作为 PR1 壳层加固的依据。",
+      libraryRuntimeFallbackTitle: "资料库仍处于浏览器 fallback",
+      libraryRuntimeFallbackBody:
+        "当前资料库页面可以展示预期的队列和布局，但它的 workspace 与 storage 状态不能被视为原生桌面路径已就绪的证明。",
       libraryFocus: "工作分区",
       libraryFocusTitle: "桌面主流程入口",
       libraryQueueTitle: "导入队列",
@@ -323,6 +400,14 @@ const resources = {
       settingsTitle: "运行时与 Provider 控制",
       settingsBody:
         "这个页面骨架会统一承载 Provider 凭据、存储位置、语言和桌面行为设置。",
+      settingsBodyFallback:
+        "这个设置页当前仍运行在浏览器壳里，只能预览契约，桌面端 secrets 和文件系统行为还没有真正生效。",
+      settingsRuntimeNativeTitle: "设置页已读取桌面运行时状态",
+      settingsRuntimeNativeBody:
+        "当前 Provider、vault 和 workspace 控制项已经接到桌面运行时边界，可用于 PR1 壳层验证。",
+      settingsRuntimeFallbackTitle: "设置页仍处于浏览器 fallback",
+      settingsRuntimeFallbackBody:
+        "当前页面可以预览设置契约，但在 fallback 模式下，凭据、vault 就绪度和文件系统路径都不能当成原生桌面的真实证明。",
       settingsProvidersTitle: "AI Provider",
       settingsProvidersHeader: "Provider 凭据",
       settingsProvidersBody:
@@ -364,6 +449,7 @@ const resources = {
       storageBody:
         "存储引导层已经会创建桌面原生 SQLite 基座，并为单工作区写入初始元数据。",
       storageHealth: "存储健康度",
+      storageHealthFallback: "原生存储不可用",
       storageReady: "已初始化",
       storageNeedsAttention: "需要处理",
       sqliteVersion: "SQLite 版本",
@@ -381,8 +467,10 @@ const resources = {
       workspaceHint:
         "现在由 Rust 接管桌面端存储根目录、manifest，以及旧数据探测入口。",
       workspaceState: "Workspace 状态",
+      workspaceStateFallback: "仅浏览器占位",
       schemaVersion: "Schema 版本",
       migrationState: "迁移状态",
+      migrationStateNeedsDesktop: "需要原生桌面运行时",
       storageRoot: "存储根目录",
       manifestPath: "Manifest 路径",
       databasePath: "数据库路径",

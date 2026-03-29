@@ -29,12 +29,18 @@ function ensureDataDir() {
 }
 
 function startDevStack() {
-  const command = process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm';
-  const child = spawn(command, ['dev:stack'], {
-    cwd: ROOT,
-    env: process.env,
-    stdio: 'inherit',
-  });
+  const child =
+    process.platform === 'win32'
+      ? spawn('cmd.exe', ['/d', '/s', '/c', 'pnpm dev:stack'], {
+          cwd: ROOT,
+          env: process.env,
+          stdio: 'inherit',
+        })
+      : spawn('pnpm', ['dev:stack'], {
+          cwd: ROOT,
+          env: process.env,
+          stdio: 'inherit',
+        });
 
   child.on('error', (error) => {
     console.error('[rolerover] Failed to start local dev stack:', error);

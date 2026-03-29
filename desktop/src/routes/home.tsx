@@ -3,6 +3,8 @@ import { useTranslation } from "react-i18next";
 import {
   getBootstrapContext,
   getWorkspaceSnapshot,
+  isBrowserFallbackRuntime,
+  type BootstrapContext,
   type WorkspaceSnapshot,
 } from "../lib/desktop-api";
 import { rootRoute } from "./root";
@@ -15,8 +17,16 @@ const workstreams = [
 
 function formatStatus(
   workspace: WorkspaceSnapshot,
+  context: BootstrapContext,
   t: (key: string) => string,
 ): { bootstrap: string; migration: string } {
+  if (isBrowserFallbackRuntime(context)) {
+    return {
+      bootstrap: t("workspaceStateFallback"),
+      migration: t("migrationStateNeedsDesktop"),
+    };
+  }
+
   return {
     bootstrap:
       workspace.bootstrapStatus === "created"
@@ -32,7 +42,15 @@ function formatStatus(
 function HomeRoute() {
   const { t } = useTranslation();
   const { context, workspace } = homeRoute.useLoaderData();
-  const status = formatStatus(workspace, t);
+  const status = formatStatus(workspace, context, t);
+  const runtimeIsFallback = isBrowserFallbackRuntime(context);
+  const runtimeBannerTitle = runtimeIsFallback
+    ? "runtimeFallbackBannerTitle"
+    : "runtimeNativeBannerTitle";
+  const runtimeBannerBody = runtimeIsFallback
+    ? "runtimeFallbackBannerBody"
+    : "runtimeNativeBannerBody";
+  const runtimeBadge = runtimeIsFallback ? "runtimeFallbackBadge" : "runtimeNativeBadge";
 
   return (
     <>
@@ -75,6 +93,22 @@ function HomeRoute() {
             <dd>{status.migration}</dd>
           </div>
         </dl>
+      </section>
+
+      <section className="panel">
+        <div className="panel__header">
+          <div>
+            <p className="panel__label">{t("runtimeStatusLabel")}</p>
+            <h2>{t(runtimeBannerTitle)}</h2>
+          </div>
+          <span className={`pill pill--${runtimeIsFallback ? "warn" : "success"}`}>
+            {t(runtimeBadge)}
+          </span>
+        </div>
+        <p className="panel__body">{t(runtimeBannerBody)}</p>
+        <p className="panel__body">
+          <strong>{context.runtime}</strong>
+        </p>
       </section>
 
       <section className="panel">

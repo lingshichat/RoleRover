@@ -5,12 +5,18 @@ import {
   getSecretVaultStatus,
   getWorkspaceSettingsSnapshot,
   getWorkspaceSnapshot,
+  isBrowserFallbackRuntime,
 } from "../lib/desktop-api";
 import { rootRoute } from "./root";
 
 function SettingsRoute() {
   const { t } = useTranslation();
   const { context, workspace, settings, vault } = settingsRoute.useLoaderData();
+  const runtimeIsFallback = isBrowserFallbackRuntime(context);
+  const settingsBodyKey = runtimeIsFallback ? "settingsBodyFallback" : "settingsBody";
+  const runtimeNoteTitle = runtimeIsFallback ? "settingsRuntimeFallbackTitle" : "settingsRuntimeNativeTitle";
+  const runtimeNoteBody = runtimeIsFallback ? "settingsRuntimeFallbackBody" : "settingsRuntimeNativeBody";
+  const runtimeBadge = runtimeIsFallback ? "runtimeFallbackBadge" : "runtimeNativeBadge";
   const vaultStatusLabel =
     vault.status === "ready"
       ? t("vaultStatusReady")
@@ -28,7 +34,7 @@ function SettingsRoute() {
           </div>
           <span className="pill pill--soft">{context.platform}</span>
         </div>
-        <p className="panel__body">{t("settingsBody")}</p>
+        <p className="panel__body">{t(settingsBodyKey)}</p>
         <div className="stub-grid">
           <article className="stub-card">
             <p className="workstream-card__badge">{t("settingsProvidersTitle")}</p>
@@ -56,6 +62,22 @@ function SettingsRoute() {
           </article>
         </div>
       </section>
+
+      <article className={runtimeIsFallback ? "issue-card" : "issue-card issue-card--neutral"}>
+        <div className="panel__header">
+          <div>
+            <p className="panel__label">{t("runtimeStatusLabel")}</p>
+            <h3>{t(runtimeNoteTitle)}</h3>
+          </div>
+          <span className={`pill pill--${runtimeIsFallback ? "warn" : "success"}`}>
+            {t(runtimeBadge)}
+          </span>
+        </div>
+        <p className="panel__body">{t(runtimeNoteBody)}</p>
+        <p className="panel__body">
+          <strong>{context.runtime}</strong>
+        </p>
+      </article>
 
       <section className="panel">
         <div className="panel__header">

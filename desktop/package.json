@@ -16,8 +16,7 @@
     "i18next": "^25.0.0",
     "react": "19.2.3",
     "react-dom": "19.2.3",
-    "react-i18next": "^15.0.0",
-    "rolerover": "file:.."
+    "react-i18next": "^15.0.0"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2.0.0",

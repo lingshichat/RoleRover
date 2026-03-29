@@ -1,5 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 
+export type DesktopRuntimeMode = "tauri" | "browser_fallback";
+
 export interface BootstrapContext {
   appName: string;
   appVersion: string;
@@ -8,6 +10,9 @@ export interface BootstrapContext {
   platform: string;
   buildChannel: string;
   branch: string;
+  runtimeMode: DesktopRuntimeMode;
+  supportsNativeCommands: boolean;
+  limitations: string[];
 }
 
 const FALLBACK_CONTEXT: BootstrapContext = {
@@ -18,6 +23,13 @@ const FALLBACK_CONTEXT: BootstrapContext = {
   platform: "browser",
   buildChannel: "development",
   branch: "tauri-rust-desktop-rewrite",
+  runtimeMode: "browser_fallback",
+  supportsNativeCommands: false,
+  limitations: [
+    "Native Tauri commands are unavailable in browser fallback mode.",
+    "Workspace, storage, settings, and importer snapshots are placeholders for shell development only.",
+    "Use the desktop shell to validate real filesystem, secrets, and migration behavior.",
+  ],
 };
 
 export interface LegacySourceSnapshot {
@@ -391,52 +403,45 @@ const FALLBACK_IMPORTER_DRY_RUN: ImporterDryRunSnapshot = {
   migrationExecution: null,
 };
 
-export async function getBootstrapContext(): Promise<BootstrapContext> {
+function reportDesktopFallback(command: string, error: unknown): void {
+  console.warn(`[desktop-api] Falling back for ${command}.`, error);
+}
+
+async function invokeWithFallback<T>(command: string, fallback: T): Promise<T> {
   try {
-    return await invoke<BootstrapContext>("get_bootstrap_context");
-  } catch {
-    return FALLBACK_CONTEXT;
+    return await invoke<T>(command);
+  } catch (error) {
+    reportDesktopFallback(command, error);
+    return fallback;
   }
+}
+
+export function isBrowserFallbackRuntime(context: BootstrapContext): boolean {
+  return context.runtimeMode === "browser_fallback";
+}
+
+export async function getBootstrapContext(): Promise<BootstrapContext> {
+  return invokeWithFallback("get_bootstrap_context", FALLBACK_CONTEXT);
 }
 
 export async function getWorkspaceSnapshot(): Promise<WorkspaceSnapshot> {
-  try {
-    return await invoke<WorkspaceSnapshot>("get_workspace_snapshot");
-  } catch {
-    return FALLBACK_WORKSPACE;
-  }
+  return invokeWithFallback("get_workspace_snapshot", FALLBACK_WORKSPACE);
 }
 
 export async function getStorageSnapshot(): Promise<StorageSnapshot> {
-  try {
-    return await invoke<StorageSnapshot>("get_storage_snapshot");
-  } catch {
-    return FALLBACK_STORAGE;
-  }
+  return invokeWithFallback("get_storage_snapshot", FALLBACK_STORAGE);
 }
 
 export async function getWorkspaceSettingsSnapshot(): Promise<WorkspaceSettingsDocument> {
-  try {
-    return await invoke<WorkspaceSettingsDocument>("get_workspace_settings_snapshot");
-  } catch {
-    return FALLBACK_SETTINGS;
-  }
+  return invokeWithFallback("get_workspace_settings_snapshot", FALLBACK_SETTINGS);
 }
 
 export async function getSecretVaultStatus(): Promise<SecretVaultStatus> {
-  try {
-    return await invoke<SecretVaultStatus>("get_secret_vault_status");
-  } catch {
-    return FALLBACK_VAULT_STATUS;
-  }
+  return invokeWithFallback("get_secret_vault_status", FALLBACK_VAULT_STATUS);
 }
 
 export async function getImporterDryRun(): Promise<ImporterDryRunSnapshot> {
-  try {
-    return await invoke<ImporterDryRunSnapshot>("get_importer_dry_run");
-  } catch {
-    return FALLBACK_IMPORTER_DRY_RUN;
-  }
+  return invokeWithFallback("get_importer_dry_run", FALLBACK_IMPORTER_DRY_RUN);
 }
 
 export async function executeImporterStaging(): Promise<ImporterDryRunSnapshot> {

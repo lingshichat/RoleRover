@@ -4,6 +4,7 @@ import {
   getBootstrapContext,
   getStorageSnapshot,
   getWorkspaceSnapshot,
+  isBrowserFallbackRuntime,
 } from "../lib/desktop-api";
 import { rootRoute } from "./root";
 
@@ -17,6 +18,22 @@ function tableCount(
 function LibraryRoute() {
   const { t } = useTranslation();
   const { context, workspace, storage } = libraryRoute.useLoaderData();
+  const runtimeIsFallback = isBrowserFallbackRuntime(context);
+  const libraryBodyKey = runtimeIsFallback ? "libraryBodyFallback" : "libraryBody";
+  const runtimeNoteTitle = runtimeIsFallback ? "libraryRuntimeFallbackTitle" : "libraryRuntimeNativeTitle";
+  const runtimeNoteBody = runtimeIsFallback ? "libraryRuntimeFallbackBody" : "libraryRuntimeNativeBody";
+  const runtimeBadge = runtimeIsFallback ? "runtimeFallbackBadge" : "runtimeNativeBadge";
+  const workspaceStateLabel = runtimeIsFallback
+    ? t("workspaceStateFallback")
+    : workspace.bootstrapStatus;
+  const migrationStateLabel = runtimeIsFallback
+    ? t("migrationStateNeedsDesktop")
+    : workspace.migrationStatus;
+  const storageHealthLabel = runtimeIsFallback
+    ? t("storageHealthFallback")
+    : storage.initialized
+      ? t("storageReady")
+      : t("storageNeedsAttention");
 
   return (
     <>
@@ -28,7 +45,7 @@ function LibraryRoute() {
           </div>
           <span className="pill">{context.buildChannel}</span>
         </div>
-        <p className="panel__body">{t("libraryBody")}</p>
+        <p className="panel__body">{t(libraryBodyKey)}</p>
         <dl className="stats-grid">
           <div className="stat-card">
             <dt>{t("branch")}</dt>
@@ -40,11 +57,11 @@ function LibraryRoute() {
           </div>
           <div className="stat-card">
             <dt>{t("workspaceState")}</dt>
-            <dd>{workspace.bootstrapStatus}</dd>
+            <dd>{workspaceStateLabel}</dd>
           </div>
           <div className="stat-card">
             <dt>{t("migrationState")}</dt>
-            <dd>{workspace.migrationStatus}</dd>
+            <dd>{migrationStateLabel}</dd>
           </div>
           <div className="stat-card">
             <dt>{t("sqliteVersion")}</dt>
@@ -52,10 +69,26 @@ function LibraryRoute() {
           </div>
           <div className="stat-card">
             <dt>{t("storageHealth")}</dt>
-            <dd>{storage.initialized ? t("storageReady") : t("storageNeedsAttention")}</dd>
+            <dd>{storageHealthLabel}</dd>
           </div>
         </dl>
       </section>
+
+      <article className={runtimeIsFallback ? "issue-card" : "issue-card issue-card--neutral"}>
+        <div className="panel__header">
+          <div>
+            <p className="panel__label">{t("runtimeStatusLabel")}</p>
+            <h3>{t(runtimeNoteTitle)}</h3>
+          </div>
+          <span className={`pill pill--${runtimeIsFallback ? "warn" : "success"}`}>
+            {t(runtimeBadge)}
+          </span>
+        </div>
+        <p className="panel__body">{t(runtimeNoteBody)}</p>
+        <p className="panel__body">
+          <strong>{context.runtime}</strong>
+        </p>
+      </article>
 
       <section className="panel">
         <div className="panel__header">

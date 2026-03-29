@@ -27,6 +27,9 @@ struct BootstrapContext {
     platform: String,
     build_channel: String,
     branch: String,
+    runtime_mode: String,
+    supports_native_commands: bool,
+    limitations: Vec<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -58,6 +61,9 @@ fn get_bootstrap_context(app: tauri::AppHandle) -> BootstrapContext {
             "production".into()
         },
         branch: "tauri-rust-desktop-rewrite".into(),
+        runtime_mode: "tauri".into(),
+        supports_native_commands: true,
+        limitations: Vec::new(),
     }
 }
 
