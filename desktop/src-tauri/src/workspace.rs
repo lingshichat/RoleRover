@@ -17,10 +17,11 @@ const CACHE_DIR: &str = "cache";
 const SECRETS_DIR: &str = "secrets";
 const MANIFESTS_DIR: &str = "manifests";
 const DATABASE_FILE: &str = "rolerover.db";
-const SECURE_SETTINGS_FILE: &str = "secure-settings.json";
+const WORKSPACE_SECURE_SETTINGS_FILE: &str = "vault-fallback.json";
 const LEGACY_PRODUCT_DIR: &str = "RoleRover";
 const LEGACY_DATABASE_FILE: &str = "jade.db";
 const LEGACY_DATA_DIR: &str = "data";
+const LEGACY_SECURE_SETTINGS_FILE: &str = "secure-settings.json";
 const LEGACY_WINDOW_STATE_FILE: &str = "window-state.json";
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -158,6 +159,7 @@ fn load_or_initialize_manifest(
                 manifest_path.display()
             )
         })?;
+        let manifest = migrate_manifest_paths(manifest);
         return Ok((manifest, BootstrapStatus::Reused));
     }
 
@@ -167,7 +169,7 @@ fn load_or_initialize_manifest(
         created_at_epoch_ms: now_epoch_ms()?,
         last_opened_at_epoch_ms: now_epoch_ms()?,
         database_rel_path: DATABASE_FILE.into(),
-        secure_settings_rel_path: format!("{SECRETS_DIR}/{SECURE_SETTINGS_FILE}"),
+        secure_settings_rel_path: format!("{SECRETS_DIR}/{WORKSPACE_SECURE_SETTINGS_FILE}"),
         documents_rel_path: DOCUMENTS_DIR.into(),
         exports_rel_path: EXPORTS_DIR.into(),
         imports_rel_path: IMPORTS_DIR.into(),
@@ -177,6 +179,14 @@ fn load_or_initialize_manifest(
 
     persist_manifest(manifest_path, &manifest)?;
     Ok((manifest, BootstrapStatus::Created))
+}
+
+fn migrate_manifest_paths(mut manifest: WorkspaceManifest) -> WorkspaceManifest {
+    if manifest.secure_settings_rel_path == format!("{SECRETS_DIR}/secure-settings.json") {
+        manifest.secure_settings_rel_path =
+            format!("{SECRETS_DIR}/{WORKSPACE_SECURE_SETTINGS_FILE}");
+    }
+    manifest
 }
 
 fn persist_manifest(manifest_path: &Path, manifest: &WorkspaceManifest) -> Result<(), String> {
@@ -215,8 +225,8 @@ fn collect_legacy_sources(app_data_dir: &Path) -> Vec<LegacySourceSnapshot> {
             id: format!("legacy-secure-settings:{}", root.display()),
             label: "Legacy secure settings".into(),
             kind: "secure-settings".into(),
-            path: path_to_string(&root.join(SECURE_SETTINGS_FILE)),
-            exists: root.join(SECURE_SETTINGS_FILE).exists(),
+            path: path_to_string(&root.join(LEGACY_SECURE_SETTINGS_FILE)),
+            exists: root.join(LEGACY_SECURE_SETTINGS_FILE).exists(),
         });
         sources.push(LegacySourceSnapshot {
             id: format!("legacy-window-state:{}", root.display()),

@@ -1,5 +1,6 @@
 #![allow(dead_code)]
 
+use crate::settings;
 use rusqlite::{params, Connection, OpenFlags};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -47,7 +48,7 @@ pub struct DiscoveredSource {
     pub priority: u8,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum LegacySourceKind {
     SqliteDatabase,
@@ -315,11 +316,12 @@ pub struct ImporterStagingAuditArtifact {
 }
 
 #[derive(Debug)]
-struct SelectedLegacySqliteSource {
+struct SelectedLegacySource {
     source_id: String,
     source_path: String,
     staged_path: String,
     priority: u8,
+    source_kind: LegacySourceKind,
 }
 
 #[derive(Debug)]
@@ -455,7 +457,25 @@ struct PreparedMigrationSlice {
     chat_sessions: Vec<PreparedChatSession>,
     chat_messages: Vec<PreparedChatMessage>,
     analysis_records: Vec<PreparedAnalysisRecord>,
+    window_state_json: Option<String>,
+    window_state_staged_path: Option<String>,
+    secure_settings_staged_path: Option<String>,
     dropped_counts: Vec<DroppedEntityCount>,
+}
+
+#[derive(Debug)]
+struct FileRollbackSnapshot {
+    target_path: PathBuf,
+    backup_path: PathBuf,
+    existed_before: bool,
+}
+
+#[derive(Debug, Default)]
+struct MigrationCommitStats {
+    audit_rows_written: u32,
+    window_state_imported: bool,
+    secure_settings_imported_count: u32,
+    secure_settings_opaque_count: u32,
 }
 
 pub struct LegacyImporter;
@@ -477,7 +497,7 @@ impl LegacyImporter {
 
         let discovery = Self::discover_sources(discovery_input);
         let staging = Self::plan_staging(&staging_dir, &discovery);
-        let validation = Self::validate(&discovery, &staging, strict_mode);
+        let validation = Self::validate(&discovery, &staging, strict_mode, workspace_database_path);
         let transform = Self::build_transform_plan();
 
         ImporterExecutionPlan {
@@ -521,7 +541,11 @@ impl LegacyImporter {
         };
 
         let summary = if blocking_issues.is_empty() {
-            "Importer dry-run is ready for execution once commit wiring is integrated.".into()
+            if plan.validation.totals.warning_issues > 0 {
+                "Importer dry-run is ready for staged SQLite execution, but review the warning set before commit.".into()
+            } else {
+                "Importer dry-run is ready for staged SQLite execution.".into()
+            }
         } else {
             "Importer dry-run found blocking issues. Resolve before commit execution.".into()
         };
@@ -813,14 +837,26 @@ impl LegacyImporter {
         discovery: &SourceDiscoveryResult,
         staging: &StagingPlan,
         strict_mode: bool,
+        workspace_database_path: &str,
     ) -> ValidationSummary {
         let mut issues = Vec::new();
-
+        let has_sqlite_candidate = discovery.sources.iter().any(|source| {
+            source.exists && matches!(source.source_kind, LegacySourceKind::SqliteDatabase)
+        });
         if !discovery.has_viable_input {
             issues.push(ValidationIssue {
                 code: "missing_viable_source".into(),
                 severity: ValidationSeverity::Blocking,
                 message: "No viable legacy source found for migration.".into(),
+                source_id: None,
+            });
+        }
+
+        if !has_sqlite_candidate {
+            issues.push(ValidationIssue {
+                code: "missing_sqlite_source".into(),
+                severity: ValidationSeverity::Blocking,
+                message: "No legacy SQLite database was discovered. The current execution slice only commits staged SQLite content into the desktop workspace.".into(),
                 source_id: None,
             });
         }
@@ -836,6 +872,49 @@ impl LegacyImporter {
                 message: "No file-based source was staged for migration.".into(),
                 source_id: None,
             });
+        }
+
+        match inspect_target_workspace_state(workspace_database_path) {
+            Ok(state) => {
+                if !state.non_empty_tables.is_empty() {
+                    let table_summary = state
+                        .non_empty_tables
+                        .iter()
+                        .map(|snapshot| format!("{}={}", snapshot.table, snapshot.row_count))
+                        .collect::<Vec<_>>()
+                        .join(", ");
+                    issues.push(ValidationIssue {
+                        code: "target_workspace_not_empty".into(),
+                        severity: ValidationSeverity::Blocking,
+                        message: format!(
+                            "Target workspace already contains imported runtime data ({table_summary}). Start from a clean workspace database before running this migration slice."
+                        ),
+                        source_id: None,
+                    });
+                }
+
+                if state.migration_audit_rows > 0 {
+                    issues.push(ValidationIssue {
+                        code: "existing_migration_audit_history".into(),
+                        severity: ValidationSeverity::Warning,
+                        message: format!(
+                            "Target workspace already contains {} migration_audit row(s). Review prior runs before importing again.",
+                            state.migration_audit_rows
+                        ),
+                        source_id: None,
+                    });
+                }
+            }
+            Err(error) => {
+                issues.push(ValidationIssue {
+                    code: "target_workspace_inspection_failed".into(),
+                    severity: ValidationSeverity::Blocking,
+                    message: format!(
+                        "Unable to inspect the target workspace database before migration: {error}"
+                    ),
+                    source_id: None,
+                });
+            }
         }
 
         let blocking_issues = issues
@@ -901,6 +980,20 @@ impl LegacyImporter {
                     mode: TransformMode::ImportWithTransform,
                     notes: "Map analysis type and preserve score/result payloads.".into(),
                 },
+                TransformStep {
+                    id: "secure_settings_to_workspace_secrets".into(),
+                    source_entity: "secure-settings.json".into(),
+                    target_entity: "workspace secrets manifest + vault fallback".into(),
+                    mode: TransformMode::ImportWithTransform,
+                    notes: "Recover plaintext legacy secrets when possible and preserve encrypted safeStorage blobs for follow-up migration.".into(),
+                },
+                TransformStep {
+                    id: "window_state_to_workspace_settings".into(),
+                    source_entity: "window-state.json".into(),
+                    target_entity: "workspace_settings.window_state_json".into(),
+                    mode: TransformMode::ImportWithTransform,
+                    notes: "Normalize legacy bounds into a safe desktop window-state payload.".into(),
+                },
             ],
             dropped_surfaces: vec![
                 DroppedSurface {
@@ -927,7 +1020,48 @@ impl LegacyImporter {
             }
         };
 
-        let prepared = match Self::prepare_document_migration(&selected_source, &mut warnings) {
+        let staged_secure_settings_source = match Self::select_optional_staged_source(
+            plan,
+            LegacySourceKind::SecureSettings,
+            &mut warnings,
+        ) {
+            Ok(source) => source,
+            Err(error) => {
+                return Self::failed_migration_result(
+                    plan,
+                    error,
+                    Some(selected_source.staged_path.clone()),
+                    None,
+                    warnings,
+                    0,
+                );
+            }
+        };
+
+        let staged_window_state_source = match Self::select_optional_staged_source(
+            plan,
+            LegacySourceKind::WindowState,
+            &mut warnings,
+        ) {
+            Ok(source) => source,
+            Err(error) => {
+                return Self::failed_migration_result(
+                    plan,
+                    error,
+                    Some(selected_source.staged_path.clone()),
+                    None,
+                    warnings,
+                    0,
+                );
+            }
+        };
+
+        let prepared = match Self::prepare_document_migration(
+            &selected_source,
+            staged_secure_settings_source.as_ref(),
+            staged_window_state_source.as_ref(),
+            &mut warnings,
+        ) {
             Ok(prepared) => prepared,
             Err(error) => {
                 return Self::failed_migration_result(
@@ -943,6 +1077,7 @@ impl LegacyImporter {
 
         let database_path = PathBuf::from(&plan.config.workspace_database_path);
         let backup_path = PathBuf::from(&plan.staging.staging_dir).join(WORKSPACE_DB_BACKUP_FILE);
+        let workspace_root = PathBuf::from(&plan.config.workspace_root);
 
         if let Err(error) = ensure_parent_directory(&backup_path) {
             return Self::failed_migration_result(
@@ -970,11 +1105,29 @@ impl LegacyImporter {
             );
         }
 
+        let file_rollbacks = match Self::prepare_file_rollbacks(
+            &workspace_root,
+            &plan.staging.staging_dir,
+            prepared.secure_settings_staged_path.is_some(),
+        ) {
+            Ok(rollbacks) => rollbacks,
+            Err(error) => {
+                return Self::failed_migration_result(
+                    plan,
+                    error,
+                    Some(selected_source.staged_path.clone()),
+                    Some(normalize_path(backup_path)),
+                    warnings,
+                    0,
+                );
+            }
+        };
+
         let commit_result =
-            Self::commit_document_migration(plan, &selected_source, &prepared, &warnings);
+            Self::commit_document_migration(plan, &selected_source, &prepared, &mut warnings);
 
         match commit_result {
-            Ok(audit_rows_written) => {
+            Ok(stats) => {
                 let mut backup_output = None;
                 if let Err(error) = fs::remove_file(&backup_path) {
                     warnings.push(format!(
@@ -982,46 +1135,67 @@ impl LegacyImporter {
                     ));
                     backup_output = Some(normalize_path(backup_path));
                 }
+                Self::cleanup_file_rollbacks(&file_rollbacks, &mut warnings);
+
+                let mut imported_counts = vec![
+                    MigrationEntityCount {
+                        entity: "documents".into(),
+                        count: prepared.documents.len() as u32,
+                    },
+                    MigrationEntityCount {
+                        entity: "document_sections".into(),
+                        count: prepared.sections.len() as u32,
+                    },
+                    MigrationEntityCount {
+                        entity: "ai_chat_sessions".into(),
+                        count: prepared.chat_sessions.len() as u32,
+                    },
+                    MigrationEntityCount {
+                        entity: "ai_chat_messages".into(),
+                        count: prepared.chat_messages.len() as u32,
+                    },
+                    MigrationEntityCount {
+                        entity: "ai_analysis_records".into(),
+                        count: prepared.analysis_records.len() as u32,
+                    },
+                ];
+
+                if stats.window_state_imported {
+                    imported_counts.push(MigrationEntityCount {
+                        entity: "workspace_settings.window_state_json".into(),
+                        count: 1,
+                    });
+                }
+
+                let secure_settings_total =
+                    stats.secure_settings_imported_count + stats.secure_settings_opaque_count;
+                if secure_settings_total > 0 {
+                    imported_counts.push(MigrationEntityCount {
+                        entity: "workspace_secrets".into(),
+                        count: secure_settings_total,
+                    });
+                }
 
                 MigrationExecutionResult {
                     run_id: plan.config.run_id.clone(),
                     state: MigrationExecutionState::Success,
                     summary: format!(
-                        "Imported {} documents, {} sections, {} chat sessions, {} chat messages, and {} analysis records from staged legacy SQLite into the desktop workspace.",
+                        "Imported {} documents, {} sections, {} chat sessions, {} chat messages, {} analysis records, {} window-state payload(s), and {} workspace secret payload(s) into the desktop workspace.",
                         prepared.documents.len(),
                         prepared.sections.len(),
                         prepared.chat_sessions.len(),
                         prepared.chat_messages.len(),
-                        prepared.analysis_records.len()
+                        prepared.analysis_records.len(),
+                        if stats.window_state_imported { 1 } else { 0 },
+                        secure_settings_total
                     ),
                     source_database_path: Some(selected_source.staged_path),
                     backup_path: backup_output,
-                    imported_counts: vec![
-                        MigrationEntityCount {
-                            entity: "documents".into(),
-                            count: prepared.documents.len() as u32,
-                        },
-                        MigrationEntityCount {
-                            entity: "document_sections".into(),
-                            count: prepared.sections.len() as u32,
-                        },
-                        MigrationEntityCount {
-                            entity: "ai_chat_sessions".into(),
-                            count: prepared.chat_sessions.len() as u32,
-                        },
-                        MigrationEntityCount {
-                            entity: "ai_chat_messages".into(),
-                            count: prepared.chat_messages.len() as u32,
-                        },
-                        MigrationEntityCount {
-                            entity: "ai_analysis_records".into(),
-                            count: prepared.analysis_records.len() as u32,
-                        },
-                    ],
+                    imported_counts,
                     dropped_counts: prepared.dropped_counts,
                     warning_count: warnings.len() as u32,
                     warnings,
-                    audit_rows_written,
+                    audit_rows_written: stats.audit_rows_written,
                 }
             }
             Err(error) => {
@@ -1044,6 +1218,7 @@ impl LegacyImporter {
                         );
                     }
                 }
+                Self::restore_file_rollbacks(&file_rollbacks, &mut warnings);
 
                 let staging_root = PathBuf::from(&plan.staging.staging_dir);
                 match fs::remove_dir_all(&staging_root) {
@@ -1078,24 +1253,40 @@ impl LegacyImporter {
     fn select_staged_sqlite_source(
         plan: &ImporterExecutionPlan,
         warnings: &mut Vec<String>,
-    ) -> Result<SelectedLegacySqliteSource, String> {
+    ) -> Result<SelectedLegacySource, String> {
+        Self::select_staged_source(plan, LegacySourceKind::SqliteDatabase, warnings)?
+            .ok_or_else(|| "no staged SQLite database is available for document migration.".into())
+    }
+
+    fn select_optional_staged_source(
+        plan: &ImporterExecutionPlan,
+        source_kind: LegacySourceKind,
+        warnings: &mut Vec<String>,
+    ) -> Result<Option<SelectedLegacySource>, String> {
+        Self::select_staged_source(plan, source_kind, warnings)
+    }
+
+    fn select_staged_source(
+        plan: &ImporterExecutionPlan,
+        source_kind: LegacySourceKind,
+        warnings: &mut Vec<String>,
+    ) -> Result<Option<SelectedLegacySource>, String> {
         let mut candidates: Vec<&DiscoveredSource> = plan
             .discovery
             .sources
             .iter()
-            .filter(|source| {
-                source.exists && matches!(source.source_kind, LegacySourceKind::SqliteDatabase)
-            })
+            .filter(|source| source.exists && source.source_kind == source_kind)
             .collect();
         candidates.sort_by_key(|source| source.priority);
 
-        let selected = candidates.first().ok_or_else(|| {
-            "no staged SQLite database is available for document migration.".to_string()
-        })?;
+        let Some(selected) = candidates.first() else {
+            return Ok(None);
+        };
 
         if candidates.len() > 1 {
             warnings.push(format!(
-                "multiple SQLite migration inputs were discovered; using {} (priority {}) and leaving {} additional candidate(s) untouched.",
+                "multiple {:?} migration inputs were discovered; using {} (priority {}) and leaving {} additional candidate(s) untouched.",
+                source_kind,
                 selected.id,
                 selected.priority,
                 candidates.len() - 1
@@ -1117,21 +1308,25 @@ impl LegacyImporter {
         let staged_path = PathBuf::from(&staged_file.staged_path);
         if !staged_path.exists() {
             return Err(format!(
-                "staged SQLite database is missing at {}",
+                "staged {:?} source is missing at {}",
+                source_kind,
                 staged_path.display()
             ));
         }
 
-        Ok(SelectedLegacySqliteSource {
+        Ok(Some(SelectedLegacySource {
             source_id: selected.id.clone(),
             source_path: selected.path.clone(),
             staged_path: normalize_path(staged_path),
             priority: selected.priority,
-        })
+            source_kind,
+        }))
     }
 
     fn prepare_document_migration(
-        selected_source: &SelectedLegacySqliteSource,
+        selected_source: &SelectedLegacySource,
+        secure_settings_source: Option<&SelectedLegacySource>,
+        window_state_source: Option<&SelectedLegacySource>,
         warnings: &mut Vec<String>,
     ) -> Result<PreparedMigrationSlice, String> {
         let connection = Connection::open_with_flags(
@@ -1155,6 +1350,14 @@ impl LegacyImporter {
         let jd_analyses = Self::load_legacy_jd_analyses(&connection)?;
         let grammar_checks = Self::load_legacy_grammar_checks(&connection)?;
         let dropped_counts = Self::load_dropped_surface_counts(&connection)?;
+        let window_state_json = if let Some(window_state_source) = window_state_source {
+            Some(Self::prepare_window_state_import(
+                window_state_source,
+                warnings,
+            )?)
+        } else {
+            None
+        };
         let inline_share_count = Self::count_inline_resume_share_rows(&connection)?;
         if inline_share_count > 0 {
             warnings.push(format!(
@@ -1327,8 +1530,71 @@ impl LegacyImporter {
             chat_sessions: prepared_chat_sessions,
             chat_messages: prepared_chat_messages,
             analysis_records: prepared_analysis_records,
+            window_state_json,
+            window_state_staged_path: window_state_source.map(|source| source.staged_path.clone()),
+            secure_settings_staged_path: secure_settings_source
+                .map(|source| source.staged_path.clone()),
             dropped_counts,
         })
+    }
+
+    fn prepare_window_state_import(
+        source: &SelectedLegacySource,
+        warnings: &mut Vec<String>,
+    ) -> Result<String, String> {
+        let raw = fs::read_to_string(&source.staged_path).map_err(|error| {
+            format!(
+                "failed to read staged window-state payload {}: {error}",
+                source.staged_path
+            )
+        })?;
+        let parsed = serde_json::from_str::<serde_json::Value>(&raw).map_err(|error| {
+            format!(
+                "failed to parse staged window-state payload {}: {error}",
+                source.staged_path
+            )
+        })?;
+        let object = parsed.as_object().ok_or_else(|| {
+            format!(
+                "legacy window-state payload at {} must be a JSON object",
+                source.staged_path
+            )
+        })?;
+
+        let width = normalize_window_dimension(
+            object.get("width").and_then(serde_json::Value::as_i64),
+            1440,
+            1200,
+            4096,
+            "width",
+            warnings,
+        );
+        let height = normalize_window_dimension(
+            object.get("height").and_then(serde_json::Value::as_i64),
+            960,
+            760,
+            2160,
+            "height",
+            warnings,
+        );
+        let x = normalize_window_coordinate(
+            object.get("x").and_then(serde_json::Value::as_i64),
+            "x",
+            warnings,
+        );
+        let y = normalize_window_coordinate(
+            object.get("y").and_then(serde_json::Value::as_i64),
+            "y",
+            warnings,
+        );
+
+        serde_json::to_string(&serde_json::json!({
+            "width": width,
+            "height": height,
+            "x": x,
+            "y": y,
+        }))
+        .map_err(|error| format!("failed to serialize normalized window-state payload: {error}"))
     }
 
     fn load_legacy_documents(connection: &Connection) -> Result<Vec<RawLegacyDocument>, String> {
@@ -1694,10 +1960,10 @@ impl LegacyImporter {
 
     fn commit_document_migration(
         plan: &ImporterExecutionPlan,
-        selected_source: &SelectedLegacySqliteSource,
+        selected_source: &SelectedLegacySource,
         prepared: &PreparedMigrationSlice,
-        warnings: &[String],
-    ) -> Result<u32, String> {
+        warnings: &mut Vec<String>,
+    ) -> Result<MigrationCommitStats, String> {
         let mut connection =
             Connection::open(&plan.config.workspace_database_path).map_err(|error| {
                 format!("failed to open workspace db for migration commit: {error}")
@@ -1717,9 +1983,9 @@ impl LegacyImporter {
         let transaction = connection
             .transaction()
             .map_err(|error| format!("failed to start migration transaction: {error}"))?;
-        let mut audit_rows_written = 0_u32;
+        let mut stats = MigrationCommitStats::default();
 
-        audit_rows_written += insert_semantic_audit_row(
+        stats.audit_rows_written += insert_semantic_audit_row(
             &transaction,
             &plan.config.run_id,
             "sqlite_database",
@@ -1736,7 +2002,7 @@ impl LegacyImporter {
             }),
         )?;
 
-        audit_rows_written += insert_semantic_audit_row(
+        stats.audit_rows_written += insert_semantic_audit_row(
             &transaction,
             &plan.config.run_id,
             "migration",
@@ -1789,7 +2055,7 @@ impl LegacyImporter {
                 })?;
         }
 
-        audit_rows_written += insert_semantic_audit_row(
+        stats.audit_rows_written += insert_semantic_audit_row(
             &transaction,
             &plan.config.run_id,
             "documents",
@@ -1840,7 +2106,7 @@ impl LegacyImporter {
                 })?;
         }
 
-        audit_rows_written += insert_semantic_audit_row(
+        stats.audit_rows_written += insert_semantic_audit_row(
             &transaction,
             &plan.config.run_id,
             "document_sections",
@@ -1883,7 +2149,7 @@ impl LegacyImporter {
                 })?;
         }
 
-        audit_rows_written += insert_semantic_audit_row(
+        stats.audit_rows_written += insert_semantic_audit_row(
             &transaction,
             &plan.config.run_id,
             "ai_chat_sessions",
@@ -1928,7 +2194,7 @@ impl LegacyImporter {
                 })?;
         }
 
-        audit_rows_written += insert_semantic_audit_row(
+        stats.audit_rows_written += insert_semantic_audit_row(
             &transaction,
             &plan.config.run_id,
             "ai_chat_messages",
@@ -1979,7 +2245,7 @@ impl LegacyImporter {
                 })?;
         }
 
-        audit_rows_written += insert_semantic_audit_row(
+        stats.audit_rows_written += insert_semantic_audit_row(
             &transaction,
             &plan.config.run_id,
             "ai_analysis_records",
@@ -1994,8 +2260,68 @@ impl LegacyImporter {
             }),
         )?;
 
+        if let Some(window_state_json) = &prepared.window_state_json {
+            transaction
+                .execute(
+                    r#"
+                    UPDATE workspace_settings
+                    SET window_state_json = ?, updated_at_epoch_ms = ?
+                    WHERE id = 1
+                    "#,
+                    params![window_state_json, now_epoch_ms()? as i64],
+                )
+                .map_err(|error| format!("failed to persist imported window state: {error}"))?;
+            stats.window_state_imported = true;
+
+            stats.audit_rows_written += insert_semantic_audit_row(
+                &transaction,
+                &plan.config.run_id,
+                "window_state",
+                prepared
+                    .window_state_staged_path
+                    .as_deref()
+                    .unwrap_or(&selected_source.staged_path),
+                "imported",
+                1,
+                0,
+                warnings.len() as i64,
+                serde_json::json!({
+                    "entity": "workspace_settings.window_state_json",
+                    "windowStateJson": window_state_json,
+                }),
+            )?;
+        }
+
+        if let Some(secure_settings_staged_path) = &prepared.secure_settings_staged_path {
+            let import_result = settings::import_legacy_secure_settings(
+                Path::new(&plan.config.workspace_root),
+                Path::new(secure_settings_staged_path),
+            )?;
+            warnings.extend(import_result.warnings.iter().cloned());
+            stats.secure_settings_imported_count = import_result.imported_secret_count;
+            stats.secure_settings_opaque_count = import_result.opaque_secret_count;
+            stats.audit_rows_written += insert_semantic_audit_row(
+                &transaction,
+                &plan.config.run_id,
+                "workspace_secrets",
+                secure_settings_staged_path,
+                "imported",
+                (import_result.imported_secret_count + import_result.opaque_secret_count) as i64,
+                0,
+                import_result.warnings.len() as i64,
+                serde_json::json!({
+                    "entity": "workspace_secrets",
+                    "importedSecretCount": import_result.imported_secret_count,
+                    "opaqueSecretCount": import_result.opaque_secret_count,
+                    "importedKeys": import_result.imported_keys,
+                    "opaqueKeys": import_result.opaque_keys,
+                    "warnings": import_result.warnings,
+                }),
+            )?;
+        }
+
         for dropped in &prepared.dropped_counts {
-            audit_rows_written += insert_semantic_audit_row(
+            stats.audit_rows_written += insert_semantic_audit_row(
                 &transaction,
                 &plan.config.run_id,
                 &dropped.entity,
@@ -2011,7 +2337,7 @@ impl LegacyImporter {
             )?;
         }
 
-        audit_rows_written += insert_semantic_audit_row(
+        stats.audit_rows_written += insert_semantic_audit_row(
             &transaction,
             &plan.config.run_id,
             "migration",
@@ -2045,7 +2371,7 @@ impl LegacyImporter {
             .commit()
             .map_err(|error| format!("failed to commit migration transaction: {error}"))?;
 
-        Ok(audit_rows_written)
+        Ok(stats)
     }
 
     fn failed_migration_result(
@@ -2160,6 +2486,102 @@ impl LegacyImporter {
             .commit()
             .map_err(|error| format!("failed to commit migration_audit transaction: {error}"))
     }
+
+    fn prepare_file_rollbacks(
+        workspace_root: &Path,
+        staging_dir: &str,
+        needs_secret_rollbacks: bool,
+    ) -> Result<Vec<FileRollbackSnapshot>, String> {
+        if !needs_secret_rollbacks {
+            return Ok(Vec::new());
+        }
+
+        let backup_root = PathBuf::from(staging_dir).join("rollback");
+        let targets = vec![
+            (
+                settings::secrets_manifest_path(workspace_root),
+                backup_root.join("secrets-manifest.backup.json"),
+            ),
+            (
+                settings::vault_fallback_path(workspace_root),
+                backup_root.join("vault-fallback.backup.json"),
+            ),
+        ];
+
+        let mut rollbacks = Vec::new();
+        for (target_path, backup_path) in targets {
+            if let Some(parent) = backup_path.parent() {
+                fs::create_dir_all(parent).map_err(|error| {
+                    format!(
+                        "failed to create rollback directory {}: {error}",
+                        parent.display()
+                    )
+                })?;
+            }
+
+            let existed_before = target_path.exists();
+            if existed_before {
+                fs::copy(&target_path, &backup_path).map_err(|error| {
+                    format!(
+                        "failed to snapshot {} into {} before migration: {error}",
+                        target_path.display(),
+                        backup_path.display()
+                    )
+                })?;
+            }
+
+            rollbacks.push(FileRollbackSnapshot {
+                target_path,
+                backup_path,
+                existed_before,
+            });
+        }
+
+        Ok(rollbacks)
+    }
+
+    fn restore_file_rollbacks(rollbacks: &[FileRollbackSnapshot], warnings: &mut Vec<String>) {
+        for rollback in rollbacks {
+            if rollback.existed_before {
+                match fs::copy(&rollback.backup_path, &rollback.target_path) {
+                    Ok(_) => warnings.push(format!(
+                        "restored {} from rollback snapshot after migration failure.",
+                        rollback.target_path.display()
+                    )),
+                    Err(error) => warnings.push(format!(
+                        "failed to restore {} from rollback snapshot {}: {error}",
+                        rollback.target_path.display(),
+                        rollback.backup_path.display()
+                    )),
+                }
+            } else if rollback.target_path.exists() {
+                match fs::remove_file(&rollback.target_path) {
+                    Ok(_) => warnings.push(format!(
+                        "removed newly created {} after migration failure.",
+                        rollback.target_path.display()
+                    )),
+                    Err(error) => warnings.push(format!(
+                        "failed to remove newly created {} after migration failure: {error}",
+                        rollback.target_path.display()
+                    )),
+                }
+            }
+        }
+    }
+
+    fn cleanup_file_rollbacks(rollbacks: &[FileRollbackSnapshot], warnings: &mut Vec<String>) {
+        for rollback in rollbacks {
+            if rollback.backup_path.exists() {
+                match fs::remove_file(&rollback.backup_path) {
+                    Ok(_) => {}
+                    Err(error) => warnings.push(format!(
+                        "migration succeeded but rollback snapshot {} could not be removed: {error}",
+                        rollback.backup_path.display()
+                    )),
+                }
+            }
+        }
+    }
 }
 
 fn insert_semantic_audit_row(
@@ -2213,6 +2635,45 @@ fn normalize_optional_text(value: Option<String>) -> Option<String> {
         } else {
             Some(trimmed.to_string())
         }
+    })
+}
+
+fn normalize_window_dimension(
+    value: Option<i64>,
+    fallback: i64,
+    min: i64,
+    max: i64,
+    label: &str,
+    warnings: &mut Vec<String>,
+) -> i64 {
+    let raw = value.unwrap_or_else(|| {
+        warnings.push(format!(
+            "legacy window-state {label} was missing; using fallback value {fallback}."
+        ));
+        fallback
+    });
+    let clamped = raw.clamp(min, max);
+    if clamped != raw {
+        warnings.push(format!(
+            "legacy window-state {label}={raw} was outside the supported range and was clamped to {clamped}."
+        ));
+    }
+    clamped
+}
+
+fn normalize_window_coordinate(
+    value: Option<i64>,
+    label: &str,
+    warnings: &mut Vec<String>,
+) -> Option<i64> {
+    value.map(|raw| {
+        let clamped = raw.clamp(-16_384, 16_384);
+        if clamped != raw {
+            warnings.push(format!(
+                "legacy window-state {label}={raw} was outside the supported range and was clamped to {clamped}."
+            ));
+        }
+        clamped
     })
 }
 
@@ -2351,6 +2812,62 @@ fn count_table_rows_if_exists(connection: &Connection, table: &str) -> Result<u3
         .query_row(&query, [], |row| row.get::<_, i64>(0))
         .map(|count| count.max(0) as u32)
         .map_err(|error| format!("failed to count rows in optional table {table}: {error}"))
+}
+
+struct TargetTableCount {
+    table: String,
+    row_count: u32,
+}
+
+struct TargetWorkspaceState {
+    non_empty_tables: Vec<TargetTableCount>,
+    migration_audit_rows: u32,
+}
+
+fn inspect_target_workspace_state(
+    workspace_database_path: &str,
+) -> Result<TargetWorkspaceState, String> {
+    let db_path = PathBuf::from(workspace_database_path);
+    if !db_path.exists() {
+        return Ok(TargetWorkspaceState {
+            non_empty_tables: Vec::new(),
+            migration_audit_rows: 0,
+        });
+    }
+
+    let connection = Connection::open_with_flags(&db_path, OpenFlags::SQLITE_OPEN_READ_ONLY)
+        .map_err(|error| {
+            format!(
+                "failed to open target workspace database {} for inspection: {error}",
+                db_path.display()
+            )
+        })?;
+
+    let runtime_tables = [
+        "documents",
+        "document_sections",
+        "ai_chat_sessions",
+        "ai_chat_messages",
+        "ai_analysis_records",
+    ];
+
+    let mut non_empty_tables = Vec::new();
+    for table in runtime_tables {
+        let row_count = count_table_rows_if_exists(&connection, table)?;
+        if row_count > 0 {
+            non_empty_tables.push(TargetTableCount {
+                table: table.into(),
+                row_count,
+            });
+        }
+    }
+
+    let migration_audit_rows = count_table_rows_if_exists(&connection, "migration_audit")?;
+
+    Ok(TargetWorkspaceState {
+        non_empty_tables,
+        migration_audit_rows,
+    })
 }
 
 fn derive_staging_state(entries: &[StagingManifestEntry]) -> StagingExecutionState {

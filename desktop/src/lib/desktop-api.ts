@@ -283,7 +283,7 @@ const FALLBACK_WORKSPACE: WorkspaceSnapshot = {
   rootDir: "desktop/workspace",
   manifestPath: "desktop/workspace/manifests/workspace.json",
   databasePath: "desktop/workspace/rolerover.db",
-  secureSettingsPath: "desktop/workspace/secrets/secure-settings.json",
+  secureSettingsPath: "desktop/workspace/secrets/vault-fallback.json",
   documentsDir: "desktop/workspace/documents",
   exportsDir: "desktop/workspace/exports",
   importsDir: "desktop/workspace/imports",
