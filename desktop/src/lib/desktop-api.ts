@@ -15,23 +15,6 @@ export interface BootstrapContext {
   limitations: string[];
 }
 
-const FALLBACK_CONTEXT: BootstrapContext = {
-  appName: "RoleRover Desktop",
-  appVersion: "0.1.0",
-  frontendShell: "React + Vite + TanStack Router + react-i18next",
-  runtime: "Tauri bootstrap shell (browser fallback)",
-  platform: "browser",
-  buildChannel: "development",
-  branch: "tauri-rust-desktop-rewrite",
-  runtimeMode: "browser_fallback",
-  supportsNativeCommands: false,
-  limitations: [
-    "Native Tauri commands are unavailable in browser fallback mode.",
-    "Workspace, storage, settings, and importer snapshots are placeholders for shell development only.",
-    "Use the desktop shell to validate real filesystem, secrets, and migration behavior.",
-  ],
-};
-
 export interface LegacySourceSnapshot {
   id: string;
   label: string;
@@ -75,6 +58,106 @@ export interface StorageSnapshot {
   tableCounts: TableCountSnapshot[];
 }
 
+export type WorkspaceModel = "single_workspace";
+
+export type ResumeSectionType =
+  | "personal_info"
+  | "qr_codes"
+  | "summary"
+  | "work_experience"
+  | "education"
+  | "skills"
+  | "projects"
+  | "certifications"
+  | "languages"
+  | "custom"
+  | "github";
+
+export type AvatarStyle = "circle" | "one_inch";
+
+export interface ResumePageMargin {
+  top: number;
+  right: number;
+  bottom: number;
+  left: number;
+}
+
+export interface ResumeThemeConfig {
+  primaryColor: string;
+  accentColor: string;
+  fontFamily: string;
+  fontSize: string;
+  lineSpacing: number;
+  margin: ResumePageMargin;
+  sectionSpacing: number;
+  avatarStyle: AvatarStyle;
+}
+
+export type AiProvider = "openai" | "anthropic" | "gemini";
+
+export interface ProviderRuntimeContract {
+  provider: AiProvider;
+  baseUrl: string;
+  model: string;
+  apiKeySecretKey: string;
+}
+
+export interface ExaPoolSettingsContract {
+  baseUrl: string;
+  apiKeySecretKey: string;
+}
+
+export interface WorkspaceContractSettings {
+  ai: {
+    defaultProvider: AiProvider;
+    providers: ProviderRuntimeContract[];
+    exaPool: ExaPoolSettingsContract;
+  };
+  editor: {
+    autoSave: boolean;
+    autoSaveIntervalMs: number;
+  };
+}
+
+export type DomainLegacySourceKind = "sqlite" | "secure_settings" | "window_state";
+
+export interface LegacySourceDescriptor {
+  kind: DomainLegacySourceKind;
+  path: string;
+  storageProfile: string;
+}
+
+export type MigrationCheckpointStatus = "pending" | "passed" | "failed" | "skipped";
+
+export interface MigrationCheckpoint {
+  name: string;
+  required: boolean;
+  status: MigrationCheckpointStatus;
+  notes: string | null;
+}
+
+export type MigrationStatus =
+  | "pending"
+  | "legacy_sources_detected"
+  | "validation_failed"
+  | "imported";
+
+export interface MigrationEnvelope {
+  source: LegacySourceDescriptor;
+  targetSchemaVersion: number;
+  status: MigrationStatus;
+  checkpoints: MigrationCheckpoint[];
+}
+
+export interface DomainContractSummary {
+  contractVersion: number;
+  workspaceModel: WorkspaceModel;
+  supportedSectionTypes: ResumeSectionType[];
+  defaultTheme: ResumeThemeConfig;
+  defaultSettings: WorkspaceContractSettings;
+  migrationEnvelopeTemplate: MigrationEnvelope;
+}
+
 export interface ProviderRuntimeSettings {
   baseUrl: string;
   model: string;
@@ -98,6 +181,31 @@ export interface WorkspaceSettingsDocument {
     restoreLastWorkspace: boolean;
   };
   updatedAtEpochMs: number;
+}
+
+export type LegacyImportSourceKind =
+  | "sqliteDatabase"
+  | "secureSettings"
+  | "windowState"
+  | "localStorageFallback";
+
+export type LegacyTableAction =
+  | "importAsIs"
+  | "importWithTransform"
+  | "mergeIntoWorkspace"
+  | "dropWithAudit";
+
+export interface LegacyTableMapping {
+  source: string;
+  target: string;
+  action: LegacyTableAction;
+  notes: string;
+}
+
+export interface LegacyImportContract {
+  sourcePriority: LegacyImportSourceKind[];
+  tableMappings: LegacyTableMapping[];
+  droppedSurfaces: string[];
 }
 
 export type SecretVaultBackend =
@@ -273,6 +381,23 @@ export interface MigrationExecutionResult {
   auditRowsWritten: number;
 }
 
+const FALLBACK_CONTEXT: BootstrapContext = {
+  appName: "RoleRover Desktop",
+  appVersion: "0.1.0",
+  frontendShell: "React + Vite + TanStack Router + react-i18next",
+  runtime: "Tauri bootstrap shell (browser fallback)",
+  platform: "browser",
+  buildChannel: "development",
+  branch: "tauri-rust-desktop-rewrite",
+  runtimeMode: "browser_fallback",
+  supportsNativeCommands: false,
+  limitations: [
+    "Native Tauri commands are unavailable in browser fallback mode.",
+    "Workspace, storage, settings, and importer snapshots are placeholders for shell development only.",
+    "Use the desktop shell to validate real filesystem, secrets, and migration behavior.",
+  ],
+};
+
 const FALLBACK_WORKSPACE: WorkspaceSnapshot = {
   schemaVersion: 1,
   workspaceId: "browser-fallback",
@@ -303,6 +428,107 @@ const FALLBACK_STORAGE: StorageSnapshot = {
   tableCounts: [],
 };
 
+const FALLBACK_DOMAIN_CONTRACT: DomainContractSummary = {
+  contractVersion: 1,
+  workspaceModel: "single_workspace",
+  supportedSectionTypes: [
+    "personal_info",
+    "qr_codes",
+    "summary",
+    "work_experience",
+    "education",
+    "skills",
+    "projects",
+    "certifications",
+    "languages",
+    "custom",
+    "github",
+  ],
+  defaultTheme: {
+    primaryColor: "#111827",
+    accentColor: "#2563eb",
+    fontFamily: "Inter",
+    fontSize: "14px",
+    lineSpacing: 1.6,
+    margin: {
+      top: 24,
+      right: 24,
+      bottom: 24,
+      left: 24,
+    },
+    sectionSpacing: 16,
+    avatarStyle: "circle",
+  },
+  defaultSettings: {
+    ai: {
+      defaultProvider: "openai",
+      providers: [
+        {
+          provider: "openai",
+          baseUrl: "https://api.openai.com/v1",
+          model: "gpt-4o",
+          apiKeySecretKey: "provider.openai.api_key",
+        },
+        {
+          provider: "anthropic",
+          baseUrl: "https://api.anthropic.com",
+          model: "claude-sonnet-4-20250514",
+          apiKeySecretKey: "provider.anthropic.api_key",
+        },
+        {
+          provider: "gemini",
+          baseUrl: "https://generativelanguage.googleapis.com/v1beta",
+          model: "gemini-2.0-flash",
+          apiKeySecretKey: "provider.gemini.api_key",
+        },
+      ],
+      exaPool: {
+        baseUrl: "",
+        apiKeySecretKey: "provider.exa_pool.api_key",
+      },
+    },
+    editor: {
+      autoSave: true,
+      autoSaveIntervalMs: 500,
+    },
+  },
+  migrationEnvelopeTemplate: {
+    source: {
+      kind: "sqlite",
+      path: "workspace/imports/legacy/jade.db",
+      storageProfile: "electron-next-local",
+    },
+    targetSchemaVersion: 1,
+    status: "pending",
+    checkpoints: [
+      {
+        name: "source-discovery",
+        required: true,
+        status: "pending",
+        notes: null,
+      },
+      {
+        name: "schema-validation",
+        required: true,
+        status: "pending",
+        notes: null,
+      },
+      {
+        name: "content-import",
+        required: true,
+        status: "pending",
+        notes: null,
+      },
+      {
+        name: "secure-settings-import",
+        required: false,
+        status: "pending",
+        notes: "Skipped when no secure settings store is detected.",
+      },
+    ],
+  },
+};
+
 const FALLBACK_SETTINGS: WorkspaceSettingsDocument = {
   schemaVersion: 1,
   locale: "zh",
@@ -313,6 +539,14 @@ const FALLBACK_SETTINGS: WorkspaceSettingsDocument = {
       openai: {
         baseUrl: "https://api.openai.com/v1",
         model: "gpt-4o",
+      },
+      anthropic: {
+        baseUrl: "https://api.anthropic.com",
+        model: "claude-sonnet-4-20250514",
+      },
+      gemini: {
+        baseUrl: "https://generativelanguage.googleapis.com/v1beta",
+        model: "gemini-2.0-flash",
       },
     },
     exaPoolBaseUrl: "",
@@ -326,6 +560,78 @@ const FALLBACK_SETTINGS: WorkspaceSettingsDocument = {
     restoreLastWorkspace: true,
   },
   updatedAtEpochMs: 0,
+};
+
+const FALLBACK_LEGACY_IMPORT_CONTRACT: LegacyImportContract = {
+  sourcePriority: [
+    "secureSettings",
+    "sqliteDatabase",
+    "localStorageFallback",
+    "windowState",
+  ],
+  tableMappings: [
+    {
+      source: "users",
+      target: "workspace metadata",
+      action: "mergeIntoWorkspace",
+      notes:
+        "Single-workspace migration; user identity is not retained at runtime.",
+    },
+    {
+      source: "auth_accounts",
+      target: "migration audit",
+      action: "dropWithAudit",
+      notes: "Desktop runtime does not preserve OAuth account sessions.",
+    },
+    {
+      source: "resumes",
+      target: "documents",
+      action: "importWithTransform",
+      notes: "Drop share fields and normalize optional target fields.",
+    },
+    {
+      source: "resume_sections",
+      target: "document_sections",
+      action: "importWithTransform",
+      notes: "Repair malformed content JSON to empty object and emit warning.",
+    },
+    {
+      source: "chat_sessions",
+      target: "ai_chat_sessions",
+      action: "importAsIs",
+      notes: "Relink sessions to migrated document IDs.",
+    },
+    {
+      source: "chat_messages",
+      target: "ai_chat_messages",
+      action: "importAsIs",
+      notes: "Preserve role/content/metadata payloads.",
+    },
+    {
+      source: "resume_shares",
+      target: "none",
+      action: "dropWithAudit",
+      notes: "Public share surface is removed in desktop-first scope.",
+    },
+    {
+      source: "jd_analyses",
+      target: "ai_analysis_records(type=jd)",
+      action: "importWithTransform",
+      notes: "Preserve result payload and score fields.",
+    },
+    {
+      source: "grammar_checks",
+      target: "ai_analysis_records(type=grammar)",
+      action: "importWithTransform",
+      notes: "Preserve result payload and score fields.",
+    },
+  ],
+  droppedSurfaces: [
+    "online share tokens",
+    "public share views",
+    "request fingerprint runtime identity",
+    "oauth session runtime records",
+  ],
 };
 
 const FALLBACK_VAULT_STATUS: SecretVaultStatus = {
@@ -369,7 +675,8 @@ const FALLBACK_IMPORTER_DRY_RUN: ImporterDryRunSnapshot = {
         {
           code: "browser_fallback",
           severity: "blocking",
-          message: "Tauri importer dry-run is unavailable in browser fallback mode.",
+          message:
+            "Tauri importer dry-run is unavailable in browser fallback mode.",
           sourceId: null,
         },
       ],
@@ -394,7 +701,8 @@ const FALLBACK_IMPORTER_DRY_RUN: ImporterDryRunSnapshot = {
       {
         code: "browser_fallback",
         severity: "blocking",
-        message: "Tauri importer dry-run is unavailable in browser fallback mode.",
+        message:
+          "Tauri importer dry-run is unavailable in browser fallback mode.",
         sourceId: null,
       },
     ],
@@ -426,6 +734,20 @@ export async function getBootstrapContext(): Promise<BootstrapContext> {
 
 export async function getWorkspaceSnapshot(): Promise<WorkspaceSnapshot> {
   return invokeWithFallback("get_workspace_snapshot", FALLBACK_WORKSPACE);
+}
+
+export async function getDomainContractSummary(): Promise<DomainContractSummary> {
+  return invokeWithFallback(
+    "get_domain_contract_summary",
+    FALLBACK_DOMAIN_CONTRACT,
+  );
+}
+
+export async function getLegacyImportContract(): Promise<LegacyImportContract> {
+  return invokeWithFallback(
+    "get_legacy_import_contract",
+    FALLBACK_LEGACY_IMPORT_CONTRACT,
+  );
 }
 
 export async function getStorageSnapshot(): Promise<StorageSnapshot> {
