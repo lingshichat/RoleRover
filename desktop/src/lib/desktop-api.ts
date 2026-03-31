@@ -381,6 +381,66 @@ export interface MigrationExecutionResult {
   auditRowsWritten: number;
 }
 
+export type TemplateValidationSource =
+  | "workspace_documents"
+  | "native_sample_documents"
+  | "workspace_plus_native_sample_documents"
+  | "browser_fallback_sample";
+
+export interface TemplateValidationDocumentMetadata {
+  id: string;
+  title: string;
+  template: string;
+  language: string;
+  targetJobTitle?: string | null;
+  targetCompany?: string | null;
+  isDefault: boolean;
+  isSample: boolean;
+  createdAtEpochMs: number;
+  updatedAtEpochMs: number;
+}
+
+export interface TemplateValidationTheme {
+  primaryColor?: string;
+  accentColor?: string;
+  fontFamily?: string;
+  fontSize?: string;
+  lineSpacing?: number;
+  margin?: Partial<ResumePageMargin>;
+  sectionSpacing?: number;
+  avatarStyle?: AvatarStyle | "oneInch";
+}
+
+export interface TemplateValidationSection {
+  id: string;
+  documentId: string;
+  sectionType: ResumeSectionType;
+  title: string;
+  sortOrder: number;
+  visible: boolean;
+  content: Record<string, unknown>;
+  createdAtEpochMs: number;
+  updatedAtEpochMs: number;
+}
+
+export interface TemplateValidationDocument {
+  metadata: TemplateValidationDocumentMetadata;
+  theme: TemplateValidationTheme;
+  sections: TemplateValidationSection[];
+}
+
+export interface TemplateValidationSnapshot {
+  source: TemplateValidationSource;
+  representativeTemplates: string[];
+  documents: TemplateValidationDocument[];
+}
+
+export interface TemplateValidationExportReceipt {
+  fileName: string;
+  outputPath: string;
+  bytesWritten: number;
+}
+
 const FALLBACK_CONTEXT: BootstrapContext = {
   appName: "RoleRover Desktop",
   appVersion: "0.1.0",
@@ -711,6 +771,222 @@ const FALLBACK_IMPORTER_DRY_RUN: ImporterDryRunSnapshot = {
   migrationExecution: null,
 };
 
+const FALLBACK_TEMPLATE_THEME: ResumeThemeConfig = {
+  primaryColor: "#111827",
+  accentColor: "#2563eb",
+  fontFamily: "Inter",
+  fontSize: "medium",
+  lineSpacing: 1.6,
+  margin: {
+    top: 24,
+    right: 24,
+    bottom: 24,
+    left: 24,
+  },
+  sectionSpacing: 16,
+  avatarStyle: "circle",
+};
+
+function createFallbackTemplateValidationDocument(config: {
+  id: string;
+  title: string;
+  template: "classic" | "modern";
+  accentColor: string;
+  primaryColor: string;
+  summary: string;
+  workHighlights: string[];
+  projectName: string;
+}): TemplateValidationDocument {
+  return {
+    metadata: {
+      id: config.id,
+      title: config.title,
+      template: config.template,
+      language: "en",
+      targetJobTitle: "Senior Product Engineer",
+      targetCompany: "RoleRover",
+      isDefault: config.template === "classic",
+      isSample: true,
+      createdAtEpochMs: 0,
+      updatedAtEpochMs: 0,
+    },
+    theme: {
+      ...FALLBACK_TEMPLATE_THEME,
+      primaryColor: config.primaryColor,
+      accentColor: config.accentColor,
+    },
+    sections: [
+      {
+        id: `${config.id}-personal`,
+        documentId: config.id,
+        sectionType: "personal_info",
+        title: "Personal Info",
+        sortOrder: 0,
+        visible: true,
+        content: {
+          fullName: "Avery Morgan",
+          jobTitle: "Senior Product Engineer",
+          email: "avery@example.com",
+          phone: "+1 555 0100",
+          location: "Hong Kong",
+          website: "https://rolerover.dev",
+        },
+        createdAtEpochMs: 0,
+        updatedAtEpochMs: 0,
+      },
+      {
+        id: `${config.id}-summary`,
+        documentId: config.id,
+        sectionType: "summary",
+        title: "Summary",
+        sortOrder: 1,
+        visible: true,
+        content: {
+          text: config.summary,
+        },
+        createdAtEpochMs: 0,
+        updatedAtEpochMs: 0,
+      },
+      {
+        id: `${config.id}-work`,
+        documentId: config.id,
+        sectionType: "work_experience",
+        title: "Work Experience",
+        sortOrder: 2,
+        visible: true,
+        content: {
+          items: [
+            {
+              id: `${config.id}-work-item`,
+              company: "RoleRover",
+              position: "Staff Product Engineer",
+              location: "Remote",
+              startDate: "2022.01",
+              endDate: null,
+              current: true,
+              description:
+                "Led the desktop rewrite to unify document editing, preview, and export flows.",
+              technologies: ["Tauri", "Rust", "React", "TypeScript"],
+              highlights: config.workHighlights,
+            },
+          ],
+        },
+        createdAtEpochMs: 0,
+        updatedAtEpochMs: 0,
+      },
+      {
+        id: `${config.id}-education`,
+        documentId: config.id,
+        sectionType: "education",
+        title: "Education",
+        sortOrder: 3,
+        visible: true,
+        content: {
+          items: [
+            {
+              id: `${config.id}-education-item`,
+              institution: "City University",
+              degree: "B.Sc.",
+              field: "Computer Science",
+              location: "Hong Kong",
+              startDate: "2014.09",
+              endDate: "2018.06",
+              highlights: ["Graduated with distinction."],
+            },
+          ],
+        },
+        createdAtEpochMs: 0,
+        updatedAtEpochMs: 0,
+      },
+      {
+        id: `${config.id}-skills`,
+        documentId: config.id,
+        sectionType: "skills",
+        title: "Skills",
+        sortOrder: 4,
+        visible: true,
+        content: {
+          categories: [
+            {
+              id: `${config.id}-skills-core`,
+              name: "Core",
+              skills: ["Desktop Architecture", "Template Systems", "SQLite"],
+            },
+            {
+              id: `${config.id}-skills-delivery`,
+              name: "Delivery",
+              skills: ["Product Thinking", "Migration Planning", "QA"],
+            },
+          ],
+        },
+        createdAtEpochMs: 0,
+        updatedAtEpochMs: 0,
+      },
+      {
+        id: `${config.id}-projects`,
+        documentId: config.id,
+        sectionType: "projects",
+        title: "Projects",
+        sortOrder: 5,
+        visible: true,
+        content: {
+          items: [
+            {
+              id: `${config.id}-project-item`,
+              name: config.projectName,
+              startDate: "2025.10",
+              endDate: null,
+              description:
+                "Built a representative template validation lane to exercise preview and export paths in the desktop shell.",
+              technologies: ["Template Contract", "HTML Export", "Validation"],
+              highlights: [
+                "Validated representative templates without depending on the legacy web runtime.",
+              ],
+            },
+          ],
+        },
+        createdAtEpochMs: 0,
+        updatedAtEpochMs: 0,
+      },
+    ],
+  };
+}
+
+const FALLBACK_TEMPLATE_VALIDATION_SNAPSHOT: TemplateValidationSnapshot = {
+  source: "browser_fallback_sample",
+  representativeTemplates: ["classic", "modern"],
+  documents: [
+    createFallbackTemplateValidationDocument({
+      id: "browser-fallback-classic",
+      title: "Classic Contract Baseline",
+      template: "classic",
+      accentColor: "#2563eb",
+      primaryColor: "#111827",
+      summary:
+        "Desktop-side validation sample for the unified classic template contract.",
+      workHighlights: [
+        "Replaced decorative placeholders with a real template validation lane in the desktop shell.",
+        "Kept preview and export on the same canonical document input.",
+      ],
+      projectName: "Classic Preview + Export Baseline",
+    }),
+    createFallbackTemplateValidationDocument({
+      id: "browser-fallback-modern",
+      title: "Modern Contract Baseline",
+      template: "modern",
+      accentColor: "#e94560",
+      primaryColor: "#0f3460",
+      summary:
+        "Desktop-side validation sample for the unified modern template contract.",
+      workHighlights: [
+        "Verified a second representative template to prove the contract extends beyond one baseline style.",
+        "Used the same canonical sections to drive desktop preview and HTML export output.",
+      ],
+      projectName: "Modern Preview + Export Baseline",
+    }),
+  ],
+};
+
 function reportDesktopFallback(command: string, error: unknown): void {
   console.warn(`[desktop-api] Falling back for ${command}.`, error);
 }
@@ -766,10 +1042,27 @@ export async function getImporterDryRun(): Promise<ImporterDryRunSnapshot> {
   return invokeWithFallback("get_importer_dry_run", FALLBACK_IMPORTER_DRY_RUN);
 }
 
+export async function getTemplateValidationSnapshot(): Promise<TemplateValidationSnapshot> {
+  return invokeWithFallback(
+    "get_template_validation_snapshot",
+    FALLBACK_TEMPLATE_VALIDATION_SNAPSHOT,
+  );
+}
+
 export async function executeImporterStaging(): Promise<ImporterDryRunSnapshot> {
   return invoke<ImporterDryRunSnapshot>("execute_importer_staging");
 }
 
 export async function executeImporterMigration(): Promise<ImporterDryRunSnapshot> {
   return invoke<ImporterDryRunSnapshot>("execute_importer_migration");
+}
+
+export async function writeTemplateValidationExport(input: {
+  fileName?: string;
+  html: string;
+}): Promise<TemplateValidationExportReceipt> {
+  return invoke<TemplateValidationExportReceipt>(
+    "write_template_validation_export",
+    input,
+  );
 }

@@ -1,4 +1,17 @@
 [[permission]]
 identifier = "desktop-core"
 description = "Allows invoking the desktop bootstrap commands exposed by the application."
-commands.allow = ["get_bootstrap_context"]
+commands.allow = [
+  "get_bootstrap_context",
+  "get_workspace_snapshot",
+  "get_domain_contract_summary",
+  "get_legacy_import_contract",
+  "get_storage_snapshot",
+  "get_workspace_settings_snapshot",
+  "get_secret_vault_status",
+  "get_importer_dry_run",
+  "execute_importer_staging",
+  "execute_importer_migration",
+  "get_template_validation_snapshot",
+  "write_template_validation_export",
+]

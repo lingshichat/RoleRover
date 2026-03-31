@@ -4,6 +4,7 @@ import {
   getLegacyImportContract,
   getSecretVaultStatus,
   getStorageSnapshot,
+  getTemplateValidationSnapshot,
   getWorkspaceSettingsSnapshot,
   getWorkspaceSnapshot,
   type DomainContractSummary,
@@ -11,6 +12,7 @@ import {
   type ProviderRuntimeContract,
   type SecretVaultStatus,
   type StorageSnapshot,
+  type TemplateValidationSnapshot,
   type WorkspaceSettingsDocument,
   type WorkspaceSnapshot,
   type LegacyImportContract,
@@ -30,6 +32,7 @@ export interface LibraryRouteData {
   storage: StorageSnapshot;
   domainContract: DomainContractSummary;
   importContract: LegacyImportContract;
+  templateValidation: TemplateValidationSnapshot;
 }
 
 export interface ImportsRouteData {
@@ -114,11 +117,13 @@ export async function loadHomeRouteData(): Promise<HomeRouteData> {
 }
 
 export async function loadLibraryRouteData(): Promise<LibraryRouteData> {
-  const [workspace, storage, domainContract, importContract] = await Promise.all([
+  const [workspace, storage, domainContract, importContract, templateValidation] =
+    await Promise.all([
     getWorkspaceSnapshot(),
     getStorageSnapshot(),
     getDomainContractSummary(),
     getLegacyImportContract(),
+    getTemplateValidationSnapshot(),
   ]);
 
   return {
@@ -126,6 +131,7 @@ export async function loadLibraryRouteData(): Promise<LibraryRouteData> {
     storage,
     domainContract,
     importContract,
+    templateValidation,
   };
 }
 

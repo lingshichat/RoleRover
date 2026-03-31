@@ -1,13 +1,22 @@
 import { Link, createRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { isBrowserFallbackRuntime } from "../lib/desktop-api";
+import {
+  isBrowserFallbackRuntime,
+  writeTemplateValidationExport,
+  type TemplateValidationSource,
+} from "../lib/desktop-api";
 import {
   countTableRows,
   getDetectedLegacySources,
   loadLibraryRouteData,
 } from "../lib/desktop-loaders";
 import { formatDesktopToken } from "../lib/desktop-format";
+import {
+  buildTemplateValidationDocumentHtml,
+  countVisibleValidationSections,
+  formatBytes,
+} from "../lib/template-validation";
 import { rootRoute } from "./root";
 
 type ViewMode = "grid" | "list";
@@ -24,6 +33,20 @@ interface LibraryCollectionItem {
   to: "/library" | "/imports" | "/settings";
   cta: string;
 }
+
+interface TemplateExportState {
+  documentId: string | null;
+  status: "idle" | "saving" | "success" | "error";
+  outputPath: string | null;
+  message: string | null;
+}
+
+const INITIAL_TEMPLATE_EXPORT_STATE: TemplateExportState = {
+  documentId: null,
+  status: "idle",
+  outputPath: null,
+  message: null,
+};
 
 function SearchIcon() {
   return (
@@ -105,14 +128,56 @@ function CollectionPreview({ item }: { item: LibraryCollectionItem }) {
   );
 }
 
+function mapTemplateValidationSource(
+  source: TemplateValidationSource,
+  t: (key: string) => string,
+): string {
+  if (source === "workspace_documents") {
+    return t("templateValidationSourceWorkspace");
+  }
+
+  if (source === "workspace_plus_native_sample_documents") {
+    return t("templateValidationSourceMixed");
+  }
+
+  if (source === "native_sample_documents") {
+    return t("templateValidationSourceNativeSample");
+  }
+
+  return t("templateValidationSourceFallback");
+}
+
+function buildSuggestedExportName(title: string, template: string): string {
+  const slug = title
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+
+  return `${slug || "desktop-template"}-${template}`;
+}
+
 function LibraryRoute() {
   const { t } = useTranslation();
   const context = rootRoute.useLoaderData();
-  const { workspace, storage, domainContract, importContract } = libraryRoute.useLoaderData();
+  const {
+    workspace,
+    storage,
+    domainContract,
+    importContract,
+    templateValidation,
+  } = libraryRoute.useLoaderData();
   const runtimeIsFallback = isBrowserFallbackRuntime(context);
   const [searchQuery, setSearchQuery] = useState("");
   const [sortOption, setSortOption] = useState<SortOption>("countDesc");
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
+  const [selectedTemplateDocumentId, setSelectedTemplateDocumentId] = useState<
+    string | null
+  >(
+    () => templateValidation.documents[0]?.metadata.id ?? null,
+  );
+  const [templateExportState, setTemplateExportState] = useState<TemplateExportState>(
+    INITIAL_TEMPLATE_EXPORT_STATE,
+  );
 
   const documentCount = countTableRows(storage, "documents");
   const sectionCount = countTableRows(storage, "document_sections");
@@ -137,6 +202,40 @@ function LibraryRoute() {
     t,
   );
   const mappingsPreview = importContract.tableMappings.slice(0, 4);
+  const templateValidationSourceLabel = mapTemplateValidationSource(
+    templateValidation.source,
+    t,
+  );
+  const resolvedSelectedTemplateDocumentId = templateValidation.documents.some(
+    (document) => document.metadata.id === selectedTemplateDocumentId,
+  )
+    ? selectedTemplateDocumentId
+    : templateValidation.documents[0]?.metadata.id ?? null;
+  const selectedTemplateDocument = useMemo(
+    () =>
+      templateValidation.documents.find(
+        (document) => document.metadata.id === resolvedSelectedTemplateDocumentId,
+      ) ?? templateValidation.documents[0] ?? null,
+    [resolvedSelectedTemplateDocumentId, templateValidation.documents],
+  );
+  const selectedTemplatePreviewHtml = useMemo(
+    () =>
+      selectedTemplateDocument
+        ? buildTemplateValidationDocumentHtml(selectedTemplateDocument)
+        : "",
+    [selectedTemplateDocument],
+  );
+  const selectedTemplatePreviewSize = useMemo(
+    () => formatBytes(new Blob([selectedTemplatePreviewHtml]).size),
+    [selectedTemplatePreviewHtml],
+  );
+  const visibleTemplateSectionCount = selectedTemplateDocument
+    ? countVisibleValidationSections(selectedTemplateDocument)
+    : 0;
+  const visibleTemplateExportState =
+    templateExportState.documentId === selectedTemplateDocument?.metadata.id
+      ? templateExportState
+      : INITIAL_TEMPLATE_EXPORT_STATE;
 
   const collectionItems = useMemo<LibraryCollectionItem[]>(
     () => [
@@ -235,6 +334,43 @@ function LibraryRoute() {
     });
   }, [collectionItems, searchQuery, sortOption]);
 
+  async function handleTemplateExport(): Promise<void> {
+    if (!selectedTemplateDocument || !selectedTemplatePreviewHtml) {
+      return;
+    }
+
+    setTemplateExportState({
+      documentId: selectedTemplateDocument.metadata.id,
+      status: "saving",
+      outputPath: null,
+      message: null,
+    });
+
+    try {
+      const receipt = await writeTemplateValidationExport({
+        fileName: buildSuggestedExportName(
+          selectedTemplateDocument.metadata.title,
+          selectedTemplateDocument.metadata.template,
+        ),
+        html: selectedTemplatePreviewHtml,
+      });
+
+      setTemplateExportState({
+        documentId: selectedTemplateDocument.metadata.id,
+        status: "success",
+        outputPath: receipt.outputPath,
+        message: null,
+      });
+    } catch (error) {
+      setTemplateExportState({
+        documentId: selectedTemplateDocument.metadata.id,
+        status: "error",
+        outputPath: null,
+        message: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+
   return (
     <div className="page">
       <header className="page-header">
@@ -293,6 +429,183 @@ function LibraryRoute() {
             <strong>{migrationStateLabel}</strong>
           </article>
         </div>
+      </section>
+
+      <section className="surface">
+        <div className="surface__header">
+          <div className="surface__copy">
+            <p className="surface__eyebrow">{t("templateContractLabel")}</p>
+            <h2 className="surface__title">{t("templateValidationTitle")}</h2>
+          </div>
+          <span className="status-badge status-badge--muted">
+            {templateValidationSourceLabel}
+          </span>
+        </div>
+        <p className="surface__body">
+          {t(
+            runtimeIsFallback
+              ? "templateValidationFallbackBody"
+              : "templateValidationNativeBody",
+          )}
+        </p>
+
+        {!selectedTemplateDocument ? (
+          <div className="empty-state empty-state--compact">
+            <h3>{t("templateValidationNoDocumentsTitle")}</h3>
+            <p>{t("templateValidationNoDocumentsBody")}</p>
+          </div>
+        ) : (
+          <>
+            <div className="template-validation-toolbar">
+              <div
+                className="template-validation-switcher"
+                role="tablist"
+                aria-label={t("templateValidationTitle")}
+              >
+                {templateValidation.documents.map((document) => {
+                  const isActive =
+                    document.metadata.id === selectedTemplateDocument.metadata.id;
+
+                  return (
+                    <button
+                      key={document.metadata.id}
+                      type="button"
+                      className={`template-chip ${isActive ? "template-chip--active" : ""}`}
+                      onClick={() => {
+                        setSelectedTemplateDocumentId(document.metadata.id);
+                        setTemplateExportState(INITIAL_TEMPLATE_EXPORT_STATE);
+                      }}
+                      aria-pressed={isActive}
+                    >
+                      <span className="template-chip__title">
+                        {formatDesktopToken(document.metadata.template)}
+                      </span>
+                      <span className="template-chip__meta">
+                        {document.metadata.title}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+              <div className="tag-list">
+                {templateValidation.representativeTemplates.map((templateId) => (
+                  <span key={templateId} className="tag">
+                    {formatDesktopToken(templateId)}
+                  </span>
+                ))}
+              </div>
+            </div>
+
+            <div className="template-validation-grid">
+              <article className="subsurface template-preview-surface">
+                <div className="subsurface__header">
+                  <div>
+                    <p className="collection-card__badge">
+                      {t("templateValidationPreviewTitle")}
+                    </p>
+                    <h3>{selectedTemplateDocument.metadata.title}</h3>
+                  </div>
+                  <span className="status-badge status-badge--muted">
+                    {selectedTemplateDocument.metadata.language.toUpperCase()}
+                  </span>
+                </div>
+                <div className="template-preview-frame">
+                  <iframe
+                    title={selectedTemplateDocument.metadata.title}
+                    className="template-preview-iframe"
+                    srcDoc={selectedTemplatePreviewHtml}
+                  />
+                </div>
+              </article>
+
+              <div className="template-validation-sidebar">
+                <article className="subsurface">
+                  <p className="collection-card__badge">{t("templateValidationContractTitle")}</p>
+                  <h3>{t("templateValidationDocumentTitle")}</h3>
+                  <dl className="template-stat-list">
+                    <div className="template-stat-row">
+                      <dt>{t("templateValidationTemplateLabel")}</dt>
+                      <dd>{formatDesktopToken(selectedTemplateDocument.metadata.template)}</dd>
+                    </div>
+                    <div className="template-stat-row">
+                      <dt>{t("templateValidationSourceLabel")}</dt>
+                      <dd>{templateValidationSourceLabel}</dd>
+                    </div>
+                    <div className="template-stat-row">
+                      <dt>{t("templateValidationVisibleSections")}</dt>
+                      <dd>{visibleTemplateSectionCount}</dd>
+                    </div>
+                    <div className="template-stat-row">
+                      <dt>{t("templateValidationHtmlSize")}</dt>
+                      <dd>{selectedTemplatePreviewSize}</dd>
+                    </div>
+                  </dl>
+                </article>
+
+                <article className="subsurface">
+                  <div className="subsurface__header">
+                    <div>
+                      <p className="collection-card__badge">
+                        {t("templateValidationExportTitle")}
+                      </p>
+                      <h3>{t("libraryExportsHeader")}</h3>
+                    </div>
+                    <button
+                      type="button"
+                      className="button button--primary template-export-button"
+                      onClick={() => void handleTemplateExport()}
+                      disabled={
+                        runtimeIsFallback ||
+                        visibleTemplateExportState.status === "saving" ||
+                        !selectedTemplatePreviewHtml
+                      }
+                    >
+                      {visibleTemplateExportState.status === "saving"
+                        ? t("templateValidationExporting")
+                        : t("templateValidationExportButton")}
+                    </button>
+                  </div>
+                  <p className="surface__body surface__body--compact">
+                    {runtimeIsFallback
+                      ? t("templateValidationExportDisabledFallback")
+                      : t("templateValidationExportBody")}
+                  </p>
+                  {visibleTemplateExportState.status === "success" &&
+                  visibleTemplateExportState.outputPath ? (
+                    <div className="template-export-status template-export-status--success">
+                      <strong>{t("templateValidationExportSuccess")}</strong>
+                      <span>{visibleTemplateExportState.outputPath}</span>
+                    </div>
+                  ) : null}
+                  {visibleTemplateExportState.status === "error" &&
+                  visibleTemplateExportState.message ? (
+                    <div className="template-export-status template-export-status--error">
+                      <strong>{t("templateValidationExportError")}</strong>
+                      <span>{visibleTemplateExportState.message}</span>
+                    </div>
+                  ) : null}
+                </article>
+
+                <article className="subsurface">
+                  <p className="collection-card__badge">{t("templateValidationSectionsTitle")}</p>
+                  <h3>{t("templateValidationRepresentativeTemplates")}</h3>
+                  <div className="tag-list">
+                    {selectedTemplateDocument.sections
+                      .filter((section) => section.visible)
+                      .map((section) => (
+                        <span
+                          key={section.id}
+                          className="tag"
+                        >
+                          {formatDesktopToken(section.sectionType)}
+                        </span>
+                      ))}
+                  </div>
+                </article>
+              </div>
+            </div>
+          </>
+        )}
       </section>
 
       <section className="surface">

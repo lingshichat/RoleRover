@@ -13,7 +13,7 @@ use importer::{
 use legacy_import_contract::LegacyImportContract;
 use serde::Serialize;
 use settings::{SecretVaultStatus, WorkspaceSettingsDocument};
-use storage::StorageSnapshot;
+use storage::{StorageSnapshot, TemplateValidationExportWriteResult, TemplateValidationSnapshot};
 use tauri::Manager;
 use workspace::WorkspaceSnapshot;
 
@@ -85,6 +85,22 @@ fn get_legacy_import_contract() -> LegacyImportContract {
 #[tauri::command]
 fn get_storage_snapshot(app: tauri::AppHandle) -> Result<StorageSnapshot, String> {
     storage::get_storage_snapshot(&app)
+}
+
+#[tauri::command]
+fn get_template_validation_snapshot(
+    app: tauri::AppHandle,
+) -> Result<TemplateValidationSnapshot, String> {
+    storage::get_template_validation_snapshot(&app)
+}
+
+#[tauri::command]
+fn write_template_validation_export(
+    app: tauri::AppHandle,
+    file_name: Option<String>,
+    html: String,
+) -> Result<TemplateValidationExportWriteResult, String> {
+    storage::write_template_validation_export(&app, file_name, html)
 }
 
 #[tauri::command]
@@ -184,6 +200,8 @@ pub fn run() {
             get_domain_contract_summary,
             get_legacy_import_contract,
             get_storage_snapshot,
+            get_template_validation_snapshot,
+            write_template_validation_export,
             get_workspace_settings_snapshot,
             get_secret_vault_status,
             get_importer_dry_run,

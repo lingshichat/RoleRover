@@ -4,6 +4,7 @@ import { useId } from 'react';
 import type { Resume, ThemeConfig } from '@/types/resume';
 import { BACKGROUND_TEMPLATES } from '@/lib/constants';
 import { normalizeSectionContentForRender } from '@/lib/section-content';
+import { getUnifiedTemplate, toCanonicalResume } from '@/lib/template-renderer';
 import { ClassicTemplate } from './templates/classic';
 import { ModernTemplate } from './templates/modern';
 import { MinimalTemplate } from './templates/minimal';
@@ -238,7 +239,8 @@ function buildThemeCSS(scopeId: string, theme: ThemeConfig, template: string): s
 }
 
 export function ResumePreview({ resume }: ResumePreviewProps) {
-  const Template = templateMap[resume.template] || ClassicTemplate;
+  const unifiedTemplate = getUnifiedTemplate(resume.template);
+  const LegacyTemplate = templateMap[resume.template] || ClassicTemplate;
   const scopeId = useId();
   const theme: ThemeConfig = { ...DEFAULT_THEME, ...(resume.themeConfig || {}) };
   const normalizedResume: Resume = {
@@ -248,6 +250,7 @@ export function ResumePreview({ resume }: ResumePreviewProps) {
       content: normalizeSectionContentForRender(section.type, section.content) as unknown as typeof section.content,
     })),
   };
+  const canonicalResume = toCanonicalResume(normalizedResume);
 
   return (
     <>
@@ -258,7 +261,11 @@ export function ResumePreview({ resume }: ResumePreviewProps) {
       <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Noto+Sans+SC:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
       <div data-theme-scope={scopeId}>
         <style dangerouslySetInnerHTML={{ __html: buildThemeCSS(scopeId, theme, resume.template) }} />
-        <Template resume={normalizedResume} />
+        {unifiedTemplate ? (
+          <unifiedTemplate.PreviewComponent resume={canonicalResume} />
+        ) : (
+          <LegacyTemplate resume={normalizedResume} />
+        )}
       </div>
     </>
   );

@@ -2,6 +2,7 @@ import { esc, buildExportThemeCSS, DEFAULT_THEME, type ResumeWithSections } from
 import { EXPORT_TAILWIND_CSS } from '@/lib/pdf/export-tailwind-css';
 import { BACKGROUND_TEMPLATES } from '@/lib/constants';
 import { generateQrSvg } from '@/lib/qrcode';
+import { getUnifiedTemplate, toCanonicalResume } from '@/lib/template-renderer';
 import { buildClassicHtml } from './templates/classic';
 import { buildModernHtml } from './templates/modern';
 import { buildMinimalHtml } from './templates/minimal';
@@ -164,8 +165,16 @@ async function preGenerateQrSvgs(resume: ResumeWithSections): Promise<void> {
 export async function generateHtml(resume: ResumeWithSections, forPdf = false): Promise<string> {
   // Pre-generate QR SVGs so sync template builders can use them
   await preGenerateQrSvgs(resume);
-  const builder = TEMPLATE_BUILDERS[resume.template] || buildClassicHtml;
-  const bodyHtml = builder(resume);
+
+  // Try unified template first, fallback to legacy builder
+  let bodyHtml: string;
+  const unifiedTemplate = getUnifiedTemplate(resume.template);
+  if (unifiedTemplate) {
+    bodyHtml = unifiedTemplate.buildHtml(toCanonicalResume(resume));
+  } else {
+    const builder = TEMPLATE_BUILDERS[resume.template] || buildClassicHtml;
+    bodyHtml = builder(resume);
+  }
   const theme = { ...DEFAULT_THEME, ...((resume as any).themeConfig || {}) };
   const themeCSS = buildExportThemeCSS(theme, resume.template);
   const isBackground = BACKGROUND_TEMPLATES.has(resume.template);

@@ -94,6 +94,37 @@ const resources = {
       libraryExportsHeader: "Export readiness",
       libraryExportsBody:
         "Track PDF/HTML/DOCX generation health from the shared export workspace.",
+      templateValidationTitle: "Template validation lane",
+      templateValidationNativeBody:
+        "This lane runs representative desktop preview and HTML export checks against the unified template contract.",
+      templateValidationFallbackBody:
+        "This fallback shell can preview the contract surface, but native HTML export must be validated from the Tauri runtime.",
+      templateValidationNoDocumentsTitle:
+        "No representative templates available",
+      templateValidationNoDocumentsBody:
+        "Expose at least one representative desktop document or native sample before treating PR4 as validated.",
+      templateValidationPreviewTitle: "Desktop preview",
+      templateValidationContractTitle: "Contract state",
+      templateValidationDocumentTitle: "Representative template document",
+      templateValidationTemplateLabel: "Template",
+      templateValidationSourceLabel: "Source",
+      templateValidationSourceWorkspace: "Workspace documents",
+      templateValidationSourceMixed: "Workspace + native sample",
+      templateValidationSourceNativeSample: "Native sample documents",
+      templateValidationSourceFallback: "Browser fallback sample",
+      templateValidationVisibleSections: "Visible sections",
+      templateValidationHtmlSize: "HTML export size",
+      templateValidationExportTitle: "HTML export",
+      templateValidationExportBody:
+        "Writes the current representative template HTML into the desktop workspace exports directory for PR4 validation.",
+      templateValidationExportButton: "Export HTML",
+      templateValidationExporting: "Exporting...",
+      templateValidationExportDisabledFallback:
+        "Launch the native desktop shell before treating HTML export as validated.",
+      templateValidationExportSuccess: "Export written",
+      templateValidationExportError: "Export failed",
+      templateValidationSectionsTitle: "Section coverage",
+      templateValidationRepresentativeTemplates: "Representative templates",
       libraryStorageTitle: "Storage lane",
       libraryStorageHeader: "Storage bootstrap",
       libraryStorageBody:
@@ -432,6 +463,36 @@ const resources = {
       libraryExportsTitle: "导出通道",
       libraryExportsHeader: "导出就绪度",
       libraryExportsBody: "在共享导出工作区持续跟踪 PDF/HTML/DOCX 生成健康度。",
+      templateValidationTitle: "模板验证通道",
+      templateValidationNativeBody:
+        "这个通道会在桌面壳里直接运行代表模板的预览与 HTML 导出校验，并复用统一模板契约。",
+      templateValidationFallbackBody:
+        "当前 fallback 壳可以预览契约表面，但 HTML 导出必须在 Tauri 原生运行时里验证。",
+      templateValidationNoDocumentsTitle: "暂时没有可验证的代表模板",
+      templateValidationNoDocumentsBody:
+        "至少暴露一份桌面原生文档或 native sample，才能把 PR4 视作已验证。",
+      templateValidationPreviewTitle: "桌面预览",
+      templateValidationContractTitle: "契约状态",
+      templateValidationDocumentTitle: "代表模板文档",
+      templateValidationTemplateLabel: "模板",
+      templateValidationSourceLabel: "来源",
+      templateValidationSourceWorkspace: "工作区文档",
+      templateValidationSourceMixed: "工作区 + 原生样本",
+      templateValidationSourceNativeSample: "原生样本文档",
+      templateValidationSourceFallback: "浏览器 fallback 样本",
+      templateValidationVisibleSections: "可见 Section 数",
+      templateValidationHtmlSize: "HTML 导出体积",
+      templateValidationExportTitle: "HTML 导出",
+      templateValidationExportBody:
+        "把当前代表模板的 HTML 落到桌面工作区 exports 目录，作为 PR4 的导出验证产物。",
+      templateValidationExportButton: "导出 HTML",
+      templateValidationExporting: "导出中...",
+      templateValidationExportDisabledFallback:
+        "请先启动原生桌面壳，再把 HTML 导出视为已验证。",
+      templateValidationExportSuccess: "导出已写入",
+      templateValidationExportError: "导出失败",
+      templateValidationSectionsTitle: "Section 覆盖",
+      templateValidationRepresentativeTemplates: "代表模板",
       libraryStorageTitle: "存储通道",
       libraryStorageHeader: "存储引导层",
       libraryStorageBody:
