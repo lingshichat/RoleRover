@@ -214,7 +214,7 @@ python3 ./.trellis/scripts/task.py create "<title>" --slug <task-name>
    --> For cross-layer: read .trellis/spec/guides/
 
 3. Self-test
-   --> Run project's lint/test commands (see spec docs)
+   --> Run project's blocking lint/test commands (repo default or task-defined hard gate; see spec docs)
    --> Manual feature testing
 
 4. Commit / push code
@@ -239,6 +239,13 @@ python3 ./.trellis/scripts/task.py create "<title>" --slug <task-name>
 **Project-specific checks**:
 - See `.trellis/spec/frontend/quality-guidelines.md` for frontend
 - See `.trellis/spec/backend/api-guidelines.md` for backend API patterns
+
+### Task-Defined Hard Gates
+
+- The default expectation is still repo-wide lint/type/test coverage.
+- If an active task PRD or spec defines a narrower hard gate, that task-defined gate becomes the blocking requirement for the slice.
+- Repo-wide observation commands should still be run when requested and reported separately from blocking failures.
+- For the current desktop migration line, prefer `pnpm run verify:desktop:migration` as the blocking gate and treat repo-wide `pnpm lint` as observation until legacy debt is intentionally pulled into scope.
 
 ---
 
@@ -269,7 +276,7 @@ This automatically:
 Use `/trellis:finish-work` command to run through:
 1. [OK] All code committed, commit message follows convention
 2. [OK] Session recorded via `add_session.py`
-3. [OK] No lint/test errors
+3. [OK] No blocking lint/test errors (and any observation-only failures are explicitly reported)
 4. [OK] Working directory clean (or WIP noted)
 5. [OK] Spec docs updated if needed
 
@@ -424,3 +431,5 @@ Following this workflow ensures:
 - [OK] Transparent team collaboration
 
 **Core Philosophy**: Read before write, follow standards, record promptly, capture learnings
+
+

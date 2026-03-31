@@ -16,6 +16,12 @@ The repo currently uses Next.js ESLint rules (`core-web-vitals` +
 TypeScript config) and strict TypeScript. There is no dedicated frontend test
 script yet, so manual testing is part of the required review process.
 
+For staged desktop migration tasks, the blocking gate may be narrower when the
+task PRD or guide says so. In the current desktop rewrite, use
+`pnpm run verify:desktop:migration` as the blocking gate and report repo-wide
+`pnpm lint` separately as an observation signal until additional legacy debt is
+intentionally pulled into scope.
+
 ---
 
 ## Forbidden Patterns
@@ -55,6 +61,10 @@ script yet, so manual testing is part of the required review process.
 
 - Run `pnpm lint`.
 - Run `pnpm type-check`.
+- If the task PRD or guide defines a narrower hard gate, run that gate as the
+  blocking check and report repo-wide lint separately as observation.
+- For the current desktop migration boundary, run
+  `pnpm run verify:desktop:migration` as the blocking check.
 - Manually verify the exact flow you changed.
 - If the change touches localized UI, verify both `messages/en.json` and
   `messages/zh.json` coverage or at least confirm the impacted locale path.
@@ -79,5 +89,5 @@ were performed.
   handling still work?
 - If visual styling changed, does it still match JadeAI's current neutral + pink
   design language and the correct page-type intensity?
-- Were `pnpm lint` and `pnpm type-check` run?
+- Were the blocking verification commands run (repo default or task-defined hard gate), and was repo-wide `pnpm lint` reported when it remained observation-only?
 - Was the changed UI flow manually tested?

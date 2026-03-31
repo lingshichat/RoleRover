@@ -20,6 +20,10 @@
     "build:desktop": "npm run build && electron-builder --config electron-builder.yml",
     "start": "next start",
     "lint": "eslint",
+    "lint:desktop:active": "node scripts/verify-desktop-lint-boundary.mjs active",
+    "lint:desktop:shared": "node scripts/verify-desktop-lint-boundary.mjs shared",
+    "lint:desktop:touched": "node scripts/verify-desktop-lint-boundary.mjs touched",
+    "verify:desktop:migration": "node scripts/verify-desktop-lint-boundary.mjs verify",
     "type-check": "tsc --noEmit",
     "db:generate": "drizzle-kit generate",
     "db:generate:pg": "drizzle-kit generate --config drizzle-pg.config.ts",
@@ -103,3 +107,4 @@
     "typescript": "^5"
   }
 }
+

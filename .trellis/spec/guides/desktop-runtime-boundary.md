@@ -29,16 +29,66 @@ This contract covers the bootstrap-stage desktop shell in `desktop/`:
 - `desktop/src/routes/library.tsx`
 - `desktop/src/routes/settings.tsx`
 - `desktop/src/i18n.ts`
+- `src/lib/constants.ts`
+- `src/lib/pdf/export-tailwind-css.ts`
+- `src/lib/template-renderer/index.ts`
+- `src/lib/template-renderer/template-contract.ts`
+- `src/lib/template-renderer/types.ts`
+- `src/lib/template-renderer/templates/classic.tsx`
+- `src/lib/template-renderer/templates/modern.tsx`
+- `src/types/resume.ts`
+- `scripts/build-export-css.ts`
 - `scripts/dev-local.mjs`
+- `scripts/verify-desktop-lint-boundary.mjs`
 
 ## Local Commands
 
 ```bash
-pnpm --filter @rolerover/desktop build
 pnpm dev:tauri
-cargo check --manifest-path desktop/src-tauri/Cargo.toml --target-dir .codex-cargo-target/desktop-tauri
-pnpm exec eslint desktop/src/lib/desktop-api.ts desktop/src/i18n.ts desktop/src/routes/root.tsx desktop/src/routes/home.tsx desktop/src/routes/library.tsx desktop/src/routes/settings.tsx
+pnpm run lint:desktop:active
+pnpm run lint:desktop:shared
+pnpm run verify:desktop:migration
+pnpm lint   # repo-wide observation
 ```
+
+## Staged Migration Lint Boundary
+
+Blocking hard gate for the current desktop migration slice:
+
+- `pnpm type-check`
+- `pnpm run lint:desktop:active`
+- `pnpm run lint:desktop:shared`
+- `pnpm --filter @rolerover/desktop build`
+- `cargo check --manifest-path desktop/src-tauri/Cargo.toml --target-dir .codex-cargo-target/desktop-tauri`
+
+Desktop active surface enforced by `lint:desktop:active`:
+
+- `desktop/src/lib/desktop-api.ts`
+- `desktop/src/lib/template-validation.ts`
+- `desktop/src/i18n.ts`
+- `desktop/src/routes/root.tsx`
+- `desktop/src/routes/home.tsx`
+- `desktop/src/routes/library.tsx`
+- `desktop/src/routes/settings.tsx`
+
+Shared active surface v1 enforced by `lint:desktop:shared`:
+
+- `src/lib/constants.ts`
+- `src/lib/pdf/export-tailwind-css.ts`
+- `src/lib/template-renderer/index.ts`
+- `src/lib/template-renderer/template-contract.ts`
+- `src/lib/template-renderer/types.ts`
+- `src/lib/template-renderer/templates/classic.tsx`
+- `src/lib/template-renderer/templates/modern.tsx`
+- `src/types/resume.ts`
+- `scripts/build-export-css.ts` when the export CSS contract changes
+- `scripts/verify-desktop-lint-boundary.mjs` when the migration gate changes
+
+Observation-only signals for this migration stage:
+
+- `pnpm lint` at repo scope
+- Desktop build chunk warnings
+- Shared-surface warnings that remain outside the current blocking contract
 
 ## Dev Command Contract
 
@@ -401,5 +451,10 @@ Automated / static assertions:
 
 1. `pnpm --filter @rolerover/desktop build`
 2. `cargo check --manifest-path desktop/src-tauri/Cargo.toml --target-dir .codex-cargo-target/desktop-tauri`
-3. `pnpm exec eslint` on touched desktop route / API files
-4. `pnpm --filter @rolerover/desktop exec tsc -b`
+3. `pnpm run lint:desktop:active`
+4. `pnpm run lint:desktop:shared`
+5. `pnpm lint` as repo-wide observation
+6. `pnpm --filter @rolerover/desktop exec tsc -b`
+
+
+

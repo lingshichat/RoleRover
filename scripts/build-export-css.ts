@@ -45,8 +45,6 @@ function extractCandidates(source: string): Set<string> {
   // Examples: flex, w-[35%], max-w-[210mm], text-sm, bg-slate-800, hover:bg-blue-500
   const TOKEN_RE = /[!-]?[a-zA-Z][a-zA-Z0-9_.-]*(?:\[[^\]\s]+\])?(?:[a-zA-Z0-9_.-]*(?:\[[^\]\s]+\])?)*(?:\/[a-zA-Z0-9._-]+)?/g;
 
-  // Variant prefix pattern (to capture things like sm:flex, hover:text-blue-500)
-  const VARIANT_RE = /(?:[a-z][a-z0-9-]*:)+/;
 
   for (const m of source.matchAll(TOKEN_RE)) {
     const token = m[0];
@@ -66,7 +64,7 @@ function extractCandidates(source: string): Set<string> {
  */
 function unwrapLayers(css: string): string {
   // Remove standalone @layer declarations (e.g. '@layer properties;')
-  let result = css.replace(/@layer\s+[^{]+;\s*/g, '');
+  const result = css.replace(/@layer\s+[^{]+;\s*/g, '');
 
   // Unwrap @layer blocks — replace '@layer name { ... }' with just '...'
   let output = '';
@@ -169,3 +167,5 @@ main().catch((err) => {
   console.error('[build-export-css] Failed:', err);
   process.exit(1);
 });
+
+

@@ -19,6 +19,8 @@ const eslintConfig = defineConfig([
     ".claude/**",
     ".kilocode/**",
     ".omc/**",
+    // The desktop migration hard gate lives in scripts/verify-desktop-lint-boundary.mjs,
+    // so keep active desktop/shared surfaces out of repo-wide ignore lists.
     // Legacy web resume template architecture; excluded while desktop migration is in flight.
     "src/components/preview/templates/**",
     "src/app/api/resume/[[]id[]]/export/**",
@@ -30,3 +32,4 @@ const eslintConfig = defineConfig([
 ]);
 
 export default eslintConfig;
+
