@@ -1,16 +1,18 @@
-import { Label } from "@/components/ui/label";
-import { SimpleSelect } from "../../simple-select";
-
-interface SelectOption {
-  label: string;
-  value: string;
-}
+import { X } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface EditableSelectProps {
   label: string;
   value: string;
   onChange: (value: string) => void;
-  options: SelectOption[];
+  options: { label: string; value: string }[];
+  placeholder?: string;
 }
 
 export function EditableSelect({
@@ -18,18 +20,39 @@ export function EditableSelect({
   value,
   onChange,
   options,
+  placeholder,
 }: EditableSelectProps) {
   return (
     <div className="space-y-1">
-      <Label className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
+      <label className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
         {label}
-      </Label>
-      <SimpleSelect
-        value={value || ""}
-        onValueChange={onChange}
-        options={options}
-        className="h-8 text-sm"
-      />
+      </label>
+      <div className="relative">
+        <Select value={value || ""} onValueChange={onChange}>
+          <SelectTrigger className="h-8 w-full text-sm">
+            <SelectValue placeholder={placeholder || label} />
+          </SelectTrigger>
+          <SelectContent>
+            {options.map((opt) => (
+              <SelectItem key={opt.value} value={opt.value}>
+                {opt.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        {value && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onChange("");
+            }}
+            className="absolute top-1/2 right-7 -translate-y-1/2 rounded p-0.5 text-zinc-400 transition-colors hover:text-zinc-600 dark:hover:text-zinc-300"
+          >
+            <X className="h-3 w-3" />
+          </button>
+        )}
+      </div>
     </div>
   );
 }

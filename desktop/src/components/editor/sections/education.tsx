@@ -7,8 +7,7 @@ import { EditableDate } from "../fields/editable-date";
 import { EditableList } from "../fields/editable-list";
 import { FieldWrapper } from "../fields/field-wrapper";
 import { generateId } from "../../../stores/resume-store";
-import type { ResumeSection } from "../../../types/resume";
-import type { EducationContent, EducationItem } from "../../../types/resume";
+import type { ResumeSection, EducationContent, EducationItem } from "../../../types/resume";
 
 interface Props {
   section: ResumeSection;
@@ -17,8 +16,8 @@ interface Props {
 
 export function EducationSection({ section, onUpdate }: Props) {
   const { t } = useTranslation();
-  const content = section.content as Partial<EducationContent>;
-  const items: EducationItem[] = (content.items || []) as EducationItem[];
+  const content = section.content as EducationContent;
+  const items = content.items || [];
 
   const addItem = () => {
     const newItem: EducationItem = {
@@ -26,34 +25,34 @@ export function EducationSection({ section, onUpdate }: Props) {
       institution: "",
       degree: "",
       field: "",
-      location: "",
       startDate: "",
       endDate: "",
-      gpa: "",
       highlights: [],
     };
-    onUpdate({ items: [...items, newItem] });
+    onUpdate({ items: [...items, newItem] } as any);
   };
 
   const updateItem = (index: number, data: Partial<EducationItem>) => {
-    const updated = items.map((item: EducationItem, i: number) =>
+    const updated = items.map((item, i) =>
       i === index ? { ...item, ...data } : item
     );
-    onUpdate({ items: updated });
+    onUpdate({ items: updated } as any);
   };
 
   const removeItem = (index: number) => {
-    onUpdate({ items: items.filter((_: EducationItem, i: number) => i !== index) });
+    onUpdate({ items: items.filter((_, i) => i !== index) } as any);
   };
 
   return (
     <div className="space-y-4">
-      {items.map((item: EducationItem, index: number) => (
+      {items.map((item, index) => (
         <div key={item.id || `edu-${index}`}>
           {index > 0 && <Separator className="mb-4" />}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-medium text-zinc-400">#{index + 1}</span>
+              <span className="text-xs font-medium text-zinc-400">
+                #{index + 1}
+              </span>
               <Button
                 variant="ghost"
                 size="sm"
@@ -82,9 +81,9 @@ export function EducationSection({ section, onUpdate }: Props) {
                 onChange={(v) => updateItem(index, { field: v })}
               />
               <EditableText
-                label={t("editor.fields.location")}
-                value={item.location || ""}
-                onChange={(v) => updateItem(index, { location: v })}
+                label={t("editor.fields.gpa")}
+                value={(item as any).gpa || ""}
+                onChange={(v) => updateItem(index, { gpa: v } as any)}
               />
             </FieldWrapper>
             <FieldWrapper>

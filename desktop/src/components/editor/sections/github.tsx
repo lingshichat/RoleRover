@@ -1,21 +1,56 @@
+import { useState, useRef, useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import { Plus, X } from "lucide-react";
+import { Plus, X, RefreshCw, Star, Code2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { EditableText } from "../fields/editable-text";
 import { Separator } from "@/components/ui/separator";
+import { EditableText } from "../fields/editable-text";
+import { EditableRichText } from "../fields/editable-rich-text";
 import { generateId } from "../../../stores/resume-store";
-import type { ResumeSection } from "../../../types/resume";
-import type { GitHubContent, GitHubRepoItem } from "../../../types/resume";
+import type { ResumeSection, GitHubContent, GitHubRepoItem } from "../../../types/resume";
+
+const GITHUB_REPO_RE = /github\.com\/[^/]+\/[^/]+/;
 
 interface Props {
   section: ResumeSection;
   onUpdate: (content: Partial<GitHubContent>) => void;
 }
 
+async function fetchGitHubRepo(url: string): Promise<{
+  name: string;
+  stars: number;
+  language: string;
+  description: string;
+} | null> {
+  try {
+    // Extract owner/repo from URL
+    const match = url.match(/github\.com\/([^/]+)\/([^/\s?#]+)/);
+    if (!match) return null;
+    const [, owner, repo] = match;
+    const res = await fetch(`https://api.github.com/repos/${owner}/${repo}`);
+    if (!res.ok) return null;
+    const data = await res.json();
+    return {
+      name: data.name || "",
+      stars: data.stargazers_count || 0,
+      language: data.language || "",
+      description: data.description || "",
+    };
+  } catch {
+    return null;
+  }
+}
+
 export function GitHubSection({ section, onUpdate }: Props) {
   const { t } = useTranslation();
-  const content = section.content as Partial<GitHubContent>;
-  const items: GitHubRepoItem[] = (content.items || []) as GitHubRepoItem[];
+  const content = section.content as GitHubContent;
+  const items = content.items || [];
+  const [loadingIds, setLoadingIds] = useState<Set<string>>(new Set());
+  const debounceTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(
+    new Map()
+  );
+  // Keep a ref to always access the latest items, avoiding stale closures in setTimeout
+  const itemsRef = useRef(items);
+  itemsRef.current = items;
 
   const addItem = () => {
     const newItem: GitHubRepoItem = {
@@ -26,28 +61,93 @@ export function GitHubSection({ section, onUpdate }: Props) {
       language: "",
       description: "",
     };
-    onUpdate({ items: [...items, newItem] });
+    onUpdate({ items: [...items, newItem] } as any);
   };
 
   const updateItem = (index: number, data: Partial<GitHubRepoItem>) => {
-    const updated = items.map((item: GitHubRepoItem, i: number) =>
+    const latest = itemsRef.current;
+    const updated = latest.map((item, i) =>
       i === index ? { ...item, ...data } : item
     );
-    onUpdate({ items: updated });
+    onUpdate({ items: updated } as any);
   };
 
   const removeItem = (index: number) => {
-    onUpdate({ items: items.filter((_: GitHubRepoItem, i: number) => i !== index) });
+    const item = items[index];
+    const timer = debounceTimers.current.get(item.id);
+    if (timer) clearTimeout(timer);
+    debounceTimers.current.delete(item.id);
+    onUpdate({ items: items.filter((_, i) => i !== index) } as any);
   };
+
+  const fetchRepo = async (index: number, url: string) => {
+    const latest = itemsRef.current;
+    const item = latest[index];
+    if (!item) return;
+    setLoadingIds((prev) => new Set(prev).add(item.id));
+    try {
+      const data = await fetchGitHubRepo(url);
+      if (data) {
+        updateItem(index, {
+          name: data.name,
+          stars: data.stars,
+          language: data.language,
+          description: data.description,
+        });
+      }
+    } finally {
+      setLoadingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(item.id);
+        return next;
+      });
+    }
+  };
+
+  const handleUrlChange = (index: number, value: string) => {
+    const item = items[index];
+    updateItem(index, { repoUrl: value });
+
+    const prev = debounceTimers.current.get(item.id);
+    if (prev) clearTimeout(prev);
+
+    if (GITHUB_REPO_RE.test(value)) {
+      const timer = setTimeout(() => {
+        debounceTimers.current.delete(item.id);
+        fetchRepo(index, value);
+      }, 600);
+      debounceTimers.current.set(item.id, timer);
+    }
+  };
+
+  // Auto-refresh stars for all repos on mount
+  const didAutoRefresh = useRef(false);
+  useEffect(() => {
+    if (didAutoRefresh.current) return;
+    didAutoRefresh.current = true;
+    const current = itemsRef.current;
+    current.forEach((item, index) => {
+      if (item.repoUrl && GITHUB_REPO_RE.test(item.repoUrl)) {
+        fetchGitHubRepo(item.repoUrl)
+          .then((data) => {
+            if (data) updateItem(index, { stars: data.stars });
+          })
+          .catch(() => {});
+      }
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <div className="space-y-4">
-      {items.map((item: GitHubRepoItem, index: number) => (
+      {items.map((item, index) => (
         <div key={item.id || `gh-${index}`}>
           {index > 0 && <Separator className="mb-4" />}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-medium text-zinc-400">#{index + 1}</span>
+              <span className="text-xs font-medium text-zinc-400">
+                #{index + 1}
+              </span>
               <Button
                 variant="ghost"
                 size="sm"
@@ -57,30 +157,50 @@ export function GitHubSection({ section, onUpdate }: Props) {
                 <X className="h-3.5 w-3.5" />
               </Button>
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="relative">
               <EditableText
                 label={t("editor.fields.repoUrl")}
                 value={item.repoUrl}
-                onChange={(v) => updateItem(index, { repoUrl: v })}
+                onChange={(v) => handleUrlChange(index, v)}
               />
-              <EditableText
-                label={t("editor.fields.repoName")}
-                value={item.name}
-                onChange={(v) => updateItem(index, { name: v })}
-              />
+              {loadingIds.has(item.id) && (
+                <Loader2 className="absolute right-2 top-7 h-4 w-4 animate-spin text-zinc-400" />
+              )}
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <EditableText
-                label={t("editor.fields.language")}
-                value={item.language}
-                onChange={(v) => updateItem(index, { language: v })}
-              />
-              <EditableText
-                label={t("editor.fields.description")}
-                value={item.description}
-                onChange={(v) => updateItem(index, { description: v })}
-              />
-            </div>
+            {item.name && (
+              <div className="flex flex-wrap items-center gap-2 text-xs text-zinc-500">
+                <span className="font-medium text-zinc-700 dark:text-zinc-300">
+                  {item.name}
+                </span>
+                {item.stars > 0 && (
+                  <span className="inline-flex items-center gap-0.5">
+                    <Star className="h-3 w-3 text-amber-500" />
+                    {item.stars.toLocaleString()}
+                  </span>
+                )}
+                {item.language && (
+                  <span className="inline-flex items-center gap-0.5">
+                    <Code2 className="h-3 w-3" />
+                    {item.language}
+                  </span>
+                )}
+                <button
+                  type="button"
+                  className="inline-flex cursor-pointer items-center gap-0.5 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"
+                  onClick={() => fetchRepo(index, item.repoUrl)}
+                  disabled={loadingIds.has(item.id)}
+                >
+                  <RefreshCw
+                    className={`h-3 w-3 ${loadingIds.has(item.id) ? "animate-spin" : ""}`}
+                  />
+                </button>
+              </div>
+            )}
+            <EditableRichText
+              label={t("editor.fields.description")}
+              value={item.description}
+              onChange={(v) => updateItem(index, { description: v })}
+            />
           </div>
         </div>
       ))}

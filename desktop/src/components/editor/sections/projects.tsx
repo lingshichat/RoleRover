@@ -18,8 +18,13 @@ interface Props {
 
 export function ProjectsSection({ section, onUpdate }: Props) {
   const { t } = useTranslation();
-  const content = section.content as Partial<ProjectsContent>;
-  const items: ProjectItem[] = (content.items || []) as ProjectItem[];
+  const content = section.content as ProjectsContent;
+  const rawItems = content.items as ProjectItem[] | { items?: ProjectItem[] } | undefined;
+  const items = Array.isArray(rawItems)
+    ? rawItems
+    : Array.isArray(rawItems?.items)
+      ? rawItems.items
+      : [];
 
   const addItem = () => {
     const newItem: ProjectItem = {
@@ -70,7 +75,7 @@ export function ProjectsSection({ section, onUpdate }: Props) {
                 onChange={(v) => updateItem(index, { name: v })}
               />
               <EditableText
-                label={t("editor.fields.url")}
+                label={t("editor.fields.website")}
                 value={item.url || ""}
                 onChange={(v) => updateItem(index, { url: v })}
               />

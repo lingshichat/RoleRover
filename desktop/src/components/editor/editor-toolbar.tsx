@@ -6,6 +6,7 @@ import {
   Undo2,
   Redo2,
   Download,
+  Upload,
   Settings,
   Palette,
   Save,
@@ -13,33 +14,28 @@ import {
   Languages,
   FileText,
   SpellCheck,
+  Copy,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { useEditorStore } from "../../stores/editor-store";
 import { useResumeStore } from "../../stores/resume-store";
+import { useUIStore } from "../../stores/ui-store";
+import { getWorkspaceSettingsSnapshot } from "../../lib/desktop-api";
 import { ExportDialog } from "./export-dialog";
 import { SettingsDialog } from "./settings-dialog";
 import { JdAnalysisDialog } from "./jd-analysis-dialog";
 import { TranslateDialog } from "./translate-dialog";
 import { CoverLetterDialog } from "./cover-letter-dialog";
 import { GrammarCheckDialog } from "./grammar-check-dialog";
-import { getWorkspaceSettingsSnapshot } from "../../lib/desktop-api";
 
 export function EditorToolbar() {
   const { t } = useTranslation();
   const { toggleThemeEditor, showThemeEditor, undo, redo, undoStack, redoStack } =
     useEditorStore();
-  const { isSaving, isDirty, currentResume, save } = useResumeStore();
+  const { isSaving, isDirty, currentResume, reorderSections, save } = useResumeStore();
+  const { activeModal, openModal, closeModal } = useUIStore();
   const [autoSave, setAutoSave] = useState(true);
-
-  // Dialog states
-  const [exportDialogOpen, setExportDialogOpen] = useState(false);
-  const [settingsDialogOpen, setSettingsDialogOpen] = useState(false);
-  const [jdAnalysisDialogOpen, setJdAnalysisDialogOpen] = useState(false);
-  const [translateDialogOpen, setTranslateDialogOpen] = useState(false);
-  const [coverLetterDialogOpen, setCoverLetterDialogOpen] = useState(false);
-  const [grammarCheckDialogOpen, setGrammarCheckDialogOpen] = useState(false);
 
   useEffect(() => {
     let isCancelled = false;
@@ -60,14 +56,14 @@ export function EditorToolbar() {
   const handleUndo = () => {
     const snapshot = undo();
     if (snapshot) {
-      // Apply snapshot
+      reorderSections(snapshot.sections as any);
     }
   };
 
   const handleRedo = () => {
     const snapshot = redo();
     if (snapshot) {
-      // Apply snapshot
+      reorderSections(snapshot.sections as any);
     }
   };
 
@@ -75,7 +71,7 @@ export function EditorToolbar() {
 
   return (
     <>
-      <div className="flex h-12 items-center justify-between border-b bg-white px-3 dark:bg-zinc-900 dark:border-zinc-800">
+      <div className="flex h-12 items-center justify-between border-b bg-white px-3 dark:bg-background dark:border-zinc-800">
         <div className="flex items-center gap-2">
           <Button
             variant="ghost"
@@ -89,7 +85,7 @@ export function EditorToolbar() {
           </Button>
           <Separator orientation="vertical" className="h-6" />
           <span className="max-w-48 truncate text-sm font-medium text-zinc-900 dark:text-zinc-100">
-            {currentResume?.title || t("editor.untitled")}
+            {currentResume?.title || ""}
           </span>
           <span className="text-xs text-zinc-400">
             {isSaving
@@ -139,7 +135,7 @@ export function EditorToolbar() {
             data-tour="export"
             variant="ghost"
             size="sm"
-            onClick={() => setExportDialogOpen(true)}
+            onClick={() => openModal("export")}
             className="cursor-pointer"
             title={t("editor.toolbar.exportPdf")}
           >
@@ -152,7 +148,7 @@ export function EditorToolbar() {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => setJdAnalysisDialogOpen(true)}
+            onClick={() => openModal("jd-analysis")}
             className="cursor-pointer"
             title={t("editor.toolbar.jdAnalysis")}
           >
@@ -164,7 +160,7 @@ export function EditorToolbar() {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => setTranslateDialogOpen(true)}
+            onClick={() => openModal("translate")}
             className="cursor-pointer"
             title={t("editor.toolbar.translate")}
           >
@@ -176,7 +172,7 @@ export function EditorToolbar() {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => setCoverLetterDialogOpen(true)}
+            onClick={() => openModal("cover-letter")}
             className="cursor-pointer"
             title={t("editor.toolbar.coverLetter")}
           >
@@ -188,7 +184,7 @@ export function EditorToolbar() {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => setGrammarCheckDialogOpen(true)}
+            onClick={() => openModal("grammar-check")}
             className="cursor-pointer"
             title={t("editor.toolbar.grammarCheck")}
           >
@@ -215,7 +211,7 @@ export function EditorToolbar() {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => setSettingsDialogOpen(true)}
+            onClick={() => openModal("settings")}
             className="cursor-pointer"
             title={t("editor.toolbar.settings")}
           >
@@ -226,42 +222,42 @@ export function EditorToolbar() {
 
       {/* Export Dialog */}
       <ExportDialog
-        open={exportDialogOpen}
-        onClose={() => setExportDialogOpen(false)}
+        open={activeModal === "export"}
+        onClose={closeModal}
         resumeId={resumeId}
       />
 
       {/* Settings Dialog */}
       <SettingsDialog
-        open={settingsDialogOpen}
-        onClose={() => setSettingsDialogOpen(false)}
+        open={activeModal === "settings"}
+        onClose={closeModal}
       />
 
       {/* JD Analysis Dialog */}
       <JdAnalysisDialog
-        open={jdAnalysisDialogOpen}
-        onClose={() => setJdAnalysisDialogOpen(false)}
+        open={activeModal === "jd-analysis"}
+        onClose={closeModal}
         resumeId={resumeId}
       />
 
       {/* Translate Dialog */}
       <TranslateDialog
-        open={translateDialogOpen}
-        onClose={() => setTranslateDialogOpen(false)}
+        open={activeModal === "translate"}
+        onClose={closeModal}
         resumeId={resumeId}
       />
 
       {/* Cover Letter Dialog */}
       <CoverLetterDialog
-        open={coverLetterDialogOpen}
-        onClose={() => setCoverLetterDialogOpen(false)}
+        open={activeModal === "cover-letter"}
+        onClose={closeModal}
         resumeId={resumeId}
       />
 
       {/* Grammar Check Dialog */}
       <GrammarCheckDialog
-        open={grammarCheckDialogOpen}
-        onClose={() => setGrammarCheckDialogOpen(false)}
+        open={activeModal === "grammar-check"}
+        onClose={closeModal}
         resumeId={resumeId}
       />
     </>

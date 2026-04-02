@@ -1,10 +1,63 @@
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Plus, X } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { EditableText } from "../fields/editable-text";
-import { generateId } from "../../../stores/resume-store";
-import type { ResumeSection } from "../../../types/resume";
-import type { QrCodesContent, QrCodeItem } from "../../../types/resume";
+import { X, Sparkles, Plus } from "lucide-react";
+import { useResumeStore } from "../../../stores/resume-store";
+import type { ResumeSection, QrCodesContent, QrCodeItem } from "../../../types/resume";
+
+function isValidUrl(str: string): boolean {
+  if (!str.trim()) return true; // empty is ok
+  try {
+    const raw = str.startsWith("http") ? str : `https://${str}`;
+    const url = new URL(raw);
+    if (url.protocol !== "http:" && url.protocol !== "https:") return false;
+    // hostname must contain a dot (e.g. example.com) or be localhost/IP
+    const host = url.hostname;
+    return (
+      host === "localhost" ||
+      /\.\w{2,}$/.test(host) ||
+      /^\d{1,3}(\.\d{1,3}){3}$/.test(host)
+    );
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Extract URLs from all resume sections for auto-detect.
+ * Desktop version: scan personal_info and github sections.
+ */
+function extractUrlsFromSections(
+  sections: Array<{ type: string; content: any }>
+): QrCodeItem[] {
+  const results: QrCodeItem[] = [];
+
+  for (const section of sections) {
+    if (section.type === "personal_info") {
+      const c = section.content || {};
+      if (c.website) {
+        results.push({
+          id: `qr-${Date.now()}-web`,
+          label: "Website",
+          url: c.website,
+        });
+      }
+    }
+    if (section.type === "github") {
+      const items = section.content?.items || [];
+      for (const item of items) {
+        if (item.repoUrl) {
+          results.push({
+            id: `qr-${Date.now()}-${item.id || Math.random().toString(36).slice(2)}`,
+            label: item.name || "GitHub",
+            url: item.repoUrl,
+          });
+        }
+      }
+    }
+  }
+
+  return results;
+}
 
 interface Props {
   section: ResumeSection;
@@ -13,67 +66,115 @@ interface Props {
 
 export function QrCodesSection({ section, onUpdate }: Props) {
   const { t } = useTranslation();
-  const content = section.content as Partial<QrCodesContent>;
-  const items: QrCodeItem[] = (content.items || []) as QrCodeItem[];
-
-  const addItem = () => {
-    const newItem: QrCodeItem = {
-      id: generateId(),
-      label: "",
-      url: "",
-    };
-    onUpdate({ items: [...items, newItem] });
-  };
-
-  const updateItem = (index: number, data: Partial<QrCodeItem>) => {
-    const updated = items.map((item: QrCodeItem, i: number) =>
-      i === index ? { ...item, ...data } : item
-    );
-    onUpdate({ items: updated });
-  };
-
-  const removeItem = (index: number) => {
-    onUpdate({ items: items.filter((_: QrCodeItem, i: number) => i !== index) });
-  };
+  const content = section.content as QrCodesContent;
+  const items = content.items || [];
+  const { currentResume } = useResumeStore();
+  const [invalidIds, setInvalidIds] = useState<Set<string>>(new Set());
 
   return (
-    <div className="space-y-4">
-      {items.map((item: QrCodeItem, index: number) => (
-        <div key={item.id || `qr-${index}`} className="space-y-3">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-zinc-400">#{index + 1}</span>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-7 cursor-pointer p-1 text-zinc-400 hover:text-red-500"
-              onClick={() => removeItem(index)}
-            >
-              <X className="h-3.5 w-3.5" />
-            </Button>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <EditableText
-              label={t("editor.fields.qrLabel")}
-              value={item.label}
-              onChange={(v) => updateItem(index, { label: v })}
-            />
-            <EditableText
-              label={t("editor.fields.qrUrl")}
-              value={item.url}
-              onChange={(v) => updateItem(index, { url: v })}
-            />
-          </div>
+    <div className="space-y-2">
+      <div className="flex items-center justify-end">
+        <button
+          type="button"
+          onClick={() => {
+            const sections = currentResume?.sections || [];
+            const detected = extractUrlsFromSections(sections);
+            if (detected.length === 0) return;
+            const existingUrls = new Set(
+              items.map((q) => q.url.toLowerCase())
+            );
+            const merged = [
+              ...items,
+              ...detected.filter((d) => !existingUrls.has(d.url.toLowerCase())),
+            ];
+            onUpdate({ items: merged });
+          }}
+          className="inline-flex cursor-pointer items-center gap-1 rounded-md px-2 py-0.5 text-[11px] text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-600 dark:hover:bg-zinc-800 dark:hover:text-zinc-300"
+        >
+          <Sparkles className="h-3 w-3" />
+          {t("editor.fields.qrAutoGenerate")}
+        </button>
+      </div>
+
+      {items.map((qr, idx) => (
+        <div key={qr.id} className="flex items-center gap-1.5">
+          <input
+            type="text"
+            value={qr.label}
+            placeholder={t("editor.fields.qrLabel")}
+            onChange={(e) => {
+              const updated = [...items];
+              updated[idx] = { ...updated[idx], label: e.target.value };
+              onUpdate({ items: updated });
+            }}
+            className="h-7 w-20 shrink-0 rounded border border-zinc-200 bg-transparent px-2 text-xs outline-none focus:border-zinc-400 dark:border-zinc-700 dark:focus:border-zinc-500"
+          />
+          <input
+            type="text"
+            value={qr.url}
+            placeholder={t("editor.fields.qrUrl")}
+            title={
+              invalidIds.has(qr.id)
+                ? t("editor.fields.qrUrlInvalid")
+                : undefined
+            }
+            onChange={(e) => {
+              const updated = [...items];
+              updated[idx] = { ...updated[idx], url: e.target.value };
+              onUpdate({ items: updated });
+              if (invalidIds.has(qr.id) && isValidUrl(e.target.value)) {
+                setInvalidIds((prev) => {
+                  const next = new Set(prev);
+                  next.delete(qr.id);
+                  return next;
+                });
+              }
+            }}
+            onBlur={() => {
+              if (!isValidUrl(qr.url)) {
+                setInvalidIds((prev) => new Set(prev).add(qr.id));
+              } else {
+                setInvalidIds((prev) => {
+                  const next = new Set(prev);
+                  next.delete(qr.id);
+                  return next;
+                });
+              }
+            }}
+            className={`h-7 min-w-0 flex-1 rounded border bg-transparent px-2 text-xs outline-none ${
+              invalidIds.has(qr.id)
+                ? "border-red-400 text-red-500 placeholder:text-red-300 focus:border-red-500"
+                : "border-zinc-200 focus:border-zinc-400 dark:border-zinc-700 dark:focus:border-zinc-500"
+            }`}
+          />
+          <button
+            type="button"
+            onClick={() => {
+              const updated = items.filter((_, i) => i !== idx);
+              onUpdate({ items: updated });
+            }}
+            className="flex h-7 w-7 shrink-0 cursor-pointer items-center justify-center rounded text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-600 dark:hover:bg-zinc-800 dark:hover:text-zinc-300"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
         </div>
       ))}
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={addItem}
-        className="w-full cursor-pointer gap-1"
+
+      <button
+        type="button"
+        onClick={() => {
+          const newItem: QrCodeItem = {
+            id: `qr-${Date.now()}`,
+            label: "",
+            url: "",
+          };
+          onUpdate({ items: [...items, newItem] });
+        }}
+        className="inline-flex cursor-pointer items-center gap-1 rounded-md px-2 py-1 text-xs text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-600 dark:hover:bg-zinc-800 dark:hover:text-zinc-300"
       >
-        <Plus className="h-3.5 w-3.5" />
+        <Plus className="h-3 w-3" />
         {t("editor.fields.qrAdd")}
-      </Button>
+      </button>
     </div>
   );
 }

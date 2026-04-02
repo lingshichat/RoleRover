@@ -30,7 +30,7 @@ export function EditorPreviewPanel() {
       className="flex min-w-0 flex-[6] flex-col border-l bg-zinc-50 dark:bg-zinc-900 dark:border-zinc-800"
     >
       {/* Header */}
-      <div className="flex shrink-0 items-center justify-between border-b bg-white px-4 py-2 dark:bg-zinc-900 dark:border-zinc-800">
+      <div className="flex shrink-0 items-center justify-between border-b bg-white px-4 py-2 dark:bg-background dark:border-zinc-800">
         <span className="text-xs font-medium text-zinc-500">
           {t("editor.toolbar.preview")}
         </span>
