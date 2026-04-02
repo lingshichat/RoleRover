@@ -233,12 +233,12 @@ export function JdAnalysisDialog({
 
     try {
       const resumeContext = {
-        title: currentResume?.metadata.title || "",
-        targetJobTitle: currentResume?.metadata.targetJobTitle || "",
-        targetCompany: currentResume?.metadata.targetCompany || "",
+        title: currentResume?.title || "",
+        targetJobTitle: currentResume?.targetJobTitle || "",
+        targetCompany: currentResume?.targetCompany || "",
         sections: sections.map((section) => ({
           sectionId: section.id,
-          type: section.sectionType,
+          type: section.type,
           title: section.title,
           content: section.content,
         })),

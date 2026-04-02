@@ -16,15 +16,16 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { useEditorStore } from "../../stores/editor-store";
+import { SortableSection } from "./dnd/sortable-section";
 import { SectionWrapper } from "./section-wrapper";
-import type { ResumeSectionWithContent } from "../../stores/resume-store";
+import { useEditorStore } from "../../stores/editor-store";
+import type { ResumeSection, SectionContent } from "../../types/resume";
 
-export interface EditorCanvasProps {
-  sections: ResumeSectionWithContent[];
-  onUpdateSection: (sectionId: string, content: Partial<Record<string, unknown>>) => void;
+interface EditorCanvasProps {
+  sections: ResumeSection[];
+  onUpdateSection: (sectionId: string, content: Partial<SectionContent>) => void;
   onRemoveSection: (sectionId: string) => void;
-  onReorderSections: (sections: ResumeSectionWithContent[]) => void;
+  onReorderSections: (sections: ResumeSection[]) => void;
 }
 
 export function EditorCanvas({
@@ -64,16 +65,14 @@ export function EditorCanvas({
           const [removed] = newSections.splice(oldIndex, 1);
           newSections.splice(newIndex, 0, removed);
           const reordered = newSections.map((s, i) => ({ ...s, sortOrder: i }));
-          onReorderSections(reordered as ResumeSectionWithContent[]);
+          onReorderSections(reordered);
         }
       }
     },
     [sections, onReorderSections, setDragging]
   );
 
-  const activeSection = activeId
-    ? sections.find((s) => s.id === activeId)
-    : null;
+  const activeSection = activeId ? sections.find((s) => s.id === activeId) : null;
 
   return (
     <div className="min-w-0 flex-[4] overflow-hidden bg-zinc-50 dark:bg-zinc-950">
@@ -91,13 +90,13 @@ export function EditorCanvas({
             >
               <div className="space-y-4">
                 {sections.map((section) => (
-                  <div key={section.id} data-section-id={section.id}>
+                  <SortableSection key={section.id} id={section.id}>
                     <SectionWrapper
                       section={section}
                       onUpdate={(content) => onUpdateSection(section.id, content)}
                       onRemove={() => onRemoveSection(section.id)}
                     />
-                  </div>
+                  </SortableSection>
                 ))}
               </div>
             </SortableContext>
@@ -105,9 +104,7 @@ export function EditorCanvas({
             <DragOverlay>
               {activeSection && (
                 <div className="rounded-lg border-2 border-pink-300 bg-white dark:bg-zinc-800 p-4 opacity-80 shadow-xl">
-                  <p className="font-medium text-zinc-700 dark:text-zinc-200">
-                    {activeSection.title}
-                  </p>
+                  <p className="font-medium text-zinc-700 dark:text-zinc-200">{activeSection.title}</p>
                 </div>
               )}
             </DragOverlay>

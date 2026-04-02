@@ -36,7 +36,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { useEditorStore } from "../../stores/editor-store";
 import { useResumeStore, generateId } from "../../stores/resume-store";
-import type { ResumeSectionWithContent } from "../../stores/resume-store";
+import type { ResumeSection, SectionContent } from "../../types/resume";
 
 const SECTION_TYPES = [
   "personal_info",
@@ -68,29 +68,19 @@ const sectionIcons: Record<string, React.ElementType> = {
   custom: LayoutList,
 };
 
-function createSectionTimestamps() {
-  const now = Date.now();
-  return {
-    createdAtEpochMs: now,
-    updatedAtEpochMs: now,
-  };
-}
-
-interface SortableSidebarItemProps {
-  section: ResumeSectionWithContent;
-  isSelected: boolean;
-  onSelect: () => void;
-  onRename?: (title: string) => void;
-  icon: React.ElementType;
-}
-
 function SortableSidebarItem({
   section,
   isSelected,
   onSelect,
   onRename,
   icon: Icon,
-}: SortableSidebarItemProps) {
+}: {
+  section: ResumeSection;
+  isSelected: boolean;
+  onSelect: () => void;
+  onRename?: (title: string) => void;
+  icon: React.ElementType;
+}) {
   const {
     attributes,
     listeners,
@@ -127,7 +117,7 @@ function SortableSidebarItem({
     opacity: isDragging ? 0.5 : undefined,
   };
 
-  const isRenamable = section.sectionType !== "personal_info";
+  const isRenamable = section.type !== "personal_info";
 
   return (
     <div
@@ -188,9 +178,9 @@ function SortableSidebarItem({
 }
 
 interface EditorSidebarProps {
-  sections: ResumeSectionWithContent[];
-  onAddSection: (section: ResumeSectionWithContent) => void;
-  onReorderSections: (sections: ResumeSectionWithContent[]) => void;
+  sections: ResumeSection[];
+  onAddSection: (section: ResumeSection) => void;
+  onReorderSections: (sections: ResumeSection[]) => void;
 }
 
 export function EditorSidebar({
@@ -232,7 +222,7 @@ export function EditorSidebar({
             ...s,
             sortOrder: i,
           }));
-          onReorderSections(reordered as ResumeSectionWithContent[]);
+          onReorderSections(reordered);
         }
       }
     },
@@ -253,41 +243,43 @@ export function EditorSidebar({
     custom: t("editor.sections.custom"),
   };
 
-  const existingTypes = new Set(sections.map((s) => s.sectionType));
+  const existingTypes = new Set(sections.map((s) => s.type));
   const availableTypes = SECTION_TYPES.filter((type) => {
     if (type === "custom") return true;
     return !existingTypes.has(type);
   });
 
   const handleAddSection = (type: SectionType) => {
-    const newSection: ResumeSectionWithContent = {
+    const now = new Date().toISOString();
+    const newSection: ResumeSection = {
       id: generateId(),
-      documentId: "",
-      sectionType: type,
+      resumeId: "",
+      type,
       title: sectionTypeLabels[type] || type,
       sortOrder: sections.length,
       visible: true,
       content:
-        type === "personal_info"
+        (type === "personal_info"
           ? { fullName: "", jobTitle: "", email: "", phone: "", location: "" }
           : type === "summary"
             ? { text: "" }
             : type === "skills"
               ? { categories: [] }
-              : { items: [] },
-      ...createSectionTimestamps(),
+              : { items: [] }) as unknown as SectionContent,
+      createdAt: now,
+      updatedAt: now,
     };
     onAddSection(newSection);
   };
 
   return (
-    <div className="flex w-56 shrink-0 flex-col border-r bg-white dark:bg-zinc-900 dark:border-zinc-800">
+    <div data-tour="sidebar" className="w-56 shrink-0 border-r bg-white dark:bg-zinc-900 dark:border-zinc-800">
       <div className="p-3">
         <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
           {t("editor.sidebar.sections")}
         </h3>
       </div>
-      <ScrollArea className="min-h-0 flex-1">
+      <ScrollArea className="h-[calc(100vh-7rem)]">
         <div className="space-y-0.5 px-2">
           <DndContext
             sensors={sensors}
@@ -299,7 +291,7 @@ export function EditorSidebar({
               strategy={verticalListSortingStrategy}
             >
               {sections.map((section) => {
-                const Icon = sectionIcons[section.sectionType] || LayoutList;
+                const Icon = sectionIcons[section.type] || LayoutList;
                 return (
                   <SortableSidebarItem
                     key={section.id}
@@ -307,7 +299,7 @@ export function EditorSidebar({
                     isSelected={selectedSectionId === section.id}
                     onSelect={() => handleSelect(section.id)}
                     onRename={
-                      section.sectionType !== "personal_info"
+                      section.type !== "personal_info"
                         ? (title) => updateSectionTitle(section.id, title)
                         : undefined
                     }

@@ -5,11 +5,11 @@ import { Separator } from "@/components/ui/separator";
 import { EditableText } from "../fields/editable-text";
 import { EditableList } from "../fields/editable-list";
 import { generateId } from "../../../stores/resume-store";
-import type { ResumeSectionWithContent } from "../../../stores/resume-store";
+import type { ResumeSection } from "../../../types/resume";
 import type { SkillsContent, SkillCategory } from "../../../types/resume";
 
 interface Props {
-  section: ResumeSectionWithContent;
+  section: ResumeSection;
   onUpdate: (content: Partial<SkillsContent>) => void;
 }
 

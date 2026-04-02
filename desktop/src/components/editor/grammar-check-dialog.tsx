@@ -247,7 +247,7 @@ ${JSON.stringify(
   scopedSections.map((section) => ({
     sectionId: section.id,
     sectionTitle: section.title,
-    sectionType: section.sectionType,
+    sectionType: section.type,
     content: section.content,
   })),
   null,

@@ -1,10 +1,10 @@
 import { useTranslation } from "react-i18next";
 import { EditableRichText } from "../fields/editable-rich-text";
-import type { ResumeSectionWithContent } from "../../../stores/resume-store";
+import type { ResumeSection } from "../../../types/resume";
 import type { SummaryContent } from "../../../types/resume";
 
 interface Props {
-  section: ResumeSectionWithContent;
+  section: ResumeSection;
   onUpdate: (content: Partial<SummaryContent>) => void;
 }
 

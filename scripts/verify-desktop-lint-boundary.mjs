@@ -13,7 +13,7 @@ const DESKTOP_ACTIVE_FILES = [
   "desktop/src/i18n.ts",
   "desktop/src/routes/root.tsx",
   "desktop/src/routes/home.tsx",
-  "desktop/src/routes/library.tsx",
+  "desktop/src/routes/dashboard.tsx",
   "desktop/src/routes/settings.tsx",
 ];
 

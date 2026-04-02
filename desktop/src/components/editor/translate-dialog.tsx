@@ -14,7 +14,8 @@ import { Button } from "@/components/ui/button";
 import { cn } from "../../lib/utils";
 import { toResumeDocument } from "../../lib/desktop-document-mappers";
 import { duplicateDocument, saveDocument } from "../../lib/desktop-api";
-import { useResumeStore, type ResumeSectionWithContent } from "../../stores/resume-store";
+import { useResumeStore } from "../../stores/resume-store";
+import type { ResumeSection } from "../../types/resume";
 import {
   extractJsonObject,
   generateRequestId,
@@ -90,12 +91,12 @@ function buildPreviewText(section: TranslatedSection): string {
   return lines.slice(0, 8).join("\n");
 }
 
-function stripSectionPayload(section: ResumeSectionWithContent) {
-  const fields = STRIP_FIELDS[section.sectionType] ?? [];
+function stripSectionPayload(section: ResumeSection) {
+  const fields = STRIP_FIELDS[section.type] ?? [];
   const content =
     typeof section.content === "object" && section.content !== null
-      ? { ...section.content }
-      : {};
+      ? { ...(section.content as unknown as Record<string, unknown>) }
+      : {} as Record<string, unknown>;
   const stripped: Record<string, unknown> = {};
 
   for (const field of fields) {
@@ -108,7 +109,7 @@ function stripSectionPayload(section: ResumeSectionWithContent) {
   return {
     payload: {
       sectionId: section.id,
-      type: section.sectionType,
+      type: section.type,
       title: section.title,
       content,
     },
@@ -142,18 +143,22 @@ function buildTranslatedCopyTitle(baseTitle: string, languageCode: string): stri
 
 function serializeSectionsForSave(
   resumeId: string,
-  sections: ResumeSectionWithContent[],
+  sections: ResumeSection[],
 ) {
   return sections.map((section) => ({
     id: section.id,
-    documentId: section.documentId || resumeId,
-    sectionType: section.sectionType,
+    documentId: section.resumeId || resumeId,
+    sectionType: section.type,
     title: section.title,
     sortOrder: section.sortOrder,
     visible: section.visible,
-    content: section.content,
-    createdAtEpochMs: section.createdAtEpochMs,
-    updatedAtEpochMs: section.updatedAtEpochMs,
+    content: section.content as unknown as Record<string, unknown>,
+    createdAtEpochMs: typeof section.createdAt === "string"
+      ? new Date(section.createdAt).getTime()
+      : Date.now(),
+    updatedAtEpochMs: typeof section.updatedAt === "string"
+      ? new Date(section.updatedAt).getTime()
+      : Date.now(),
   }));
 }
 
@@ -162,7 +167,7 @@ export function TranslateDialog({ open, onClose, resumeId }: TranslateDialogProp
   const navigate = useNavigate();
   const { currentResume, sections, setResume } = useResumeStore();
 
-  const currentLanguage = currentResume?.metadata.language || "en";
+  const currentLanguage = currentResume?.language || "en";
   const isZh = i18n.language.startsWith("zh");
 
   const [sourceLang, setSourceLang] = useState(currentLanguage);
@@ -197,7 +202,7 @@ export function TranslateDialog({ open, onClose, resumeId }: TranslateDialogProp
       return;
     }
 
-    const nextSourceLanguage = currentResume?.metadata.language || "en";
+    const nextSourceLanguage = currentResume?.language || "en";
     setSourceLang(nextSourceLanguage);
     setTargetLang(nextSourceLanguage === "zh" ? "en" : "zh");
     setMode("overwrite");
@@ -210,7 +215,7 @@ export function TranslateDialog({ open, onClose, resumeId }: TranslateDialogProp
       total: 0,
       currentSectionTitle: "",
     });
-  }, [currentResume?.metadata.language, open]);
+  }, [currentResume?.language, open]);
 
   const handleTranslate = async () => {
     if (!currentResume || sortedSections.length === 0 || sourceLang === targetLang) {
@@ -261,7 +266,7 @@ Rules:
           const parsed = extractJsonObject<ParsedTranslatedSection>(rawResponse);
           translated.push({
             sourceSectionId: section.id,
-            sectionType: section.sectionType,
+            sectionType: section.type,
             sortOrder: section.sortOrder,
             title: parsed.title,
             content: restoreStrippedFields(parsed.content, stripped),
@@ -314,24 +319,23 @@ Rules:
           return {
             ...section,
             title: translated.title,
-            content: translated.content,
-            updatedAtEpochMs: Date.now(),
+            content: translated.content as unknown as import("../../types/resume").SectionContent,
           };
         });
 
         const saved = await saveDocument({
-          id: currentResume.metadata.id,
-          title: currentResume.metadata.title,
-          template: currentResume.metadata.template,
+          id: currentResume.id,
+          title: currentResume.title,
+          template: currentResume.template,
           language: targetLang,
-          themeJson: JSON.stringify(currentResume.theme),
-          targetJobTitle: currentResume.metadata.targetJobTitle,
-          targetCompany: currentResume.metadata.targetCompany,
-          sections: serializeSectionsForSave(currentResume.metadata.id, nextSections),
+          themeJson: JSON.stringify(currentResume.themeConfig),
+          targetJobTitle: currentResume.targetJobTitle,
+          targetCompany: currentResume.targetCompany,
+          sections: serializeSectionsForSave(currentResume.id, nextSections),
         });
 
         const mapped = toResumeDocument(saved);
-        setResume(mapped, mapped.sections);
+        setResume(mapped);
         onClose();
         return;
       }
@@ -350,26 +354,25 @@ Rules:
           return {
             ...section,
             title: translated.title,
-            content: translated.content,
-            updatedAtEpochMs: Date.now(),
+            content: translated.content as unknown as import("../../types/resume").SectionContent,
           };
         });
 
       const saved = await saveDocument({
-        id: duplicatedResume.metadata.id,
-        title: buildTranslatedCopyTitle(currentResume.metadata.title, targetLang),
-        template: duplicatedResume.metadata.template,
+        id: duplicatedResume.id,
+        title: buildTranslatedCopyTitle(currentResume.title, targetLang),
+        template: duplicatedResume.template,
         language: targetLang,
-        themeJson: JSON.stringify(duplicatedResume.theme),
-        targetJobTitle: duplicatedResume.metadata.targetJobTitle,
-        targetCompany: duplicatedResume.metadata.targetCompany,
-        sections: serializeSectionsForSave(duplicatedResume.metadata.id, duplicatedSections),
+        themeJson: JSON.stringify(duplicatedResume.themeConfig),
+        targetJobTitle: duplicatedResume.targetJobTitle,
+        targetCompany: duplicatedResume.targetCompany,
+        sections: serializeSectionsForSave(duplicatedResume.id, duplicatedSections),
       });
 
       const mapped = toResumeDocument(saved);
-      setResume(mapped, mapped.sections);
+      setResume(mapped);
       onClose();
-      navigate({ to: "/editor/$id", params: { id: mapped.metadata.id } });
+      navigate({ to: "/editor/$id", params: { id: mapped.id } });
     } catch (error) {
       setState("error");
       setErrorMessage(

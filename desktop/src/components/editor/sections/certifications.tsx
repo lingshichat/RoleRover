@@ -4,11 +4,11 @@ import { Button } from "@/components/ui/button";
 import { EditableText } from "../fields/editable-text";
 import { FieldWrapper } from "../fields/field-wrapper";
 import { generateId } from "../../../stores/resume-store";
-import type { ResumeSectionWithContent } from "../../../stores/resume-store";
+import type { ResumeSection } from "../../../types/resume";
 import type { CertificationsContent, CertificationItem } from "../../../types/resume";
 
 interface Props {
-  section: ResumeSectionWithContent;
+  section: ResumeSection;
   onUpdate: (content: Partial<CertificationsContent>) => void;
 }
 

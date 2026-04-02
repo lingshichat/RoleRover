@@ -8,27 +8,23 @@ import { EditorToolbar } from "../components/editor/editor-toolbar";
 import { ThemeEditor } from "../components/editor/theme-editor";
 import { AIChatBubble } from "../components/ai/ai-chat-bubble";
 import { useEditorStore } from "../stores/editor-store";
-import {
-  useResumeStore,
-  generateId,
-  type ResumeDocument,
-} from "../stores/resume-store";
+import { useResumeStore, generateId } from "../stores/resume-store";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getDocument, getTemplateValidationSnapshot } from "../lib/desktop-api";
 import { toResumeDocument } from "../lib/desktop-document-mappers";
+import type { Resume, SectionContent } from "../types/resume";
 
-function createFallbackDocument(): ResumeDocument {
+function createFallbackResume(): Resume {
+  const id = generateId();
+  const now = new Date().toISOString();
   return {
-    metadata: {
-      id: generateId(),
-      title: "New Resume",
-      template: "classic",
-      language: "en",
-      isDefault: true,
-      createdAtEpochMs: Date.now(),
-      updatedAtEpochMs: Date.now(),
-    },
-    theme: {
+    id,
+    userId: "desktop-workspace",
+    title: "New Resume",
+    template: "classic",
+    language: "en",
+    isDefault: true,
+    themeConfig: {
       primaryColor: "#1a1a1a",
       accentColor: "#3b82f6",
       fontFamily: "Inter",
@@ -41,8 +37,8 @@ function createFallbackDocument(): ResumeDocument {
     sections: [
       {
         id: generateId(),
-        documentId: "",
-        sectionType: "personal_info",
+        resumeId: id,
+        type: "personal_info",
         title: "Personal Info",
         sortOrder: 0,
         visible: true,
@@ -52,11 +48,81 @@ function createFallbackDocument(): ResumeDocument {
           email: "",
           phone: "",
           location: "",
-        },
-        createdAtEpochMs: Date.now(),
-        updatedAtEpochMs: Date.now(),
+        } as unknown as SectionContent,
+        createdAt: now,
+        updatedAt: now,
       },
     ],
+    createdAt: now,
+    updatedAt: now,
+  };
+}
+
+function toResumeFromValidation(doc: {
+  metadata: {
+    id: string;
+    title: string;
+    template: string;
+    language: string;
+    targetJobTitle?: string | null;
+    targetCompany?: string | null;
+    isDefault: boolean;
+    createdAtEpochMs: number;
+    updatedAtEpochMs: number;
+  };
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  theme: Record<string, any>;
+  sections: Array<{
+    id: string;
+    documentId: string;
+    sectionType: string;
+    title: string;
+    sortOrder: number;
+    visible: boolean;
+    content: Record<string, unknown>;
+    createdAtEpochMs: number;
+    updatedAtEpochMs: number;
+  }>;
+}): Resume {
+  return {
+    id: doc.metadata.id,
+    userId: "desktop-workspace",
+    title: doc.metadata.title,
+    template: doc.metadata.template,
+    language: doc.metadata.language,
+    targetJobTitle: doc.metadata.targetJobTitle,
+    targetCompany: doc.metadata.targetCompany,
+    isDefault: doc.metadata.isDefault,
+    themeConfig: {
+      primaryColor: (doc.theme.primaryColor as string) || "#1a1a1a",
+      accentColor: (doc.theme.accentColor as string) || "#3b82f6",
+      fontFamily: (doc.theme.fontFamily as string) || "Inter",
+      fontSize: (doc.theme.fontSize as string) || "medium",
+      lineSpacing: (doc.theme.lineSpacing as number) || 1.5,
+      margin: {
+        top: ((doc.theme.margin as Record<string, number> | undefined)?.top) ?? 24,
+        right: ((doc.theme.margin as Record<string, number> | undefined)?.right) ?? 24,
+        bottom: ((doc.theme.margin as Record<string, number> | undefined)?.bottom) ?? 24,
+        left: ((doc.theme.margin as Record<string, number> | undefined)?.left) ?? 24,
+      },
+      sectionSpacing: (doc.theme.sectionSpacing as number) || 16,
+      avatarStyle: ((doc.theme.avatarStyle as string) === "oneInch" || (doc.theme.avatarStyle as string) === "one_inch")
+        ? "oneInch"
+        : "circle",
+    },
+    sections: doc.sections.map((s, i) => ({
+      id: s.id,
+      resumeId: s.documentId || doc.metadata.id,
+      type: s.sectionType,
+      title: s.title,
+      sortOrder: s.sortOrder ?? i,
+      visible: s.visible,
+      content: s.content as unknown as SectionContent,
+      createdAt: new Date(s.createdAtEpochMs).toISOString(),
+      updatedAt: new Date(s.updatedAtEpochMs).toISOString(),
+    })),
+    createdAt: new Date(doc.metadata.createdAtEpochMs).toISOString(),
+    updatedAt: new Date(doc.metadata.updatedAtEpochMs).toISOString(),
   };
 }
 
@@ -66,7 +132,7 @@ function EditorRoute() {
   const {
     currentResume,
     sections,
-    loadResume,
+    setResume,
     updateSection,
     addSection,
     removeSection,
@@ -83,7 +149,7 @@ function EditorRoute() {
         const nativeDocument = await getDocument(id);
         if (nativeDocument) {
           if (!isCancelled) {
-            loadResume(toResumeDocument(nativeDocument));
+            setResume(toResumeDocument(nativeDocument));
           }
           return;
         }
@@ -96,45 +162,7 @@ function EditorRoute() {
         if (snapshot.documents.length > 0) {
           const doc = snapshot.documents[0];
           if (!isCancelled) {
-            loadResume({
-              metadata: {
-                id: doc.metadata.id,
-                title: doc.metadata.title,
-                template: doc.metadata.template,
-                language: doc.metadata.language,
-                targetJobTitle: doc.metadata.targetJobTitle,
-                targetCompany: doc.metadata.targetCompany,
-                isDefault: doc.metadata.isDefault,
-                createdAtEpochMs: doc.metadata.createdAtEpochMs,
-                updatedAtEpochMs: doc.metadata.updatedAtEpochMs,
-              },
-              theme: {
-                primaryColor: doc.theme.primaryColor || "#1a1a1a",
-                accentColor: doc.theme.accentColor || "#3b82f6",
-                fontFamily: doc.theme.fontFamily || "Inter",
-                fontSize: doc.theme.fontSize || "medium",
-                lineSpacing: doc.theme.lineSpacing || 1.5,
-                margin: {
-                  top: doc.theme.margin?.top ?? 24,
-                  right: doc.theme.margin?.right ?? 24,
-                  bottom: doc.theme.margin?.bottom ?? 24,
-                  left: doc.theme.margin?.left ?? 24,
-                },
-                sectionSpacing: doc.theme.sectionSpacing || 16,
-                avatarStyle: (doc.theme.avatarStyle as "circle" | "oneInch") || "circle",
-              },
-              sections: doc.sections.map((s, i) => ({
-                id: s.id,
-                documentId: s.documentId,
-                sectionType: s.sectionType,
-                title: s.title,
-                sortOrder: s.sortOrder ?? i,
-                visible: s.visible,
-                content: s.content,
-                createdAtEpochMs: s.createdAtEpochMs,
-                updatedAtEpochMs: s.updatedAtEpochMs,
-              })),
-            });
+            setResume(toResumeFromValidation(doc));
             return;
           }
         }
@@ -143,7 +171,7 @@ function EditorRoute() {
       }
 
       if (!isCancelled) {
-        loadResume(createFallbackDocument());
+        setResume(createFallbackResume());
       }
     };
 
@@ -152,7 +180,7 @@ function EditorRoute() {
     return () => {
       isCancelled = true;
     };
-  }, [id, loadResume]);
+  }, [id, setResume]);
 
   useEffect(() => {
     return () => {
@@ -193,7 +221,7 @@ function EditorRoute() {
       </div>
 
       {/* AI Chat Bubble */}
-      <AIChatBubble resumeId={currentResume?.metadata?.id || ""} />
+      <AIChatBubble resumeId={currentResume?.id || ""} />
     </div>
   );
 }

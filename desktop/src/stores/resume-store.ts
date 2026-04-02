@@ -1,6 +1,11 @@
 import { create } from "zustand";
 import { saveDocument } from "../lib/desktop-api";
-import type { ThemeConfig } from "../types/resume";
+import type {
+  Resume,
+  ResumeSection,
+  SectionContent,
+  ThemeConfig,
+} from "../types/resume";
 
 const AUTOSAVE_DELAY = 500;
 
@@ -8,49 +13,19 @@ function generateId(): string {
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 9)}`;
 }
 
-// Desktop-specific document type matching Tauri backend
-export interface ResumeDocument {
-  metadata: {
-    id: string;
-    title: string;
-    template: string;
-    language: string;
-    targetJobTitle?: string | null;
-    targetCompany?: string | null;
-    isDefault: boolean;
-    createdAtEpochMs: number;
-    updatedAtEpochMs: number;
-  };
-  theme: ThemeConfig;
-  sections: ResumeSectionWithContent[];
-}
-
-export interface ResumeSectionWithContent {
-  id: string;
-  documentId: string;
-  sectionType: string;
-  title: string;
-  sortOrder: number;
-  visible: boolean;
-  content: Record<string, unknown>;
-  createdAtEpochMs: number;
-  updatedAtEpochMs: number;
-}
-
 interface ResumeStore {
-  currentResume: ResumeDocument | null;
-  sections: ResumeSectionWithContent[];
+  currentResume: Resume | null;
+  sections: ResumeSection[];
   isDirty: boolean;
   isSaving: boolean;
   _saveTimeout: ReturnType<typeof setTimeout> | null;
 
-  loadResume: (document: ResumeDocument) => void;
-  setResume: (resume: ResumeDocument, sections: ResumeSectionWithContent[]) => void;
-  updateSection: (sectionId: string, content: Partial<Record<string, unknown>>) => void;
+  setResume: (resume: Resume) => void;
+  updateSection: (sectionId: string, content: Partial<SectionContent>) => void;
   updateSectionTitle: (sectionId: string, title: string) => void;
-  addSection: (section: ResumeSectionWithContent) => void;
+  addSection: (section: ResumeSection) => void;
   removeSection: (sectionId: string) => void;
-  reorderSections: (sections: ResumeSectionWithContent[]) => void;
+  reorderSections: (sections: ResumeSection[]) => void;
   toggleSectionVisibility: (sectionId: string) => void;
   setTemplate: (template: string) => void;
   setTitle: (title: string) => void;
@@ -67,31 +42,22 @@ export const useResumeStore = create<ResumeStore>((set, get) => ({
   isSaving: false,
   _saveTimeout: null,
 
-  loadResume: (document) => {
+  setResume: (resume) => {
+    // Cancel any pending autosave to prevent stale data overwriting
     const { _saveTimeout } = get();
     if (_saveTimeout) clearTimeout(_saveTimeout);
 
-    set({
-      currentResume: document,
-      sections: document.sections.map((s, i) => ({
-        ...s,
-        sortOrder: s.sortOrder ?? i,
-        content:
-          typeof s.content === "object" && s.content !== null
-            ? (s.content as Record<string, unknown>)
-            : {},
-      })) as ResumeSectionWithContent[],
-      isDirty: false,
-      _saveTimeout: null,
-    });
-  },
-
-  setResume: (resume, sections) => {
-    const { _saveTimeout } = get();
-    if (_saveTimeout) clearTimeout(_saveTimeout);
+    const sections = resume.sections.map((s, i) => ({
+      ...s,
+      sortOrder: s.sortOrder ?? i,
+      content:
+        typeof s.content === "object" && s.content !== null
+          ? s.content
+          : ({} as SectionContent),
+    }));
 
     set({
-      currentResume: resume,
+      currentResume: { ...resume, sections },
       sections,
       isDirty: false,
       _saveTimeout: null,
@@ -105,23 +71,20 @@ export const useResumeStore = create<ResumeStore>((set, get) => ({
           ? {
               ...s,
               content: {
-                ...s.content,
-                ...content,
-              },
-              updatedAtEpochMs: Date.now(),
+                ...(typeof s.content === "object" && s.content !== null
+                  ? (s.content as unknown as Record<string, unknown>)
+                  : {}),
+                ...(typeof content === "object" && content !== null
+                  ? (content as unknown as Record<string, unknown>)
+                  : {}),
+              } as unknown as SectionContent,
             }
           : s
       );
       return {
         sections,
         currentResume: state.currentResume
-          ? {
-              ...state.currentResume,
-              metadata: {
-                ...state.currentResume.metadata,
-                updatedAtEpochMs: Date.now(),
-              },
-            }
+          ? { ...state.currentResume, sections }
           : null,
         isDirty: true,
       };
@@ -132,20 +95,12 @@ export const useResumeStore = create<ResumeStore>((set, get) => ({
   updateSectionTitle: (sectionId, title) => {
     set((state) => {
       const sections = state.sections.map((s) =>
-        s.id === sectionId
-          ? { ...s, title, updatedAtEpochMs: Date.now() }
-          : s
+        s.id === sectionId ? { ...s, title } : s
       );
       return {
         sections,
         currentResume: state.currentResume
-          ? {
-              ...state.currentResume,
-              metadata: {
-                ...state.currentResume.metadata,
-                updatedAtEpochMs: Date.now(),
-              },
-            }
+          ? { ...state.currentResume, sections }
           : null,
         isDirty: true,
       };
@@ -159,13 +114,7 @@ export const useResumeStore = create<ResumeStore>((set, get) => ({
       return {
         sections,
         currentResume: state.currentResume
-          ? {
-              ...state.currentResume,
-              metadata: {
-                ...state.currentResume.metadata,
-                updatedAtEpochMs: Date.now(),
-              },
-            }
+          ? { ...state.currentResume, sections }
           : null,
         isDirty: true,
       };
@@ -179,13 +128,7 @@ export const useResumeStore = create<ResumeStore>((set, get) => ({
       return {
         sections,
         currentResume: state.currentResume
-          ? {
-              ...state.currentResume,
-              metadata: {
-                ...state.currentResume.metadata,
-                updatedAtEpochMs: Date.now(),
-              },
-            }
+          ? { ...state.currentResume, sections }
           : null,
         isDirty: true,
       };
@@ -197,13 +140,7 @@ export const useResumeStore = create<ResumeStore>((set, get) => ({
     set((state) => ({
       sections,
       currentResume: state.currentResume
-        ? {
-            ...state.currentResume,
-            metadata: {
-              ...state.currentResume.metadata,
-              updatedAtEpochMs: Date.now(),
-            },
-          }
+        ? { ...state.currentResume, sections }
         : null,
       isDirty: true,
     }));
@@ -213,20 +150,12 @@ export const useResumeStore = create<ResumeStore>((set, get) => ({
   toggleSectionVisibility: (sectionId) => {
     set((state) => {
       const sections = state.sections.map((s) =>
-        s.id === sectionId
-          ? { ...s, visible: !s.visible, updatedAtEpochMs: Date.now() }
-          : s
+        s.id === sectionId ? { ...s, visible: !s.visible } : s
       );
       return {
         sections,
         currentResume: state.currentResume
-          ? {
-              ...state.currentResume,
-              metadata: {
-                ...state.currentResume.metadata,
-                updatedAtEpochMs: Date.now(),
-              },
-            }
+          ? { ...state.currentResume, sections }
           : null,
         isDirty: true,
       };
@@ -237,14 +166,7 @@ export const useResumeStore = create<ResumeStore>((set, get) => ({
   setTemplate: (template) => {
     set((state) => ({
       currentResume: state.currentResume
-        ? {
-            ...state.currentResume,
-            metadata: {
-              ...state.currentResume.metadata,
-              template,
-              updatedAtEpochMs: Date.now(),
-            },
-          }
+        ? { ...state.currentResume, template }
         : null,
       isDirty: true,
     }));
@@ -254,14 +176,7 @@ export const useResumeStore = create<ResumeStore>((set, get) => ({
   setTitle: (title) => {
     set((state) => ({
       currentResume: state.currentResume
-        ? {
-            ...state.currentResume,
-            metadata: {
-              ...state.currentResume.metadata,
-              title,
-              updatedAtEpochMs: Date.now(),
-            },
-          }
+        ? { ...state.currentResume, title }
         : null,
       isDirty: true,
     }));
@@ -273,11 +188,7 @@ export const useResumeStore = create<ResumeStore>((set, get) => ({
       currentResume: state.currentResume
         ? {
             ...state.currentResume,
-            theme: { ...state.currentResume.theme, ...theme },
-            metadata: {
-              ...state.currentResume.metadata,
-              updatedAtEpochMs: Date.now(),
-            },
+            themeConfig: { ...state.currentResume.themeConfig, ...theme },
           }
         : null,
       isDirty: true,
@@ -292,23 +203,27 @@ export const useResumeStore = create<ResumeStore>((set, get) => ({
     set({ isSaving: true });
     try {
       await saveDocument({
-        id: currentResume.metadata.id,
-        title: currentResume.metadata.title,
-        template: currentResume.metadata.template,
-        language: currentResume.metadata.language,
-        themeJson: JSON.stringify(currentResume.theme),
-        targetJobTitle: currentResume.metadata.targetJobTitle,
-        targetCompany: currentResume.metadata.targetCompany,
+        id: currentResume.id,
+        title: currentResume.title,
+        template: currentResume.template,
+        language: currentResume.language,
+        themeJson: JSON.stringify(currentResume.themeConfig),
+        targetJobTitle: currentResume.targetJobTitle,
+        targetCompany: currentResume.targetCompany,
         sections: sections.map((section) => ({
           id: section.id,
-          documentId: section.documentId || currentResume.metadata.id,
-          sectionType: section.sectionType,
+          documentId: section.resumeId || currentResume.id,
+          sectionType: section.type,
           title: section.title,
           sortOrder: section.sortOrder,
           visible: section.visible,
-          content: section.content,
-          createdAtEpochMs: section.createdAtEpochMs,
-          updatedAtEpochMs: section.updatedAtEpochMs,
+          content: section.content as unknown as Record<string, unknown>,
+          createdAtEpochMs: typeof section.createdAt === "string"
+            ? new Date(section.createdAt).getTime()
+            : Date.now(),
+          updatedAtEpochMs: typeof section.updatedAt === "string"
+            ? new Date(section.updatedAt).getTime()
+            : Date.now(),
         })),
       });
 

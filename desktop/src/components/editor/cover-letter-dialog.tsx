@@ -80,10 +80,10 @@ export function CoverLetterDialog({ open, onClose, resumeId }: CoverLetterDialog
       const runtime = await getDesktopAiRuntimeConfig();
       const resumeContext = {
         resumeId,
-        title: currentResume.metadata.title || "",
-        language: currentResume.metadata.language || "en",
+        title: currentResume.title || "",
+        language: currentResume.language || "en",
         sections: sections.map((section) => ({
-          type: section.sectionType,
+          type: section.type,
           title: section.title,
           content: section.content,
         })),
@@ -96,7 +96,7 @@ export function CoverLetterDialog({ open, onClose, resumeId }: CoverLetterDialog
           baseUrl: runtime.baseUrl,
           requestId: generateRequestId("cover-letter"),
           systemPrompt: `You are an expert cover letter writer. Write a tailored cover letter in ${
-            currentResume.metadata.language === "zh" ? "Simplified Chinese" : "English"
+            currentResume.language === "zh" ? "Simplified Chinese" : "English"
           }.
 
 Requirements:

@@ -2,14 +2,13 @@ import { useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { Camera, Circle, RectangleVertical, X } from "lucide-react";
 import { useResumeStore } from "../../../stores/resume-store";
-import type { PersonalInfoContent } from "../../../types/resume";
-import type { ResumeSectionWithContent } from "../../../stores/resume-store";
+import type { ResumeSection, PersonalInfoContent } from "../../../types/resume";
 import { EditableSelect } from "../fields/editable-select";
 import { EditableText } from "../fields/editable-text";
 import { FieldWrapper } from "../fields/field-wrapper";
 
 interface Props {
-  section: ResumeSectionWithContent;
+  section: ResumeSection;
   onUpdate: (content: Partial<PersonalInfoContent>) => void;
 }
 
@@ -57,7 +56,7 @@ export function PersonalInfoSection({ section, onUpdate }: Props) {
   const content = section.content as Partial<PersonalInfoContent>;
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { currentResume, updateTheme } = useResumeStore();
-  const avatarStyle = currentResume?.theme?.avatarStyle || "oneInch";
+  const avatarStyle = currentResume?.themeConfig?.avatarStyle || "oneInch";
 
   const handleAvatarChange = async (
     event: React.ChangeEvent<HTMLInputElement>,

@@ -4,11 +4,11 @@ import { Button } from "@/components/ui/button";
 import { EditableText } from "../fields/editable-text";
 import { Separator } from "@/components/ui/separator";
 import { generateId } from "../../../stores/resume-store";
-import type { ResumeSectionWithContent } from "../../../stores/resume-store";
+import type { ResumeSection } from "../../../types/resume";
 import type { GitHubContent, GitHubRepoItem } from "../../../types/resume";
 
 interface Props {
-  section: ResumeSectionWithContent;
+  section: ResumeSection;
   onUpdate: (content: Partial<GitHubContent>) => void;
 }
 

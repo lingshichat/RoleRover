@@ -3,11 +3,11 @@ import { Plus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { EditableText } from "../fields/editable-text";
 import { generateId } from "../../../stores/resume-store";
-import type { ResumeSectionWithContent } from "../../../stores/resume-store";
+import type { ResumeSection } from "../../../types/resume";
 import type { QrCodesContent, QrCodeItem } from "../../../types/resume";
 
 interface Props {
-  section: ResumeSectionWithContent;
+  section: ResumeSection;
   onUpdate: (content: Partial<QrCodesContent>) => void;
 }
 

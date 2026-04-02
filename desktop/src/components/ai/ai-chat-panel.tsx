@@ -564,13 +564,13 @@ export function AIChatContent({
       requestIdRef.current = requestId;
 
       const resumeContext = {
-        title: currentResume?.metadata.title || "",
-        language: currentResume?.metadata.language || "",
-        template: currentResume?.metadata.template || "",
-        targetJobTitle: currentResume?.metadata.targetJobTitle || "",
-        targetCompany: currentResume?.metadata.targetCompany || "",
+        title: currentResume?.title || "",
+        language: currentResume?.language || "",
+        template: currentResume?.template || "",
+        targetJobTitle: currentResume?.targetJobTitle || "",
+        targetCompany: currentResume?.targetCompany || "",
         sections: sections.map((section) => ({
-          type: section.sectionType,
+          type: section.type,
           title: section.title,
           visible: section.visible,
           content: section.content,
@@ -607,11 +607,11 @@ export function AIChatContent({
     [
       activeSession,
       apiKeyMissingHint,
-      currentResume?.metadata.language,
-      currentResume?.metadata.targetCompany,
-      currentResume?.metadata.targetJobTitle,
-      currentResume?.metadata.template,
-      currentResume?.metadata.title,
+      currentResume?.language,
+      currentResume?.targetCompany,
+      currentResume?.targetJobTitle,
+      currentResume?.template,
+      currentResume?.title,
       genericError,
       input,
       isThinking,

@@ -2,6 +2,7 @@ import { useTranslation } from "react-i18next";
 import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import {
+  ArrowLeft,
   Undo2,
   Redo2,
   Download,
@@ -13,9 +14,10 @@ import {
   FileText,
   SpellCheck,
 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
 import { useEditorStore } from "../../stores/editor-store";
 import { useResumeStore } from "../../stores/resume-store";
-import { Separator } from "@/components/ui/separator";
 import { ExportDialog } from "./export-dialog";
 import { SettingsDialog } from "./settings-dialog";
 import { JdAnalysisDialog } from "./jd-analysis-dialog";
@@ -69,34 +71,25 @@ export function EditorToolbar() {
     }
   };
 
-  const resumeId = currentResume?.metadata?.id || "";
+  const resumeId = currentResume?.id || "";
 
   return (
     <>
       <div className="flex h-12 items-center justify-between border-b bg-white px-3 dark:bg-zinc-900 dark:border-zinc-800">
         <div className="flex items-center gap-2">
-          <Link
-            to="/dashboard"
-            className="flex h-8 w-8 cursor-pointer items-center justify-center rounded text-zinc-600 hover:bg-zinc-50"
+          <Button
+            variant="ghost"
+            size="sm"
+            asChild
+            className="cursor-pointer gap-1 text-zinc-600"
           >
-            <svg
-              viewBox="0 0 20 20"
-              fill="none"
-              className="h-4 w-4"
-              aria-hidden="true"
-            >
-              <path
-                d="M15 15L10 10L15 5"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          </Link>
+            <Link to="/dashboard">
+              <ArrowLeft className="h-4 w-4" />
+            </Link>
+          </Button>
           <Separator orientation="vertical" className="h-6" />
           <span className="max-w-48 truncate text-sm font-medium text-zinc-900 dark:text-zinc-100">
-            {currentResume?.metadata?.title || t("editor.untitled")}
+            {currentResume?.title || t("editor.untitled")}
           </span>
           <span className="text-xs text-zinc-400">
             {isSaving
@@ -108,116 +101,126 @@ export function EditorToolbar() {
                 : t("editor.toolbar.autoSaved")}
           </span>
           {!autoSave && isDirty && !isSaving && (
-            <button
-              type="button"
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={() => save()}
-              className="flex h-7 cursor-pointer items-center gap-1 rounded px-2 text-xs text-pink-600 hover:bg-pink-50"
+              className="cursor-pointer gap-1 text-pink-600 hover:text-pink-700 hover:bg-pink-50"
             >
               <Save className="h-3.5 w-3.5" />
-              {t("editor.toolbar.save")}
-            </button>
+              <span className="text-xs">{t("editor.toolbar.save")}</span>
+            </Button>
           )}
         </div>
 
         <div className="flex items-center gap-1">
-          <button
-            type="button"
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={handleUndo}
             disabled={undoStack.length === 0}
-            className="flex h-8 w-8 cursor-pointer items-center justify-center rounded text-zinc-600 hover:bg-zinc-50 disabled:opacity-50"
+            className="cursor-pointer"
             title={t("editor.toolbar.undo")}
           >
             <Undo2 className="h-4 w-4" />
-          </button>
-          <button
-            type="button"
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={handleRedo}
             disabled={redoStack.length === 0}
-            className="flex h-8 w-8 cursor-pointer items-center justify-center rounded text-zinc-600 hover:bg-zinc-50 disabled:opacity-50"
+            className="cursor-pointer"
             title={t("editor.toolbar.redo")}
           >
             <Redo2 className="h-4 w-4" />
-          </button>
-          <Separator orientation="vertical" className="h-6 mx-1" />
-          <button
-            type="button"
+          </Button>
+          <Separator orientation="vertical" className="h-6" />
+          <Button
+            data-tour="export"
+            variant="ghost"
+            size="sm"
             onClick={() => setExportDialogOpen(true)}
-            className="flex h-8 cursor-pointer items-center gap-1 rounded px-2 text-zinc-600 hover:bg-zinc-50"
+            className="cursor-pointer"
             title={t("editor.toolbar.exportPdf")}
           >
             <Download className="h-4 w-4" />
             <span className="ml-1 text-xs hidden sm:inline">
               {t("editor.toolbar.exportPdf")}
             </span>
-          </button>
-          <Separator orientation="vertical" className="h-6 mx-1" />
-          <button
-            type="button"
+          </Button>
+          <Separator orientation="vertical" className="h-6" />
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={() => setJdAnalysisDialogOpen(true)}
-            className="flex h-8 cursor-pointer items-center gap-1 rounded px-2 text-zinc-600 hover:bg-zinc-50"
+            className="cursor-pointer"
             title={t("editor.toolbar.jdAnalysis")}
           >
             <FileSearch className="h-4 w-4" />
             <span className="ml-1 text-xs hidden sm:inline">
               {t("editor.toolbar.jdAnalysis")}
             </span>
-          </button>
-          <button
-            type="button"
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={() => setTranslateDialogOpen(true)}
-            className="flex h-8 cursor-pointer items-center gap-1 rounded px-2 text-zinc-600 hover:bg-zinc-50"
+            className="cursor-pointer"
             title={t("editor.toolbar.translate")}
           >
             <Languages className="h-4 w-4" />
             <span className="ml-1 text-xs hidden sm:inline">
               {t("editor.toolbar.translate")}
             </span>
-          </button>
-          <button
-            type="button"
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={() => setCoverLetterDialogOpen(true)}
-            className="flex h-8 cursor-pointer items-center gap-1 rounded px-2 text-zinc-600 hover:bg-zinc-50"
+            className="cursor-pointer"
             title={t("editor.toolbar.coverLetter")}
           >
             <FileText className="h-4 w-4" />
             <span className="ml-1 text-xs hidden sm:inline">
               {t("editor.toolbar.coverLetter")}
             </span>
-          </button>
-          <button
-            type="button"
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={() => setGrammarCheckDialogOpen(true)}
-            className="flex h-8 cursor-pointer items-center gap-1 rounded px-2 text-zinc-600 hover:bg-zinc-50"
+            className="cursor-pointer"
             title={t("editor.toolbar.grammarCheck")}
           >
             <SpellCheck className="h-4 w-4" />
             <span className="ml-1 text-xs hidden sm:inline">
               {t("editor.toolbar.grammarCheck")}
             </span>
-          </button>
-          <Separator orientation="vertical" className="h-6 mx-1" />
-          <button
-            type="button"
+          </Button>
+          <Separator orientation="vertical" className="h-6" />
+          <Button
+            data-tour="theme"
+            variant={showThemeEditor ? "secondary" : "ghost"}
+            size="sm"
             onClick={toggleThemeEditor}
-            className={`flex h-8 cursor-pointer items-center gap-1 rounded px-2 hover:bg-zinc-50 ${
-              showThemeEditor ? "bg-zinc-100 text-zinc-900" : "text-zinc-600"
-            }`}
+            className="cursor-pointer"
             title={t("editor.toolbar.theme")}
           >
             <Palette className="h-4 w-4" />
             <span className="ml-1 text-xs hidden sm:inline">
               {t("editor.toolbar.theme")}
             </span>
-          </button>
-          <Separator orientation="vertical" className="h-6 mx-1" />
-          <button
-            type="button"
+          </Button>
+          <Separator orientation="vertical" className="h-6" />
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={() => setSettingsDialogOpen(true)}
-            className="flex h-8 w-8 cursor-pointer items-center justify-center rounded text-zinc-600 hover:bg-zinc-50"
+            className="cursor-pointer"
             title={t("editor.toolbar.settings")}
           >
             <Settings className="h-4 w-4" />
-          </button>
+          </Button>
         </div>
       </div>
 

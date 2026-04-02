@@ -1,11 +1,11 @@
 import { useState, useRef, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { GripVertical, X, Eye, EyeOff, Sparkles } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { useEditorStore } from "../../stores/editor-store";
 import { useResumeStore } from "../../stores/resume-store";
-import { useSortable } from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
-import type { ResumeSectionWithContent } from "../../stores/resume-store";
+import { useDragHandle } from "./dnd/sortable-section";
+import type { ResumeSection, SectionContent } from "../../types/resume";
 import { PersonalInfoSection } from "./sections/personal-info";
 import { SummarySection } from "./sections/summary";
 import { WorkExperienceSection } from "./sections/work-experience";
@@ -19,15 +19,15 @@ import { GitHubSection } from "./sections/github";
 import { QrCodesSection } from "./sections/qr-codes";
 
 interface SectionWrapperProps {
-  section: ResumeSectionWithContent;
-  onUpdate: (content: Partial<Record<string, unknown>>) => void;
+  section: ResumeSection;
+  onUpdate: (content: Partial<SectionContent>) => void;
   onRemove: () => void;
 }
 
-const sectionComponents: Record<string, React.ComponentType<{
-  section: ResumeSectionWithContent;
-  onUpdate: (content: Partial<Record<string, unknown>>) => void;
-}>> = {
+const sectionComponents: Record<
+  string,
+  React.ComponentType<{ section: ResumeSection; onUpdate: (content: Partial<SectionContent>) => void }>
+> = {
   personal_info: PersonalInfoSection,
   summary: SummarySection,
   work_experience: WorkExperienceSection,
@@ -45,25 +45,11 @@ export function SectionWrapper({ section, onUpdate, onRemove }: SectionWrapperPr
   const { t } = useTranslation();
   const { selectedSectionId, selectSection, showAiChat, toggleAiChat } = useEditorStore();
   const { toggleSectionVisibility, updateSectionTitle } = useResumeStore();
+  const { attributes, listeners } = useDragHandle();
   const isSelected = selectedSectionId === section.id;
   const [isRenaming, setIsRenaming] = useState(false);
   const [renameValue, setRenameValue] = useState(section.title);
   const renameInputRef = useRef<HTMLInputElement>(null);
-
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: section.id });
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.5 : undefined,
-  };
 
   useEffect(() => {
     if (isRenaming) {
@@ -82,13 +68,11 @@ export function SectionWrapper({ section, onUpdate, onRemove }: SectionWrapperPr
     setIsRenaming(false);
   };
 
-  const SectionComponent = sectionComponents[section.sectionType];
-  const isRenamable = section.sectionType !== "personal_info";
+  const SectionComponent = sectionComponents[section.type];
+  const isRenamable = section.type !== "personal_info";
 
   return (
     <div
-      ref={setNodeRef}
-      style={style}
       className={`rounded-xl border bg-white shadow-sm transition-all duration-200 dark:bg-zinc-900 ${
         isSelected
           ? "border-pink-300 shadow-pink-100/50 dark:shadow-pink-900/20"
@@ -141,9 +125,10 @@ export function SectionWrapper({ section, onUpdate, onRemove }: SectionWrapperPr
           )}
         </div>
         <div className="flex items-center gap-1">
-          <button
-            type="button"
-            className="flex h-7 w-7 cursor-pointer items-center justify-center rounded text-pink-400 hover:text-pink-600"
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 w-7 cursor-pointer p-0 text-pink-400 hover:text-pink-600"
             title={t("editor.aiPolish")}
             onClick={(e) => {
               e.stopPropagation();
@@ -153,31 +138,33 @@ export function SectionWrapper({ section, onUpdate, onRemove }: SectionWrapperPr
             }}
           >
             <Sparkles className="h-3.5 w-3.5" />
-          </button>
-          <button
-            type="button"
-            className="flex h-7 w-7 cursor-pointer items-center justify-center rounded text-zinc-400 hover:text-zinc-600"
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 w-7 cursor-pointer p-0"
             onClick={(e) => {
               e.stopPropagation();
               toggleSectionVisibility(section.id);
             }}
           >
             {section.visible ? (
-              <Eye className="h-3.5 w-3.5" />
+              <Eye className="h-3.5 w-3.5 text-zinc-400" />
             ) : (
-              <EyeOff className="h-3.5 w-3.5" />
+              <EyeOff className="h-3.5 w-3.5 text-zinc-400" />
             )}
-          </button>
-          <button
-            type="button"
-            className="flex h-7 w-7 cursor-pointer items-center justify-center rounded text-zinc-400 hover:text-red-500"
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 w-7 cursor-pointer p-0 text-zinc-400 hover:text-red-500"
             onClick={(e) => {
               e.stopPropagation();
               onRemove();
             }}
           >
             <X className="h-3.5 w-3.5" />
-          </button>
+          </Button>
         </div>
       </div>
       <div className="px-4 pb-4 pt-3">
@@ -185,7 +172,7 @@ export function SectionWrapper({ section, onUpdate, onRemove }: SectionWrapperPr
           <SectionComponent section={section} onUpdate={onUpdate} />
         ) : (
           <p className="text-sm text-zinc-400">
-            {t("editorUnknownSectionType")}: {section.sectionType}
+            Unknown section type: {section.type}
           </p>
         )}
       </div>

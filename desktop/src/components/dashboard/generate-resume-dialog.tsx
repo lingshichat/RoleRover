@@ -3,7 +3,8 @@ import { useTranslation } from "react-i18next";
 import { useNavigate } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { generateId, useResumeStore, type ResumeDocument } from "../../stores/resume-store";
+import { generateId, useResumeStore } from "../../stores/resume-store";
+import type { Resume, SectionContent } from "../../types/resume";
 import { Sparkles, X, Loader2 } from "lucide-react";
 
 interface GenerateResumeDialogProps {
@@ -15,7 +16,7 @@ interface GenerateResumeDialogProps {
 export function GenerateResumeDialog({ open, onClose, onCreated }: GenerateResumeDialogProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { loadResume } = useResumeStore();
+  const { setResume } = useResumeStore();
 
   const [jobTitle, setJobTitle] = useState("");
   const [yearsOfExperience, setYearsOfExperience] = useState("");
@@ -40,19 +41,18 @@ export function GenerateResumeDialog({ open, onClose, onCreated }: GenerateResum
     setIsGenerating(true);
 
     try {
+      const id = generateId();
+      const now = new Date().toISOString();
       // TODO: Implement actual AI generation via Tauri
       // For now, create a template resume
-      const newResume: ResumeDocument = {
-        metadata: {
-          id: generateId(),
-          title: `${jobTitle} Resume`,
-          template: "modern",
-          language,
-          isDefault: false,
-          createdAtEpochMs: Date.now(),
-          updatedAtEpochMs: Date.now(),
-        },
-        theme: {
+      const newResume: Resume = {
+        id,
+        userId: "desktop-workspace",
+        title: `${jobTitle} Resume`,
+        template: "modern",
+        language,
+        isDefault: false,
+        themeConfig: {
           primaryColor: "#111827",
           accentColor: "#2563eb",
           fontFamily: "Inter",
@@ -65,8 +65,8 @@ export function GenerateResumeDialog({ open, onClose, onCreated }: GenerateResum
         sections: [
           {
             id: generateId(),
-            documentId: "",
-            sectionType: "personal_info",
+            resumeId: id,
+            type: "personal_info",
             title: t("editor.sections.personalInfo"),
             sortOrder: 0,
             visible: true,
@@ -76,27 +76,27 @@ export function GenerateResumeDialog({ open, onClose, onCreated }: GenerateResum
               email: "email@example.com",
               phone: "+1 (000) 000-0000",
               location: "City, Country",
-            },
-            createdAtEpochMs: Date.now(),
-            updatedAtEpochMs: Date.now(),
+            } as unknown as SectionContent,
+            createdAt: now,
+            updatedAt: now,
           },
           {
             id: generateId(),
-            documentId: "",
-            sectionType: "summary",
+            resumeId: id,
+            type: "summary",
             title: t("editor.sections.summary"),
             sortOrder: 1,
             visible: true,
             content: {
               text: `Experienced ${jobTitle} with ${yearsOfExperience || "several"} years of expertise in ${industry || "the industry"}. Skilled in ${skills || "various relevant technologies"}.`,
-            },
-            createdAtEpochMs: Date.now(),
-            updatedAtEpochMs: Date.now(),
+            } as unknown as SectionContent,
+            createdAt: now,
+            updatedAt: now,
           },
           {
             id: generateId(),
-            documentId: "",
-            sectionType: "skills",
+            resumeId: id,
+            type: "skills",
             title: t("editor.sections.skills"),
             sortOrder: 2,
             visible: true,
@@ -108,20 +108,22 @@ export function GenerateResumeDialog({ open, onClose, onCreated }: GenerateResum
                   skills: skills ? skills.split(",").map((s) => s.trim()) : ["Skill 1", "Skill 2", "Skill 3"],
                 },
               ],
-            },
-            createdAtEpochMs: Date.now(),
-            updatedAtEpochMs: Date.now(),
+            } as unknown as SectionContent,
+            createdAt: now,
+            updatedAt: now,
           },
         ],
+        createdAt: now,
+        updatedAt: now,
       };
 
       // Simulate AI generation delay
       await new Promise((resolve) => setTimeout(resolve, 2000));
 
-      loadResume(newResume);
+      setResume(newResume);
       onCreated?.();
       resetAndClose();
-      navigate({ to: "/editor/$id", params: { id: newResume.metadata.id } });
+      navigate({ to: "/editor/$id", params: { id: newResume.id } });
     } catch (error) {
       console.error("Failed to generate resume:", error);
     } finally {

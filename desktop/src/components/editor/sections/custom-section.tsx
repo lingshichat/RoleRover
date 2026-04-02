@@ -5,11 +5,11 @@ import { EditableText } from "../fields/editable-text";
 import { EditableRichText } from "../fields/editable-rich-text";
 import { Separator } from "@/components/ui/separator";
 import { generateId } from "../../../stores/resume-store";
-import type { ResumeSectionWithContent } from "../../../stores/resume-store";
+import type { ResumeSection } from "../../../types/resume";
 import type { CustomContent, CustomItem } from "../../../types/resume";
 
 interface Props {
-  section: ResumeSectionWithContent;
+  section: ResumeSection;
   onUpdate: (content: Partial<CustomContent>) => void;
 }
 

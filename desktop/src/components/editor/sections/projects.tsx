@@ -8,11 +8,11 @@ import { EditableRichText } from "../fields/editable-rich-text";
 import { EditableList } from "../fields/editable-list";
 import { FieldWrapper } from "../fields/field-wrapper";
 import { generateId } from "../../../stores/resume-store";
-import type { ResumeSectionWithContent } from "../../../stores/resume-store";
+import type { ResumeSection } from "../../../types/resume";
 import type { ProjectsContent, ProjectItem } from "../../../types/resume";
 
 interface Props {
-  section: ResumeSectionWithContent;
+  section: ResumeSection;
   onUpdate: (content: Partial<ProjectsContent>) => void;
 }
 

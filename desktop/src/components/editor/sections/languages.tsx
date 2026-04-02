@@ -5,11 +5,11 @@ import { EditableText } from "../fields/editable-text";
 import { EditableSelect } from "../fields/editable-select";
 import { FieldWrapper } from "../fields/field-wrapper";
 import { generateId } from "../../../stores/resume-store";
-import type { ResumeSectionWithContent } from "../../../stores/resume-store";
+import type { ResumeSection } from "../../../types/resume";
 import type { LanguagesContent, LanguageItem } from "../../../types/resume";
 
 interface Props {
-  section: ResumeSectionWithContent;
+  section: ResumeSection;
   onUpdate: (content: Partial<LanguagesContent>) => void;
 }
 

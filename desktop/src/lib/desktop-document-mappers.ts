@@ -2,11 +2,7 @@ import type {
   DesktopDocumentDetail,
   DesktopDocumentListItem,
 } from "./desktop-api";
-import type { Resume, ThemeConfig } from "../types/resume";
-import type {
-  ResumeDocument,
-  ResumeSectionWithContent,
-} from "../stores/resume-store";
+import type { Resume, ResumeSection, ThemeConfig } from "../types/resume";
 
 const DEFAULT_THEME: ThemeConfig = {
   primaryColor: "#1a1a1a",
@@ -97,32 +93,35 @@ export function toResume(document: DesktopDocumentListItem): Resume {
   };
 }
 
-export function toResumeDocument(document: DesktopDocumentDetail): ResumeDocument {
-  const sections: ResumeSectionWithContent[] = document.sections.map((section, index) => ({
+/**
+ * Convert a native document detail (from Tauri backend) into the shared
+ * Resume type used by the web preview components and resume-store.
+ */
+export function toResumeDocument(document: DesktopDocumentDetail): Resume {
+  const sections: ResumeSection[] = document.sections.map((section, index) => ({
     id: section.id,
-    documentId: section.documentId || document.id,
-    sectionType: section.sectionType,
+    resumeId: section.documentId || document.id,
+    type: section.sectionType,
     title: section.title,
     sortOrder: section.sortOrder ?? index,
     visible: section.visible,
-    content: parseRecord(section.contentJson),
-    createdAtEpochMs: section.createdAtEpochMs,
-    updatedAtEpochMs: section.updatedAtEpochMs,
+    content: parseRecord(section.contentJson) as unknown as import("../types/resume").SectionContent,
+    createdAt: new Date(section.createdAtEpochMs).toISOString(),
+    updatedAt: new Date(section.updatedAtEpochMs).toISOString(),
   }));
 
   return {
-    metadata: {
-      id: document.id,
-      title: document.title,
-      template: document.template,
-      language: document.language,
-      targetJobTitle: document.targetJobTitle,
-      targetCompany: document.targetCompany,
-      isDefault: document.isDefault,
-      createdAtEpochMs: document.createdAtEpochMs,
-      updatedAtEpochMs: document.updatedAtEpochMs,
-    },
-    theme: parseThemeConfig(document.themeJson),
+    id: document.id,
+    userId: "desktop-workspace",
+    title: document.title,
+    template: document.template,
+    themeConfig: parseThemeConfig(document.themeJson),
+    isDefault: document.isDefault,
+    language: document.language,
+    targetJobTitle: document.targetJobTitle,
+    targetCompany: document.targetCompany,
     sections,
+    createdAt: new Date(document.createdAtEpochMs).toISOString(),
+    updatedAt: new Date(document.updatedAtEpochMs).toISOString(),
   };
 }

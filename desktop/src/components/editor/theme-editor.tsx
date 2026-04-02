@@ -209,7 +209,7 @@ export function ThemeEditor() {
 
   const themeConfig: ThemeConfig = {
     ...DEFAULT_THEME,
-    ...(currentResume?.theme || {}),
+    ...(currentResume?.themeConfig || {}),
   };
 
   const updateThemeConfig = useCallback(
@@ -264,7 +264,7 @@ export function ThemeEditor() {
           >
             <div className="grid max-h-[320px] grid-cols-3 gap-2 overflow-y-auto pr-1">
               {TEMPLATES.map((template) => {
-                const isSelected = currentResume?.metadata.template === template;
+                const isSelected = currentResume?.template === template;
 
                 return (
                   <button

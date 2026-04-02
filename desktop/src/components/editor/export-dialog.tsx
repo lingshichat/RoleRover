@@ -14,7 +14,8 @@ import {
   X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useResumeStore, type ResumeSectionWithContent } from "../../stores/resume-store";
+import { useResumeStore } from "../../stores/resume-store";
+import type { ResumeSection } from "../../types/resume";
 import {
   writeTemplateValidationExport,
   type TemplateValidationDocument,
@@ -207,7 +208,7 @@ function toTemplateValidationDocument(
     sectionSpacing: number;
     avatarStyle?: string;
   },
-  sections: ResumeSectionWithContent[],
+  sections: ResumeSection[],
   resumeId: string,
 ): TemplateValidationDocument {
   return {
@@ -236,13 +237,17 @@ function toTemplateValidationDocument(
     sections: sections.map((section, index) => ({
       id: section.id,
       documentId: resumeId,
-      sectionType: section.sectionType as TemplateValidationDocument["sections"][number]["sectionType"],
+      sectionType: section.type as TemplateValidationDocument["sections"][number]["sectionType"],
       title: section.title,
       sortOrder: section.sortOrder ?? index,
       visible: section.visible,
-      content: section.content,
-      createdAtEpochMs: section.createdAtEpochMs,
-      updatedAtEpochMs: section.updatedAtEpochMs,
+      content: section.content as unknown as Record<string, unknown>,
+      createdAtEpochMs: typeof section.createdAt === "string"
+        ? new Date(section.createdAt).getTime()
+        : Date.now(),
+      updatedAtEpochMs: typeof section.updatedAt === "string"
+        ? new Date(section.updatedAt).getTime()
+        : Date.now(),
     })),
   };
 }
@@ -354,18 +359,18 @@ export function ExportDialog({ open, onClose, resumeId }: ExportDialogProps) {
       }
 
       const document = toTemplateValidationDocument(
-        currentResume.metadata.title || "Resume",
-        currentResume.metadata.language || "en",
-        currentResume.metadata.template || "classic",
-        currentResume.metadata.isDefault,
-        currentResume.metadata.targetJobTitle,
-        currentResume.metadata.targetCompany,
-        currentResume.theme,
+        currentResume.title || "Resume",
+        currentResume.language || "en",
+        currentResume.template || "classic",
+        currentResume.isDefault,
+        currentResume.targetJobTitle,
+        currentResume.targetCompany,
+        currentResume.themeConfig,
         sections,
         resumeId,
       );
 
-      const fileBase = `${sanitizeFileName(currentResume.metadata.title || "resume")}-${formatTimestamp(
+      const fileBase = `${sanitizeFileName(currentResume.title || "resume")}-${formatTimestamp(
         new Date(),
       )}`;
 
