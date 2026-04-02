@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { TEMPLATES } from "@/lib/constants";
 import { Upload, FileText, X, Loader2, Check } from "lucide-react";
-import { TemplateThumbnail } from "../template-thumbnail";
+import { TemplateThumbnail } from "@/components/dashboard/template-thumbnail";
 import { templateLabelsMap } from "../../lib/template-labels";
 import type { DesktopDocumentDetail } from "../../lib/desktop-api";
 
@@ -210,7 +210,7 @@ export function CreateResumeDialog({
                         className={`template-option ${template === tId ? "template-option--active" : ""}`}
                         onClick={() => setTemplate(tId)}
                       >
-                        <TemplateThumbnail template={tId} size="sm" className="mx-auto" />
+                        <TemplateThumbnail template={tId} className="mx-auto" />
                         <span className="template-option-label">
                           {t(templateLabelsMap[tId] || "templateClassic")}
                         </span>
@@ -282,7 +282,7 @@ export function CreateResumeDialog({
                         className={`template-option ${template === tId ? "template-option--active" : ""}`}
                         onClick={() => setTemplate(tId)}
                       >
-                        <TemplateThumbnail template={tId} size="sm" className="mx-auto" />
+                        <TemplateThumbnail template={tId} className="mx-auto" />
                         <span className="template-option-label">
                           {t(templateLabelsMap[tId] || "templateClassic")}
                         </span>
