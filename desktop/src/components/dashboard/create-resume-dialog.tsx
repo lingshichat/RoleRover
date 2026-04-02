@@ -199,24 +199,30 @@ export function CreateResumeDialog({
               </div>
 
               {/* Template selection */}
-              <div className="form-field">
-                <label className="form-label">{t("templatesTitle")}</label>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">{t("templatesTitle")}</label>
                 <div className="max-h-[400px] overflow-y-auto pr-1">
                   <div className="grid grid-cols-3 gap-3 md:grid-cols-4 xl:grid-cols-5">
                     {TEMPLATES.map((tId) => (
                       <button
                         key={tId}
                         type="button"
-                        className={`template-option ${template === tId ? "template-option--active" : ""}`}
+                        className={`relative flex flex-col items-center overflow-hidden rounded-lg border-2 p-2 transition-all ${
+                          template === tId
+                            ? "border-pink-500 bg-pink-50 dark:bg-pink-950/20"
+                            : "border-zinc-200 hover:border-zinc-300 dark:border-zinc-700 dark:hover:border-zinc-600"
+                        }`}
                         onClick={() => setTemplate(tId)}
                       >
-                        <TemplateThumbnail template={tId} className="mx-auto" />
-                        <span className="template-option-label">
+                        <div className="aspect-[3/4] w-full overflow-hidden rounded">
+                          <TemplateThumbnail template={tId} className="h-full w-full" />
+                        </div>
+                        <span className="mt-1.5 truncate text-[11px] font-medium text-zinc-600 dark:text-zinc-400">
                           {t(templateLabelsMap[tId] || "templateClassic")}
                         </span>
                         {template === tId && (
-                          <div className="template-option-check">
-                            <Check className="h-3 w-3" />
+                          <div className="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-pink-500 text-white">
+                            <Check className="h-2.5 w-2.5" />
                           </div>
                         )}
                       </button>
