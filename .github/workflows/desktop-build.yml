@@ -44,14 +44,11 @@ jobs:
       - name: Build frontend for Desktop
         run: pnpm --filter @rolerover/desktop run build
 
-      - name: Set up Tauri Signing Key (Dummy for CI without secrets)
+      - name: Generate CI updater signing key
         run: |
-          New-Item -Path "desktop/.tauri" -ItemType Directory -Force
-          Set-Content -Path "desktop/.tauri/updater.key" -Value "untrusted comment: minisign secret key`nRWQk5Iwp1GnPfwN+pL46+6/lXJ0yJ9Bv1t1Y2nS8A1L+M3e/r30wE8d3jO1O5hD2pG/x3s03I2zY1Eki/R6SjJ3+R7tB/9wX/mO1/1A="
+          pnpm --prefix desktop exec tauri signer generate --ci -w .tauri/updater.key -f -p ""
         shell: powershell
-        if: env.TAURI_SIGNING_PRIVATE_KEY == ''
-        env:
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+        if: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY == '' }}
 
       - name: Build Tauri Desktop
         run: pnpm run build:tauri
@@ -65,6 +62,6 @@ jobs:
         with:
           name: rolerover-desktop-windows
           path: |
-            desktop/src-tauri/target/release/bundle/msi/*.msi
-            desktop/src-tauri/target/release/bundle/nsis/*.exe
+            .codex-cargo-target/desktop-tauri/release/bundle/msi/*.msi
+            .codex-cargo-target/desktop-tauri/release/bundle/nsis/*.exe
           if-no-files-found: error
