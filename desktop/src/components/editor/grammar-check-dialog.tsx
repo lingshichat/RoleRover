@@ -13,6 +13,7 @@ import {
 import { useResumeStore } from "../../stores/resume-store";
 import { useEditorStore } from "../../stores/editor-store";
 import { listenToAiStreamEvents, startAiPromptStream } from "../../lib/desktop-api";
+import { getDesktopAiRuntimeConfig } from "./ai-dialog-helpers";
 import type { DesktopAiStreamEvent } from "../../lib/desktop-api";
 
 interface GrammarCheckDialogProps {
@@ -215,9 +216,12 @@ export function GrammarCheckDialog({
     setAppliedIssues(new Set());
 
     try {
+      const aiConfig = await getDesktopAiRuntimeConfig();
+
       await startAiPromptStream({
-        provider: "openai",
-        model: "gpt-4o",
+        provider: aiConfig.provider,
+        model: aiConfig.model || undefined,
+        baseUrl: aiConfig.baseUrl,
         requestId,
         prompt: `Review this resume content for grammar and style issues.
 

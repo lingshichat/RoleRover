@@ -1430,6 +1430,42 @@ export async function startAiPromptStream(
   return invoke<AiStreamStartReceipt>("start_ai_prompt_stream", { input });
 }
 
+export interface FetchAiModelsResult {
+  provider: string;
+  models: string[];
+}
+
+export interface ConnectivityTestResult {
+  success: boolean;
+  latencyMs: number;
+  errorMessage: string | null;
+}
+
+export async function fetchAiModels(
+  provider?: string,
+): Promise<FetchAiModelsResult> {
+  return invokeWithFallback("fetch_ai_models", { provider: "", models: [] }, {
+    provider: provider ?? null,
+  });
+}
+
+export async function testAiConnectivity(
+  provider?: string,
+): Promise<ConnectivityTestResult> {
+  return invokeWithFallback<ConnectivityTestResult>(
+    "test_ai_connectivity",
+    { success: false, latencyMs: 0, errorMessage: "Desktop runtime not available" },
+    { provider: provider ?? null },
+  );
+}
+
+export async function testExaConnectivity(): Promise<ConnectivityTestResult> {
+  return invokeWithFallback<ConnectivityTestResult>(
+    "test_exa_connectivity",
+    { success: false, latencyMs: 0, errorMessage: "Desktop runtime not available" },
+  );
+}
+
 export async function listenToAiStreamEvents(
   handler: (event: DesktopAiStreamEvent) => void,
 ): Promise<UnlistenFn> {

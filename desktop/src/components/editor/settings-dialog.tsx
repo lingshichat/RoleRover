@@ -15,6 +15,7 @@ import {
   Check,
   Loader2,
   X,
+  Plug,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -29,8 +30,12 @@ import {
   updateWorkspaceAppearanceSettings,
   updateAiProviderSettings,
   writeSecretValue,
+  fetchAiModels,
+  testAiConnectivity,
+  testExaConnectivity,
   type ProviderConfigUpdateInput,
   type AiProvider,
+  type ConnectivityTestResult,
 } from "../../lib/desktop-api";
 
 const AI_PROVIDERS: { value: AiProvider; label: string }[] = [
@@ -77,7 +82,7 @@ export function SettingsDialog({ open, onClose }: SettingsDialogProps) {
   const [aiProvider, setAIProvider] = useState<AiProvider>("openai");
   const [aiApiKey, setAIApiKey] = useState("");
   const [aiBaseURL, setAIBaseURL] = useState("");
-  const [aiModel, setAIModel] = useState("gpt-4o");
+  const [aiModel, setAIModel] = useState("");
   const [showApiKey, setShowApiKey] = useState(false);
   const [setAsDefault, setSetAsDefault] = useState(true);
 
@@ -89,7 +94,16 @@ export function SettingsDialog({ open, onClose }: SettingsDialogProps) {
   // Model combobox state
   const [modelOpen, setModelOpen] = useState(false);
   const [modelSearch, setModelSearch] = useState("");
+  const [fetchedModels, setFetchedModels] = useState<string[]>([]);
+  const [modelsFetching, setModelsFetching] = useState(false);
+  const [modelsFetched, setModelsFetched] = useState(false);
   const modelSearchRef = useRef<HTMLInputElement>(null);
+
+  // Connectivity test state
+  const [aiTestResult, setAiTestResult] = useState<ConnectivityTestResult | null>(null);
+  const [aiTesting, setAiTesting] = useState(false);
+  const [exaTestResult, setExaTestResult] = useState<ConnectivityTestResult | null>(null);
+  const [exaTesting, setExaTesting] = useState(false);
 
   // Load settings on open
   useEffect(() => {
@@ -106,7 +120,7 @@ export function SettingsDialog({ open, onClose }: SettingsDialogProps) {
         setAIProvider(provider);
         const config = settings.ai?.providerConfigs?.[provider];
         setAIBaseURL(config?.baseUrl || "");
-        setAIModel(config?.model || "gpt-4o");
+        setAIModel(config?.model || "");
         setSetAsDefault(true);
 
         // Exa
@@ -125,6 +139,39 @@ export function SettingsDialog({ open, onClose }: SettingsDialogProps) {
       setModelSearch("");
     }
   }, [modelOpen]);
+
+  // Fetch models when combobox opens
+  const fetchModelsForProvider = useCallback(async () => {
+    setModelsFetching(true);
+    try {
+      const result = await fetchAiModels(aiProvider);
+      setFetchedModels(result.models);
+      setModelsFetched(true);
+    } catch {
+      setFetchedModels([]);
+      setModelsFetched(true);
+    } finally {
+      setModelsFetching(false);
+    }
+  }, [aiProvider]);
+
+  useEffect(() => {
+    if (modelOpen && !modelsFetched && !modelsFetching) {
+      void fetchModelsForProvider();
+    }
+  }, [modelOpen, modelsFetched, modelsFetching, fetchModelsForProvider]);
+
+  // Reset model fetch state when provider changes
+  useEffect(() => {
+    setModelsFetched(false);
+    setFetchedModels([]);
+    setAiTestResult(null);
+    setModelSearch("");
+  }, [aiProvider]);
+
+  const filteredModels = fetchedModels.filter((m) =>
+    m.toLowerCase().includes(modelSearch.toLowerCase()),
+  );
 
   // Auto-save appearance settings on change
   const saveAppearance = useCallback(
@@ -173,17 +220,17 @@ export function SettingsDialog({ open, onClose }: SettingsDialogProps) {
       const settings = await getWorkspaceSettingsSnapshot();
       const config = settings.ai?.providerConfigs?.[value];
       setAIBaseURL(config?.baseUrl || "");
-      setAIModel(config?.model || "gpt-4o");
+      setAIModel(config?.model || "");
     } catch { /* ignore */ }
   };
 
   // Auto-save AI config on blur
-  const saveAIConfig = useCallback(async () => {
+  const saveAIConfig = useCallback(async (overrides?: { model?: string }) => {
     try {
       const payload: ProviderConfigUpdateInput = {
         provider: aiProvider,
         baseUrl: aiBaseURL,
-        model: aiModel,
+        model: overrides?.model ?? aiModel,
         setAsDefault,
       };
       await updateAiProviderSettings(payload);
@@ -217,6 +264,40 @@ export function SettingsDialog({ open, onClose }: SettingsDialogProps) {
       console.error("Failed to save Exa API key:", error);
     }
   }, [exaPoolApiKey]);
+
+  const handleTestAiConnection = useCallback(async () => {
+    setAiTesting(true);
+    setAiTestResult(null);
+    try {
+      const result = await testAiConnectivity(aiProvider);
+      setAiTestResult(result);
+    } catch (error) {
+      setAiTestResult({
+        success: false,
+        latencyMs: 0,
+        errorMessage: error instanceof Error ? error.message : String(error),
+      });
+    } finally {
+      setAiTesting(false);
+    }
+  }, [aiProvider]);
+
+  const handleTestExaConnection = useCallback(async () => {
+    setExaTesting(true);
+    setExaTestResult(null);
+    try {
+      const result = await testExaConnectivity();
+      setExaTestResult(result);
+    } catch (error) {
+      setExaTestResult({
+        success: false,
+        latencyMs: 0,
+        errorMessage: error instanceof Error ? error.message : String(error),
+      });
+    } finally {
+      setExaTesting(false);
+    }
+  }, []);
 
   if (!open) return null;
 
@@ -340,10 +421,51 @@ export function SettingsDialog({ open, onClose }: SettingsDialogProps) {
                 </Button>
                 {modelOpen && (
                   <div className="absolute z-50 mt-1 w-full rounded-md border border-zinc-200 bg-white shadow-md dark:border-zinc-800 dark:bg-zinc-900">
-                    {/* Manual entry */}
+                    {/* Search input */}
                     <div className="border-b px-3 py-2 dark:border-zinc-800">
                       <Input
                         ref={modelSearchRef}
+                        value={modelSearch}
+                        onChange={(e) => setModelSearch(e.target.value)}
+                        placeholder={t("settings.ai.modelPlaceholder")}
+                        className="h-8 text-sm"
+                      />
+                    </div>
+                    {/* Model list */}
+                    <div className="max-h-48 overflow-y-auto">
+                      {modelsFetching && (
+                        <div className="flex items-center gap-2 px-3 py-3 text-xs text-zinc-400">
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          {t("aiFetchingModels")}
+                        </div>
+                      )}
+                      {!modelsFetching && filteredModels.length === 0 && modelsFetched && (
+                        <div className="px-3 py-3 text-xs text-zinc-400">
+                          {t("aiNoModelsFound")}
+                        </div>
+                      )}
+                      {filteredModels.map((m) => (
+                        <button
+                          key={m}
+                          type="button"
+                          className={cn(
+                            "flex w-full cursor-pointer items-center px-3 py-1.5 text-sm hover:bg-zinc-50 dark:hover:bg-zinc-800",
+                            aiModel === m && "bg-zinc-100 dark:bg-zinc-800",
+                          )}
+                          onClick={() => {
+                            setAIModel(m);
+                            setModelOpen(false);
+                            void saveAIConfig({ model: m });
+                          }}
+                        >
+                          <Check className={cn("mr-2 h-4 w-4", aiModel === m ? "opacity-100" : "opacity-0")} />
+                          {m}
+                        </button>
+                      ))}
+                    </div>
+                    {/* Manual entry */}
+                    <div className="border-t px-3 py-2 dark:border-zinc-800">
+                      <Input
                         value={aiModel}
                         onChange={(e) => setAIModel(e.target.value)}
                         placeholder={t("settings.ai.modelPlaceholder")}
@@ -359,6 +481,39 @@ export function SettingsDialog({ open, onClose }: SettingsDialogProps) {
                   </div>
                 )}
               </div>
+            </div>
+
+            {/* Test AI Connection */}
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="cursor-pointer gap-1.5"
+                disabled={aiTesting}
+                onClick={() => void handleTestAiConnection()}
+              >
+                {aiTesting ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Plug className="h-3.5 w-3.5" />
+                )}
+                {aiTesting ? t("aiTesting") : t("aiTestConnection")}
+              </Button>
+              {aiTestResult && (
+                <span
+                  className={cn(
+                    "text-xs font-medium",
+                    aiTestResult.success
+                      ? "text-green-600"
+                      : "text-red-500",
+                  )}
+                >
+                  {aiTestResult.success
+                    ? `${t("aiConnected")} (${aiTestResult.latencyMs}ms)`
+                    : aiTestResult.errorMessage || t("aiConnectionFailed")}
+                </span>
+              )}
             </div>
 
             <Separator />
@@ -405,6 +560,39 @@ export function SettingsDialog({ open, onClose }: SettingsDialogProps) {
                 </Button>
               </div>
               <p className="text-xs text-zinc-400">{t("settings.ai.exaPoolApiKeyHint")}</p>
+            </div>
+
+            {/* Test Exa Connection */}
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="cursor-pointer gap-1.5"
+                disabled={exaTesting}
+                onClick={() => void handleTestExaConnection()}
+              >
+                {exaTesting ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Plug className="h-3.5 w-3.5" />
+                )}
+                {exaTesting ? t("aiTesting") : t("aiTestConnection")}
+              </Button>
+              {exaTestResult && (
+                <span
+                  className={cn(
+                    "text-xs font-medium",
+                    exaTestResult.success
+                      ? "text-green-600"
+                      : "text-red-500",
+                  )}
+                >
+                  {exaTestResult.success
+                    ? `${t("aiConnected")} (${exaTestResult.latencyMs}ms)`
+                    : exaTestResult.errorMessage || t("aiConnectionFailed")}
+                </span>
+              )}
             </div>
           </div>
         )}

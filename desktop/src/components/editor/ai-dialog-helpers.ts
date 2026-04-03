@@ -50,13 +50,13 @@ export async function getDesktopAiRuntimeConfig(): Promise<DesktopAiRuntimeConfi
 
     return {
       provider,
-      model: providerConfig?.model || "gpt-4o",
+      model: providerConfig?.model || "",
       baseUrl: providerConfig?.baseUrl || undefined,
     };
   } catch {
     return {
       provider: "openai",
-      model: "gpt-4o",
+      model: "",
     };
   }
 }

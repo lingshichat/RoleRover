@@ -784,6 +784,13 @@ const legacyResources = {
       importError: "导入失败，请重试。",
       importImporting: "导入中...",
       importImportBtn: "导入",
+      // AI Config
+      aiTestConnection: "测试连接",
+      aiTesting: "测试中...",
+      aiConnected: "已连接",
+      aiConnectionFailed: "连接失败",
+      aiNoModelsFound: "未找到模型",
+      aiFetchingModels: "正在获取模型...",
     },
   },
   en: {
@@ -1085,6 +1092,13 @@ const legacyResources = {
       importError: "Import failed. Please try again.",
       importImporting: "Importing...",
       importImportBtn: "Import",
+      // AI Config
+      aiTestConnection: "Test Connection",
+      aiTesting: "Testing...",
+      aiConnected: "Connected",
+      aiConnectionFailed: "Connection Failed",
+      aiNoModelsFound: "No models found",
+      aiFetchingModels: "Fetching models...",
       // AI
       aiPanelTitle: "AI Assistant",
       aiPlaceholder: "Describe what you want to improve...",

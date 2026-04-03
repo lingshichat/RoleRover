@@ -7,6 +7,7 @@ mod settings;
 mod storage;
 mod workspace;
 
+use ai::{ConnectivityTestResult, FetchAiModelsResult};
 use domain::DomainContractSummary;
 use importer::{
     ImporterExecutionPlan, ImporterRunResult, ImporterState, LegacyDiscoveryInput, LegacyImporter,
@@ -247,6 +248,32 @@ fn start_ai_prompt_stream(
 }
 
 #[tauri::command]
+async fn fetch_ai_models(
+    app: tauri::AppHandle,
+    provider: Option<String>,
+) -> Result<FetchAiModelsResult, String> {
+    let workspace_root = resolve_workspace_root(&app)?;
+    ai::fetch_ai_models(&workspace_root, provider.as_deref()).await
+}
+
+#[tauri::command]
+async fn test_ai_connectivity(
+    app: tauri::AppHandle,
+    provider: Option<String>,
+) -> Result<ConnectivityTestResult, String> {
+    let workspace_root = resolve_workspace_root(&app)?;
+    ai::test_ai_connectivity(&workspace_root, provider.as_deref()).await
+}
+
+#[tauri::command]
+async fn test_exa_connectivity(
+    app: tauri::AppHandle,
+) -> Result<ConnectivityTestResult, String> {
+    let workspace_root = resolve_workspace_root(&app)?;
+    ai::test_exa_connectivity(&workspace_root).await
+}
+
+#[tauri::command]
 fn get_importer_dry_run(app: tauri::AppHandle) -> Result<ImporterDryRunSnapshot, String> {
     build_importer_snapshot(&app, ImporterExecutionMode::DryRun)
 }
@@ -350,6 +377,9 @@ pub fn run() {
             update_workspace_appearance_settings,
             write_secret_value,
             start_ai_prompt_stream,
+            fetch_ai_models,
+            test_ai_connectivity,
+            test_exa_connectivity,
             get_importer_dry_run,
             execute_importer_staging,
             execute_importer_migration

@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { useResumeStore } from "../../stores/resume-store";
 import { listenToAiStreamEvents, startAiPromptStream } from "../../lib/desktop-api";
+import { getDesktopAiRuntimeConfig } from "./ai-dialog-helpers";
 import type { DesktopAiStreamEvent } from "../../lib/desktop-api";
 
 interface JdAnalysisDialogProps {
@@ -244,9 +245,12 @@ export function JdAnalysisDialog({
         })),
       };
 
+      const aiConfig = await getDesktopAiRuntimeConfig();
+
       await startAiPromptStream({
-        provider: "openai",
-        model: "gpt-4o",
+        provider: aiConfig.provider,
+        model: aiConfig.model || undefined,
+        baseUrl: aiConfig.baseUrl,
         requestId,
         prompt: `You are analyzing how well a resume matches a job description.
 

@@ -41,6 +41,7 @@ import {
   getWorkspaceSettingsSnapshot,
   listenToAiStreamEvents,
   startAiPromptStream,
+  fetchAiModels,
   type DesktopAiStreamEvent,
 } from "../../lib/desktop-api";
 
@@ -80,11 +81,6 @@ interface RuntimeChatSettings {
 
 const SESSION_STORAGE_VERSION = 1;
 const SESSION_STORAGE_PREFIX = "desktop-ai-chat-sessions";
-const MODEL_OPTIONS: Record<string, string[]> = {
-  openai: ["gpt-4o", "gpt-4.1", "gpt-4.1-mini"],
-  anthropic: ["claude-sonnet-4-20250514", "claude-3-7-sonnet-latest"],
-  gemini: ["gemini-2.0-flash", "gemini-1.5-pro"],
-};
 
 function createId(prefix: string): string {
   return `${prefix}-${Date.now().toString(36)}-${Math.random()
@@ -248,11 +244,12 @@ export function AIChatContent({
   const [runtimeSettings, setRuntimeSettings] = useState<RuntimeChatSettings>({
     loading: true,
     provider: "openai",
-    model: "gpt-4o",
+    model: "",
     baseUrl: "",
     hasApiKey: false,
   });
-  const [selectedModel, setSelectedModel] = useState("gpt-4o");
+  const [selectedModel, setSelectedModel] = useState("");
+  const [fetchedModelOptions, setFetchedModelOptions] = useState<string[]>([]);
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -273,15 +270,14 @@ export function AIChatContent({
   );
 
   const modelOptions = useMemo(() => {
-    const defaults = MODEL_OPTIONS[runtimeSettings.provider] ?? [];
     return Array.from(
       new Set(
-        [selectedModel, runtimeSettings.model, ...defaults].filter(
+        [selectedModel, runtimeSettings.model, ...fetchedModelOptions].filter(
           (value): value is string => Boolean(value),
         ),
       ),
     );
-  }, [runtimeSettings.model, runtimeSettings.provider, selectedModel]);
+  }, [runtimeSettings.model, fetchedModelOptions, selectedModel]);
 
 
   const refreshRuntimeSettings = useCallback(async () => {
@@ -298,23 +294,34 @@ export function AIChatContent({
           entry.key === `provider.${provider}.api_key` && entry.isConfigured,
       );
 
+      const model = providerConfig?.model || "";
+
       setRuntimeSettings({
         loading: false,
         provider,
-        model: providerConfig?.model || "gpt-4o",
+        model,
         baseUrl: providerConfig?.baseUrl || "",
         hasApiKey,
       });
-      setSelectedModel(providerConfig?.model || "gpt-4o");
+      setSelectedModel(model);
+
+      // Fetch models from the provider
+      try {
+        const modelsResult = await fetchAiModels(provider);
+        setFetchedModelOptions(modelsResult.models);
+      } catch {
+        setFetchedModelOptions([]);
+      }
     } catch {
       setRuntimeSettings({
         loading: false,
         provider: "openai",
-        model: "gpt-4o",
+        model: "",
         baseUrl: "",
         hasApiKey: false,
       });
-      setSelectedModel("gpt-4o");
+      setSelectedModel("");
+      setFetchedModelOptions([]);
     }
   }, []);
 

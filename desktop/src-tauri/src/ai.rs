@@ -1,7 +1,7 @@
 use futures_util::StreamExt;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::time::{Instant, SystemTime, UNIX_EPOCH};
 use tauri::{AppHandle, Emitter};
 
 use crate::settings;
@@ -452,6 +452,433 @@ fn trim_event_terminator(mut event_bytes: Vec<u8>) -> Vec<u8> {
         event_bytes.pop();
     }
     event_bytes
+}
+
+// ---------------------------------------------------------------------------
+// Fetch AI Models
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FetchAiModelsResult {
+    pub provider: String,
+    pub models: Vec<String>,
+}
+
+pub async fn fetch_ai_models(
+    workspace_root: &std::path::Path,
+    provider_override: Option<&str>,
+) -> Result<FetchAiModelsResult, String> {
+    let settings_document = settings::load_or_initialize_settings(workspace_root)?;
+    let provider = provider_override
+        .filter(|value| !value.trim().is_empty())
+        .and_then(|value| normalize_supported_provider(value))
+        .unwrap_or_else(|| settings_document.ai.default_provider.trim().to_string());
+
+    let configured = settings_document.ai.provider_configs.get(&provider);
+    let base_url = configured
+        .map(|value| value.base_url.trim().to_string())
+        .filter(|value| !value.is_empty())
+        .unwrap_or_else(|| default_base_url_for_provider(&provider).to_string());
+
+    let api_key_secret_key = format!("provider.{provider}.api_key");
+    let api_key = settings::read_secret_value(workspace_root, &api_key_secret_key)?
+        .unwrap_or_default()
+        .trim()
+        .to_string();
+
+    if api_key.is_empty() {
+        return Ok(FetchAiModelsResult {
+            provider,
+            models: Vec::new(),
+        });
+    }
+
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(15))
+        .build()
+        .map_err(|e| format!("Failed to build HTTP client: {e}"))?;
+    let models = match provider.as_str() {
+        "anthropic" => fetch_anthropic_models(&client, &base_url, &api_key).await?,
+        "gemini" => fetch_gemini_models(&client, &base_url, &api_key).await?,
+        _ => fetch_openai_models(&client, &base_url, &api_key).await?,
+    };
+
+    Ok(FetchAiModelsResult { provider, models })
+}
+
+async fn fetch_openai_models(
+    client: &reqwest::Client,
+    base_url: &str,
+    api_key: &str,
+) -> Result<Vec<String>, String> {
+    let endpoint = format!("{}/models", base_url.trim_end_matches('/'));
+    let response = client
+        .get(&endpoint)
+        .bearer_auth(api_key)
+        .send()
+        .await
+        .map_err(|error| format!("failed to fetch OpenAI models: {error}"))?;
+
+    if !response.status().is_success() {
+        return Ok(Vec::new());
+    }
+
+    let body: serde_json::Value = response
+        .json()
+        .await
+        .map_err(|error| format!("failed to parse OpenAI models response: {error}"))?;
+
+    let models = body
+        .get("data")
+        .and_then(|v| v.as_array())
+        .or_else(|| body.as_array())
+        .map(|array| {
+            array
+                .iter()
+                .filter_map(|item| item.get("id").and_then(|v| v.as_str()))
+                .map(ToString::to_string)
+                .collect::<Vec<_>>()
+        })
+        .unwrap_or_default();
+
+    let mut models = models;
+    models.sort();
+    Ok(models)
+}
+
+async fn fetch_anthropic_models(
+    client: &reqwest::Client,
+    base_url: &str,
+    api_key: &str,
+) -> Result<Vec<String>, String> {
+    let endpoint = format!("{}/v1/models", base_url.trim_end_matches('/'));
+    let response = client
+        .get(&endpoint)
+        .header("x-api-key", api_key)
+        .header("anthropic-version", "2023-06-01")
+        .send()
+        .await
+        .map_err(|error| format!("failed to fetch Anthropic models: {error}"))?;
+
+    if !response.status().is_success() {
+        return Ok(Vec::new());
+    }
+
+    let body: serde_json::Value = response
+        .json()
+        .await
+        .map_err(|error| format!("failed to parse Anthropic models response: {error}"))?;
+
+    let models = body
+        .get("data")
+        .and_then(|value| value.as_array())
+        .map(|array| {
+            array
+                .iter()
+                .filter_map(|item| item.get("id").and_then(|value| value.as_str()))
+                .map(ToString::to_string)
+                .collect::<Vec<_>>()
+        })
+        .unwrap_or_default();
+
+    let mut models = models;
+    models.sort();
+    Ok(models)
+}
+
+async fn fetch_gemini_models(
+    client: &reqwest::Client,
+    base_url: &str,
+    api_key: &str,
+) -> Result<Vec<String>, String> {
+    let endpoint = format!(
+        "{}/models?key={}",
+        base_url.trim_end_matches('/'),
+        api_key
+    );
+    let response = client
+        .get(&endpoint)
+        .send()
+        .await
+        .map_err(|error| format!("failed to fetch Gemini models: {error}"))?;
+
+    if !response.status().is_success() {
+        return Ok(Vec::new());
+    }
+
+    let body: serde_json::Value = response
+        .json()
+        .await
+        .map_err(|error| format!("failed to parse Gemini models response: {error}"))?;
+
+    let models = body
+        .get("models")
+        .and_then(|value| value.as_array())
+        .map(|array| {
+            array
+                .iter()
+                .filter_map(|item| item.get("name").and_then(|value| value.as_str()))
+                .map(|name| name.strip_prefix("models/").unwrap_or(name).to_string())
+                .collect::<Vec<_>>()
+        })
+        .unwrap_or_default();
+
+    let mut models = models;
+    models.sort();
+    Ok(models)
+}
+
+// ---------------------------------------------------------------------------
+// Test AI Connectivity
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ConnectivityTestResult {
+    pub success: bool,
+    pub latency_ms: u64,
+    pub error_message: Option<String>,
+}
+
+pub async fn test_ai_connectivity(
+    workspace_root: &std::path::Path,
+    provider_override: Option<&str>,
+) -> Result<ConnectivityTestResult, String> {
+    let settings_document = settings::load_or_initialize_settings(workspace_root)?;
+    let provider = provider_override
+        .filter(|value| !value.trim().is_empty())
+        .and_then(|value| normalize_supported_provider(value))
+        .unwrap_or_else(|| settings_document.ai.default_provider.trim().to_string());
+
+    let configured = settings_document.ai.provider_configs.get(&provider);
+    let base_url = configured
+        .map(|value| value.base_url.trim().to_string())
+        .filter(|value| !value.is_empty())
+        .unwrap_or_else(|| default_base_url_for_provider(&provider).to_string());
+    let model = configured
+        .map(|value| value.model.trim().to_string())
+        .filter(|value| !value.is_empty())
+        .unwrap_or_else(|| default_model_for_provider(&provider).to_string());
+
+    let api_key_secret_key = format!("provider.{provider}.api_key");
+    let api_key = settings::read_secret_value(workspace_root, &api_key_secret_key)?
+        .unwrap_or_default()
+        .trim()
+        .to_string();
+
+    if api_key.is_empty() {
+        return Ok(ConnectivityTestResult {
+            success: false,
+            latency_ms: 0,
+            error_message: Some(format!(
+                "No API key configured for provider '{provider}'."
+            )),
+        });
+    }
+
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(15))
+        .build()
+        .map_err(|e| format!("Failed to build HTTP client: {e}"))?;
+    let start = Instant::now();
+
+    let result = match provider.as_str() {
+        "anthropic" => {
+            test_anthropic_connectivity(&client, &base_url, &api_key, &model).await
+        }
+        "gemini" => {
+            test_gemini_connectivity(&client, &base_url, &api_key, &model).await
+        }
+        _ => {
+            test_openai_connectivity(&client, &base_url, &api_key, &model).await
+        }
+    };
+
+    let latency_ms = start.elapsed().as_millis() as u64;
+
+    match result {
+        Ok(()) => Ok(ConnectivityTestResult {
+            success: true,
+            latency_ms,
+            error_message: None,
+        }),
+        Err(error) => Ok(ConnectivityTestResult {
+            success: false,
+            latency_ms,
+            error_message: Some(error),
+        }),
+    }
+}
+
+async fn test_openai_connectivity(
+    client: &reqwest::Client,
+    base_url: &str,
+    api_key: &str,
+    model: &str,
+) -> Result<(), String> {
+    let endpoint = format!("{}/chat/completions", base_url.trim_end_matches('/'));
+    let response = client
+        .post(&endpoint)
+        .bearer_auth(api_key)
+        .header("Content-Type", "application/json")
+        .json(&json!({
+            "model": model,
+            "messages": [{"role": "user", "content": "hi"}],
+            "max_tokens": 1,
+        }))
+        .send()
+        .await
+        .map_err(|error| format!("connection failed: {error}"))?;
+
+    if !response.status().is_success() {
+        let status = response.status();
+        let body = response
+            .text()
+            .await
+            .unwrap_or_else(|_| "failed to read error body".into());
+        return Err(format!("provider returned {status}: {body}"));
+    }
+
+    Ok(())
+}
+
+async fn test_anthropic_connectivity(
+    client: &reqwest::Client,
+    base_url: &str,
+    api_key: &str,
+    model: &str,
+) -> Result<(), String> {
+    let endpoint = format!("{}/v1/messages", base_url.trim_end_matches('/'));
+    let response = client
+        .post(&endpoint)
+        .header("x-api-key", api_key)
+        .header("anthropic-version", "2023-06-01")
+        .header("Content-Type", "application/json")
+        .json(&json!({
+            "model": model,
+            "messages": [{"role": "user", "content": "hi"}],
+            "max_tokens": 1,
+        }))
+        .send()
+        .await
+        .map_err(|error| format!("connection failed: {error}"))?;
+
+    if !response.status().is_success() {
+        let status = response.status();
+        let body = response
+            .text()
+            .await
+            .unwrap_or_else(|_| "failed to read error body".into());
+        return Err(format!("provider returned {status}: {body}"));
+    }
+
+    Ok(())
+}
+
+async fn test_gemini_connectivity(
+    client: &reqwest::Client,
+    base_url: &str,
+    api_key: &str,
+    model: &str,
+) -> Result<(), String> {
+    let endpoint = format!(
+        "{}/models/{}:generateContent?key={}",
+        base_url.trim_end_matches('/'),
+        model,
+        api_key
+    );
+    let response = client
+        .post(&endpoint)
+        .header("Content-Type", "application/json")
+        .json(&json!({
+            "contents": [{"parts": [{"text": "hi"}]}],
+            "generationConfig": {"maxOutputTokens": 1},
+        }))
+        .send()
+        .await
+        .map_err(|error| format!("connection failed: {error}"))?;
+
+    if !response.status().is_success() {
+        let status = response.status();
+        let body = response
+            .text()
+            .await
+            .unwrap_or_else(|_| "failed to read error body".into());
+        return Err(format!("provider returned {status}: {body}"));
+    }
+
+    Ok(())
+}
+
+// ---------------------------------------------------------------------------
+// Test Exa Connectivity
+// ---------------------------------------------------------------------------
+
+pub async fn test_exa_connectivity(
+    workspace_root: &std::path::Path,
+) -> Result<ConnectivityTestResult, String> {
+    let settings_document = settings::load_or_initialize_settings(workspace_root)?;
+    let exa_base_url = settings_document.ai.exa_pool_base_url.trim().to_string();
+    let exa_base_url = if exa_base_url.is_empty() {
+        "https://api.exa.ai".to_string()
+    } else {
+        exa_base_url
+    };
+
+    let api_key_secret_key = "provider.exa_pool.api_key";
+    let api_key = settings::read_secret_value(workspace_root, api_key_secret_key)?
+        .unwrap_or_default()
+        .trim()
+        .to_string();
+
+    if api_key.is_empty() {
+        return Ok(ConnectivityTestResult {
+            success: false,
+            latency_ms: 0,
+            error_message: Some("No API key configured for Exa.".into()),
+        });
+    }
+
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(15))
+        .build()
+        .map_err(|e| format!("Failed to build HTTP client: {e}"))?;
+    let endpoint = format!("{}/search", exa_base_url.trim_end_matches('/'));
+    let start = Instant::now();
+
+    let response = client
+        .post(&endpoint)
+        .bearer_auth(&api_key)
+        .header("Content-Type", "application/json")
+        .json(&json!({
+            "query": "test",
+            "numResults": 1,
+        }))
+        .send()
+        .await
+        .map_err(|error| format!("connection failed: {error}"))?;
+
+    let latency_ms = start.elapsed().as_millis() as u64;
+
+    if !response.status().is_success() {
+        let status = response.status();
+        let body = response
+            .text()
+            .await
+            .unwrap_or_else(|_| "failed to read error body".into());
+        return Ok(ConnectivityTestResult {
+            success: false,
+            latency_ms,
+            error_message: Some(format!("Exa returned {status}: {body}")),
+        });
+    }
+
+    Ok(ConnectivityTestResult {
+        success: true,
+        latency_ms,
+        error_message: None,
+    })
 }
 
 #[cfg(test)]
