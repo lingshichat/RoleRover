@@ -24,6 +24,7 @@ interface JdAnalysisDialogProps {
 }
 
 type AnalysisState = "idle" | "analyzing" | "completed" | "error";
+type AnalysisOutputLanguage = "en" | "zh-Hans";
 
 interface JdSuggestion {
   section: string;
@@ -42,6 +43,14 @@ interface JdAnalysisResult {
 
 const JSON_START = "<<<JD_ANALYSIS_JSON_START>>>";
 const JSON_END = "<<<JD_ANALYSIS_JSON_END>>>";
+const RESUME_SECTION_ALIASES = new Set([
+  "resume",
+  "full resume",
+  "entire resume",
+  "whole resume",
+  "complete resume",
+  "overall",
+]);
 
 function clampScore(value: unknown): number {
   if (typeof value !== "number" || Number.isNaN(value)) {
@@ -63,6 +72,98 @@ function toStringArray(value: unknown): string[] {
   return value
     .map((item) => (typeof item === "string" ? item.trim() : ""))
     .filter(Boolean);
+}
+
+function containsCjkCharacters(text: string): boolean {
+  return /[\u3400-\u9fff]/u.test(text);
+}
+
+function normalizeSectionKey(value: string): string {
+  return value.trim().toLowerCase().replace(/[_-]+/g, " ");
+}
+
+function resolveAnalysisOutputLanguage(params: {
+  resumeLanguage?: string;
+  uiLanguage?: string;
+  resumeContextJson: string;
+  jobDescription: string;
+}): AnalysisOutputLanguage {
+  const resumeLanguage = params.resumeLanguage?.trim().toLowerCase() ?? "";
+  const uiLanguage = params.uiLanguage?.trim().toLowerCase() ?? "";
+
+  if (resumeLanguage.startsWith("zh")) {
+    return "zh-Hans";
+  }
+
+  if (containsCjkCharacters(params.resumeContextJson)) {
+    return "zh-Hans";
+  }
+
+  if (resumeLanguage.startsWith("en")) {
+    return "en";
+  }
+
+  if (containsCjkCharacters(params.jobDescription)) {
+    return "zh-Hans";
+  }
+
+  if (uiLanguage.startsWith("zh")) {
+    return "zh-Hans";
+  }
+
+  return "en";
+}
+
+function buildAnalysisPrompt(params: {
+  outputLanguage: AnalysisOutputLanguage;
+  resumeContextJson: string;
+  jobDescription: string;
+}): string {
+  const languageName =
+    params.outputLanguage === "zh-Hans" ? "Simplified Chinese" : "English";
+
+  return `You are an expert resume analyst and career coach.
+
+Analyze how well the resume matches the job description.
+
+Output language: ${languageName}.
+All human-readable analysis text and every JSON string value must be written in ${languageName}.
+Keep proper nouns and technology names in their original spelling when appropriate.
+
+Return two things in one response:
+1. A concise human-readable analysis with sections for overall fit, matching keywords, missing keywords, and improvement suggestions.
+2. A final JSON object wrapped exactly between these markers:
+${JSON_START}
+...json...
+${JSON_END}
+
+The JSON shape must be:
+{
+  "overallScore": number,
+  "atsScore": number,
+  "summary": string,
+  "keywordMatches": string[],
+  "missingKeywords": string[],
+  "suggestions": [
+    {
+      "section": string,
+      "current": string,
+      "suggested": string
+    }
+  ]
+}
+
+Requirements:
+- scores are 0-100 integers
+- suggestions should be specific and actionable
+- only include suggestions when you have a clear before/after recommendation
+- when filling suggestions[].section, prefer the exact section title from the provided resume data
+
+Resume:
+${params.resumeContextJson}
+
+Job description:
+${params.jobDescription}`;
 }
 
 function parseStructuredResult(text: string): JdAnalysisResult | null {
@@ -95,9 +196,7 @@ function parseStructuredResult(text: string): JdAnalysisResult | null {
 
             return {
               section:
-                typeof item.section === "string" && item.section.trim()
-                  ? item.section.trim()
-                  : "Resume",
+                typeof item.section === "string" ? item.section.trim() : "",
               current:
                 typeof item.current === "string" ? item.current.trim() : "",
               suggested:
@@ -162,7 +261,7 @@ export function JdAnalysisDialog({
   onClose,
   resumeId,
 }: JdAnalysisDialogProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { currentResume, sections } = useResumeStore();
 
   const [jdText, setJdText] = useState("");
@@ -244,6 +343,13 @@ export function JdAnalysisDialog({
           content: section.content,
         })),
       };
+      const resumeContextJson = JSON.stringify(resumeContext, null, 2);
+      const outputLanguage = resolveAnalysisOutputLanguage({
+        resumeLanguage: currentResume?.language,
+        uiLanguage: i18n.resolvedLanguage || i18n.language,
+        resumeContextJson,
+        jobDescription: jdText,
+      });
 
       const aiConfig = await getDesktopAiRuntimeConfig();
 
@@ -252,41 +358,11 @@ export function JdAnalysisDialog({
         model: aiConfig.model || undefined,
         baseUrl: aiConfig.baseUrl,
         requestId,
-        prompt: `You are analyzing how well a resume matches a job description.
-
-Return two things in one response:
-1. A concise human-readable analysis with sections for overall fit, matching keywords, missing keywords, and improvement suggestions.
-2. A final JSON object wrapped exactly between these markers:
-${JSON_START}
-...json...
-${JSON_END}
-
-The JSON shape must be:
-{
-  "overallScore": number,
-  "atsScore": number,
-  "summary": string,
-  "keywordMatches": string[],
-  "missingKeywords": string[],
-  "suggestions": [
-    {
-      "section": string,
-      "current": string,
-      "suggested": string
-    }
-  ]
-}
-
-Requirements:
-- scores are 0-100 integers
-- suggestions should be specific and actionable
-- only include suggestions when you have a clear before/after recommendation
-
-Resume:
-${JSON.stringify(resumeContext, null, 2)}
-
-Job description:
-${jdText}`,
+        prompt: buildAnalysisPrompt({
+          outputLanguage,
+          resumeContextJson,
+          jobDescription: jdText,
+        }),
       });
     } catch (error: unknown) {
       setState("error");
@@ -298,7 +374,42 @@ ${jdText}`,
     () => stripStructuredPayload(streamText),
     [streamText],
   );
+  const suggestionSectionLabels = useMemo(() => {
+    const labels = new Map<string, string>();
+
+    sections.forEach((section) => {
+      const title = section.title.trim();
+      if (!title) {
+        return;
+      }
+
+      [
+        section.id,
+        section.title,
+        section.type,
+        section.type.replaceAll("_", " "),
+        section.type.replaceAll("_", "-"),
+      ].forEach((alias) => {
+        const normalized = normalizeSectionKey(alias);
+        if (normalized && !labels.has(normalized)) {
+          labels.set(normalized, title);
+        }
+      });
+    });
+
+    return labels;
+  }, [sections]);
   const isLoading = state === "analyzing";
+
+  const getSuggestionSectionLabel = (sectionName: string) => {
+    const normalized = normalizeSectionKey(sectionName);
+
+    if (!normalized || RESUME_SECTION_ALIASES.has(normalized)) {
+      return t("jdAnalysisResumeSection");
+    }
+
+    return suggestionSectionLabels.get(normalized) ?? sectionName;
+  };
 
   if (!open) {
     return null;
@@ -370,16 +481,19 @@ ${jdText}`,
                 <div className="space-y-4">
                   <div className="grid grid-cols-2 gap-3">
                     <ScoreCard
-                      label="Overall Match"
+                      label={t("jdAnalysisOverallMatch")}
                       score={structuredResult.overallScore}
                     />
-                    <ScoreCard label="ATS Score" score={structuredResult.atsScore} />
+                    <ScoreCard
+                      label={t("jdAnalysisAtsScore")}
+                      score={structuredResult.atsScore}
+                    />
                   </div>
 
                   <section className="space-y-2">
                     <h3 className="flex items-center gap-2 text-sm font-semibold text-zinc-800">
                       <Target className="h-4 w-4 text-zinc-400" />
-                      Summary
+                      {t("jdAnalysisSummary")}
                     </h3>
                     <p className="rounded-lg border border-zinc-200 bg-zinc-50 p-3 text-sm leading-relaxed text-zinc-700">
                       {structuredResult.summary || visibleAnalysis || "..."}
@@ -390,7 +504,7 @@ ${jdText}`,
                     <section className="space-y-2">
                       <h3 className="flex items-center gap-2 text-sm font-semibold text-zinc-800">
                         <ShieldCheck className="h-4 w-4 text-emerald-500" />
-                        Keyword Matches
+                        {t("jdAnalysisKeywordMatches")}
                       </h3>
                       <div className="flex flex-wrap gap-2">
                         {structuredResult.keywordMatches.map((keyword) => (
@@ -409,7 +523,7 @@ ${jdText}`,
                     <section className="space-y-2">
                       <h3 className="flex items-center gap-2 text-sm font-semibold text-zinc-800">
                         <AlertTriangle className="h-4 w-4 text-amber-500" />
-                        Skill Gaps
+                        {t("jdAnalysisMissingKeywords")}
                       </h3>
                       <div className="flex flex-wrap gap-2">
                         {structuredResult.missingKeywords.map((keyword) => (
@@ -428,7 +542,7 @@ ${jdText}`,
                     <section className="space-y-3">
                       <h3 className="flex items-center gap-2 text-sm font-semibold text-zinc-800">
                         <Lightbulb className="h-4 w-4 text-yellow-500" />
-                        Suggestions
+                        {t("jdAnalysisSuggestions")}
                       </h3>
                       <div className="space-y-2">
                         {structuredResult.suggestions.map((suggestion, index) => (
@@ -437,12 +551,12 @@ ${jdText}`,
                             className="rounded-lg border border-zinc-200 bg-white p-3"
                           >
                             <div className="mb-2 inline-flex rounded-full bg-zinc-100 px-2 py-0.5 text-xs font-medium text-zinc-600">
-                              {suggestion.section}
+                              {getSuggestionSectionLabel(suggestion.section)}
                             </div>
                             <div className="space-y-2 text-sm">
                               <div>
                                 <div className="text-xs font-medium text-zinc-400">
-                                  Current
+                                  {t("jdAnalysisCurrent")}
                                 </div>
                                 <div className="text-zinc-600">
                                   {suggestion.current}
@@ -450,7 +564,7 @@ ${jdText}`,
                               </div>
                               <div>
                                 <div className="text-xs font-medium text-pink-500">
-                                  Suggested
+                                  {t("jdAnalysisSuggested")}
                                 </div>
                                 <div className="font-medium text-zinc-900">
                                   {suggestion.suggested}

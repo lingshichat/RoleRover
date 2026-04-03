@@ -1,12 +1,12 @@
-import { resumeRepository } from '@/lib/db/repositories/resume.repository';
 import { BACKGROUND_TEMPLATES } from '@/lib/constants';
 import type {
   PersonalInfoContent,
+  Resume,
   SkillsContent,
   SummaryContent,
 } from '@/types/resume';
 
-export type ResumeWithSections = NonNullable<Awaited<ReturnType<typeof resumeRepository.findById>>>;
+export type ResumeWithSections = Resume;
 export type Section = ResumeWithSections['sections'][number];
 
 // ─── Helpers ──────────────────────────────────────────────────

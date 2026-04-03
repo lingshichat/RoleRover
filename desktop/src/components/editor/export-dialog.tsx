@@ -14,13 +14,18 @@ import {
   X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useResumeStore } from "../../stores/resume-store";
-import type { ResumeSection } from "../../types/resume";
 import {
-  writeTemplateValidationExport,
-  type TemplateValidationDocument,
+  generateDocxBuffer,
+  generateHtml,
+  generatePlainText,
+} from "@/lib/export";
+import { save as openSaveDialog } from "@tauri-apps/plugin-dialog";
+import { useResumeStore } from "../../stores/resume-store";
+import {
+  writeExportFile,
+  writePdfExport,
 } from "../../lib/desktop-api";
-import { buildTemplateValidationDocumentHtml } from "../../lib/template-validation";
+import { prepareDesktopPdfHtml, toSharedResume } from "../../lib/resume-export";
 
 interface ExportDialogProps {
   open: boolean;
@@ -39,17 +44,15 @@ interface NativeDialogSaveOptions {
   }>;
 }
 
-interface NativeDialogModule {
-  save: (
-    options: NativeDialogSaveOptions,
-  ) => Promise<string | string[] | null>;
-}
-
 interface FormatOption {
   value: ExportFormat;
   icon: typeof FileDown;
   labelKey: string;
   descKey: string;
+  fallbackLabel: string;
+  fallbackDescription: string;
+  tooltipKey?: string;
+  tooltipFallback?: string;
   supported: boolean;
   extension: string;
 }
@@ -60,7 +63,9 @@ const FORMAT_OPTIONS: FormatOption[] = [
     icon: FileDown,
     labelKey: "pdf",
     descKey: "pdfDescription",
-    supported: false,
+    fallbackLabel: "PDF",
+    fallbackDescription: "Print-ready document",
+    supported: true,
     extension: "pdf",
   },
   {
@@ -68,7 +73,11 @@ const FORMAT_OPTIONS: FormatOption[] = [
     icon: Sparkles,
     labelKey: "pdfOnePage",
     descKey: "pdfOnePageDescription",
-    supported: false,
+    fallbackLabel: "Smart One-Page",
+    fallbackDescription: "Auto-fit to one page",
+    tooltipKey: "pdfOnePageTooltip",
+    tooltipFallback: "Very long resumes may fail to fit on one page",
+    supported: true,
     extension: "pdf",
   },
   {
@@ -76,7 +85,9 @@ const FORMAT_OPTIONS: FormatOption[] = [
     icon: FileText,
     labelKey: "docx",
     descKey: "docxDescription",
-    supported: false,
+    fallbackLabel: "Word",
+    fallbackDescription: "Editable document",
+    supported: true,
     extension: "docx",
   },
   {
@@ -84,6 +95,8 @@ const FORMAT_OPTIONS: FormatOption[] = [
     icon: Globe,
     labelKey: "html",
     descKey: "htmlDescription",
+    fallbackLabel: "HTML",
+    fallbackDescription: "Web page format",
     supported: true,
     extension: "html",
   },
@@ -92,6 +105,8 @@ const FORMAT_OPTIONS: FormatOption[] = [
     icon: AlignLeft,
     labelKey: "txt",
     descKey: "txtDescription",
+    fallbackLabel: "Plain Text",
+    fallbackDescription: "Simple text file",
     supported: true,
     extension: "txt",
   },
@@ -100,6 +115,8 @@ const FORMAT_OPTIONS: FormatOption[] = [
     icon: Braces,
     labelKey: "json",
     descKey: "jsonDescription",
+    fallbackLabel: "JSON",
+    fallbackDescription: "Structured data",
     supported: true,
     extension: "json",
   },
@@ -120,150 +137,15 @@ function formatTimestamp(date: Date): string {
   return `${year}${month}${day}-${hours}${minutes}${seconds}`;
 }
 
-function stringifyValue(value: unknown, depth = 0): string[] {
-  const prefix = "  ".repeat(depth);
-
-  if (value == null) {
-    return [];
-  }
-
-  if (typeof value === "string") {
-    const trimmed = value.trim();
-    return trimmed ? trimmed.split("\n").map((line) => `${prefix}${line}`) : [];
-  }
-
-  if (typeof value === "number" || typeof value === "boolean") {
-    return [`${prefix}${String(value)}`];
-  }
-
-  if (Array.isArray(value)) {
-    return value.flatMap((item) => {
-      const lines = stringifyValue(item, depth + 1);
-      if (lines.length === 0) {
-        return [];
-      }
-
-      const [first, ...rest] = lines;
-      return [`${prefix}- ${first.trimStart()}`, ...rest];
-    });
-  }
-
-  if (typeof value === "object") {
-    return Object.entries(value as Record<string, unknown>).flatMap(([key, nested]) => {
-      const lines = stringifyValue(nested, depth + 1);
-      if (lines.length === 0) {
-        return [];
-      }
-
-      if (lines.length === 1) {
-        return [`${prefix}${key}: ${lines[0].trimStart()}`];
-      }
-
-      return [`${prefix}${key}:`, ...lines];
-    });
-  }
-
-  return [`${prefix}${String(value)}`];
-}
-
-function buildTextExport(document: TemplateValidationDocument): string {
-  const lines: string[] = [document.metadata.title, ""];
-
-  if (document.metadata.targetJobTitle || document.metadata.targetCompany) {
-    lines.push(
-      [document.metadata.targetJobTitle, document.metadata.targetCompany]
-        .filter(Boolean)
-        .join(" @ "),
-    );
-    lines.push("");
-  }
-
-  document.sections
-    .filter((section) => section.visible)
-    .sort((left, right) => left.sortOrder - right.sortOrder)
-    .forEach((section) => {
-      lines.push(section.title);
-      lines.push("-".repeat(section.title.length));
-      lines.push(...stringifyValue(section.content));
-      lines.push("");
-    });
-
-  return lines.join("\n").trim();
-}
-
-function toTemplateValidationDocument(
-  title: string,
-  language: string,
-  template: string,
-  isDefault: boolean,
-  targetJobTitle: string | null | undefined,
-  targetCompany: string | null | undefined,
-  theme: {
-    primaryColor: string;
-    accentColor: string;
-    fontFamily: string;
-    fontSize: string;
-    lineSpacing: number;
-    margin: { top: number; right: number; bottom: number; left: number };
-    sectionSpacing: number;
-    avatarStyle?: string;
-  },
-  sections: ResumeSection[],
-  resumeId: string,
-): TemplateValidationDocument {
-  return {
-    metadata: {
-      id: resumeId,
-      title,
-      template,
-      language,
-      targetJobTitle,
-      targetCompany,
-      isDefault,
-      isSample: false,
-      createdAtEpochMs: Date.now(),
-      updatedAtEpochMs: Date.now(),
-    },
-    theme: {
-      primaryColor: theme.primaryColor,
-      accentColor: theme.accentColor,
-      fontFamily: theme.fontFamily,
-      fontSize: theme.fontSize,
-      lineSpacing: theme.lineSpacing,
-      margin: theme.margin,
-      sectionSpacing: theme.sectionSpacing,
-      avatarStyle: (theme.avatarStyle || "circle") as "circle" | "oneInch",
-    },
-    sections: sections.map((section, index) => ({
-      id: section.id,
-      documentId: resumeId,
-      sectionType: section.type as TemplateValidationDocument["sections"][number]["sectionType"],
-      title: section.title,
-      sortOrder: section.sortOrder ?? index,
-      visible: section.visible,
-      content: section.content as unknown as Record<string, unknown>,
-      createdAtEpochMs: typeof section.createdAt === "string"
-        ? new Date(section.createdAt).getTime()
-        : Date.now(),
-      updatedAtEpochMs: typeof section.updatedAt === "string"
-        ? new Date(section.updatedAt).getTime()
-        : Date.now(),
-    })),
-  };
+function encodeText(value: string): number[] {
+  return Array.from(new TextEncoder().encode(value));
 }
 
 async function openNativeSaveDialog(
   options: NativeDialogSaveOptions,
 ): Promise<string | string[] | null> {
-  const moduleSpecifier = "@tauri-apps/plugin-dialog";
-
   try {
-    const dialogModule = (await import(moduleSpecifier)) as NativeDialogModule;
-    if (typeof dialogModule.save !== "function") {
-      throw new Error("save() is unavailable.");
-    }
-
-    return dialogModule.save(options);
+    return await openSaveDialog(options);
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error);
     throw new Error(`Native save dialog is unavailable: ${reason}`);
@@ -274,10 +156,21 @@ export function ExportDialog({ open, onClose, resumeId }: ExportDialogProps) {
   const { t, i18n } = useTranslation();
   const { currentResume, isDirty, save, sections } = useResumeStore();
 
-  const translate = useCallback(
+  const translateKey = useCallback(
     (key: string, fallback: string) => {
       const value = t(key);
-      return value === key ? fallback : value;
+      return typeof value === "string" && value !== key ? value : fallback;
+    },
+    [t],
+  );
+
+  const translateExport = useCallback(
+    (key: string, fallback: string) => {
+      const namespacedKey = `export.${key}`;
+      const value = t(namespacedKey);
+      return typeof value === "string" && value !== namespacedKey
+        ? value
+        : fallback;
     },
     [t],
   );
@@ -304,14 +197,6 @@ export function ExportDialog({ open, onClose, resumeId }: ExportDialogProps) {
     [selectedFormat],
   );
 
-  const capabilityBadge = selectedOption.supported
-    ? isZh
-      ? "当前可导出"
-      : "Available now"
-    : isZh
-      ? "桌面暂不支持"
-      : "Not in desktop yet";
-
   const capabilityMessage = selectedOption.supported
     ? isZh
       ? "当前 desktop runtime 已经能真实写出这个格式文件，并通过原生保存路径落盘。"
@@ -322,17 +207,13 @@ export function ExportDialog({ open, onClose, resumeId }: ExportDialogProps) {
 
   const exportActionLabel =
     state === "exporting"
-      ? translate("exporting", "Exporting...")
-      : selectedOption.supported
-        ? translate("export", "Export")
-        : isZh
-          ? "暂不可导出"
-          : "Unavailable";
+      ? translateExport("exporting", "Exporting...")
+      : translateExport("export", "Export");
 
   const closeLabel =
     state === "success" || state === "cancelled"
-      ? translate("close", "Close")
-      : translate("exportCancel", "Cancel");
+      ? translateKey("common.close", "Close")
+      : translateExport("cancel", "Cancel");
 
   const handleExport = useCallback(async () => {
     if (!currentResume) {
@@ -358,35 +239,28 @@ export function ExportDialog({ open, onClose, resumeId }: ExportDialogProps) {
         await save();
       }
 
-      const document = toTemplateValidationDocument(
-        currentResume.title || "Resume",
-        currentResume.language || "en",
-        currentResume.template || "classic",
-        currentResume.isDefault,
-        currentResume.targetJobTitle,
-        currentResume.targetCompany,
-        currentResume.themeConfig,
+      const resume = toSharedResume(
+        {
+          ...currentResume,
+          id: resumeId,
+          sections,
+        },
         sections,
-        resumeId,
       );
 
       const fileBase = `${sanitizeFileName(currentResume.title || "resume")}-${formatTimestamp(
         new Date(),
       )}`;
 
-      const content =
-        selectedFormat === "html"
-          ? buildTemplateValidationDocumentHtml(document)
-          : selectedFormat === "json"
-            ? JSON.stringify(document, null, 2)
-            : buildTextExport(document);
-
       const defaultPath = `${fileBase}.${selectedOption.extension}`;
       const selectedOutputPath = await openNativeSaveDialog({
         defaultPath,
         filters: [
           {
-            name: selectedOption.labelKey.toUpperCase(),
+            name: translateExport(
+              selectedOption.labelKey,
+              selectedOption.fallbackLabel,
+            ),
             extensions: [selectedOption.extension],
           },
         ],
@@ -404,11 +278,27 @@ export function ExportDialog({ open, onClose, resumeId }: ExportDialogProps) {
         return;
       }
 
-      const receipt = await writeTemplateValidationExport({
-        fileName: defaultPath,
-        outputPath: resolvedOutputPath,
-        html: content,
-      });
+      const receipt =
+        selectedFormat === "pdf" || selectedFormat === "pdf-one-page"
+          ? await writePdfExport({
+              outputPath: resolvedOutputPath,
+              html: prepareDesktopPdfHtml(
+                await generateHtml(resume, true),
+                { fitOnePage: selectedFormat === "pdf-one-page" },
+              ),
+            })
+          : await writeExportFile({
+              outputPath: resolvedOutputPath,
+              expectedExtension: selectedOption.extension,
+              bytes:
+                selectedFormat === "docx"
+                  ? Array.from(await generateDocxBuffer(resume))
+                  : selectedFormat === "html"
+                    ? encodeText(await generateHtml(resume))
+                    : selectedFormat === "json"
+                      ? encodeText(JSON.stringify(resume, null, 2))
+                      : encodeText(generatePlainText(resume)),
+            });
 
       setState("success");
       setSavedPath(receipt.outputPath);
@@ -435,8 +325,10 @@ export function ExportDialog({ open, onClose, resumeId }: ExportDialogProps) {
     sections,
     selectedFormat,
     selectedOption.extension,
+    selectedOption.fallbackLabel,
     selectedOption.labelKey,
     selectedOption.supported,
+    translateExport,
   ]);
 
   if (!open) {
@@ -454,11 +346,11 @@ export function ExportDialog({ open, onClose, resumeId }: ExportDialogProps) {
             <FileDown className="h-5 w-5 text-pink-500" />
             <div>
               <h2 className="dialog-title">
-                {translate("exportTitle", "Export Resume")}
+                {translateExport("title", "Export Resume")}
               </h2>
               <p className="mt-1 text-sm text-zinc-500">
-                {translate(
-                  "exportDescription",
+                {translateExport(
+                  "description",
                   "Choose a format to export your resume",
                 )}
               </p>
@@ -481,36 +373,18 @@ export function ExportDialog({ open, onClose, resumeId }: ExportDialogProps) {
                 {FORMAT_OPTIONS.map((option) => {
                   const Icon = option.icon;
                   const isSelected = option.value === selectedFormat;
-                  const statusChip = option.supported
-                    ? isZh
-                      ? "可用"
-                      : "Ready"
-                    : isZh
-                      ? "未支持"
-                      : "Soon";
 
                   return (
                     <button
                       key={option.value}
                       type="button"
                       onClick={() => setSelectedFormat(option.value)}
-                      className={`flex min-h-[128px] flex-col items-center gap-2 rounded-xl border-2 p-4 text-center transition-all duration-150 ${
+                      className={`cursor-pointer flex min-h-[128px] flex-col items-center gap-2 rounded-lg border-2 p-4 text-center transition-all duration-150 ${
                         isSelected
                           ? "border-pink-500 bg-pink-50"
                           : "border-zinc-200 bg-white hover:border-pink-300 hover:bg-pink-50/50"
                       }`}
                     >
-                      <div className="flex w-full justify-end">
-                        <span
-                          className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${
-                            option.supported
-                              ? "bg-emerald-50 text-emerald-700"
-                              : "bg-amber-50 text-amber-700"
-                          }`}
-                        >
-                          {statusChip}
-                        </span>
-                      </div>
                       <Icon
                         className={`h-6 w-6 ${
                           isSelected ? "text-pink-500" : "text-zinc-500"
@@ -520,48 +394,33 @@ export function ExportDialog({ open, onClose, resumeId }: ExportDialogProps) {
                         className={`text-sm font-medium ${
                           isSelected ? "text-pink-600" : "text-zinc-700"
                         }`}
+                        title={
+                          option.tooltipKey
+                            ? translateExport(
+                                option.tooltipKey,
+                                option.tooltipFallback ?? "",
+                              )
+                            : undefined
+                        }
                       >
-                        {translate(option.labelKey, option.labelKey.toUpperCase())}
+                        {translateExport(option.labelKey, option.fallbackLabel)}
                       </span>
                       <span className="text-xs text-zinc-400">
-                        {translate(option.descKey, "")}
+                        {translateExport(option.descKey, option.fallbackDescription)}
                       </span>
                     </button>
                   );
                 })}
               </div>
 
-              <div
-                className={`rounded-2xl border px-4 py-3 ${
-                  selectedOption.supported
-                    ? "border-emerald-200 bg-emerald-50/70"
-                    : "border-amber-200 bg-amber-50/80"
-                }`}
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="text-sm font-semibold text-zinc-900">
-                      {translate(selectedOption.labelKey, selectedOption.labelKey)}
-                    </p>
-                    <p className="mt-1 text-sm text-zinc-600">
-                      {translate(selectedOption.descKey, "")}
-                    </p>
+              {!selectedOption.supported ? (
+                <div className="rounded-lg border border-amber-200 bg-amber-50/80 px-4 py-3">
+                  <div className="flex items-start gap-2 text-sm leading-6 text-amber-900">
+                    <Info className="mt-1 h-4 w-4 shrink-0" />
+                    <span>{capabilityMessage}</span>
                   </div>
-                  <span
-                    className={`rounded-full px-2 py-1 text-[11px] font-medium ${
-                      selectedOption.supported
-                        ? "bg-emerald-100 text-emerald-700"
-                        : "bg-amber-100 text-amber-700"
-                    }`}
-                  >
-                    {capabilityBadge}
-                  </span>
                 </div>
-                <div className="mt-3 flex items-start gap-2 text-[12px] leading-5 text-zinc-600">
-                  <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                  <span>{capabilityMessage}</span>
-                </div>
-              </div>
+              ) : null}
             </>
           ) : null}
 
@@ -569,7 +428,7 @@ export function ExportDialog({ open, onClose, resumeId }: ExportDialogProps) {
             <div className="flex flex-col items-center justify-center py-10 text-center">
               <Loader2 className="mb-3 h-8 w-8 animate-spin text-pink-500" />
               <p className="text-sm font-medium text-zinc-700">
-                {translate("exporting", "Exporting...")}
+                {translateExport("exporting", "Exporting...")}
               </p>
               <p className="mt-2 text-xs text-zinc-400">
                 {isZh
@@ -582,7 +441,9 @@ export function ExportDialog({ open, onClose, resumeId }: ExportDialogProps) {
           {state === "success" ? (
             <div className="flex flex-col items-center justify-center py-8 text-center">
               <CheckCircle2 className="mb-3 h-8 w-8 text-green-500" />
-              <p className="text-sm font-medium text-zinc-700">{statusMessage}</p>
+              <p className="text-sm font-medium text-zinc-700">
+                {statusMessage || translateExport("success", "Export successful!")}
+              </p>
               {savedPath ? (
                 <p className="mt-2 max-w-md break-all text-xs text-zinc-500">
                   {savedPath}

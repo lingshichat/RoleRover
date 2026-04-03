@@ -83,6 +83,7 @@ export function SettingsDialog({ open, onClose }: SettingsDialogProps) {
   const [aiApiKey, setAIApiKey] = useState("");
   const [aiBaseURL, setAIBaseURL] = useState("");
   const [aiModel, setAIModel] = useState("");
+  const [resumeImportVisionModel, setResumeImportVisionModel] = useState("");
   const [showApiKey, setShowApiKey] = useState(false);
   const [setAsDefault, setSetAsDefault] = useState(true);
 
@@ -94,10 +95,13 @@ export function SettingsDialog({ open, onClose }: SettingsDialogProps) {
   // Model combobox state
   const [modelOpen, setModelOpen] = useState(false);
   const [modelSearch, setModelSearch] = useState("");
+  const [visionModelOpen, setVisionModelOpen] = useState(false);
+  const [visionModelSearch, setVisionModelSearch] = useState("");
   const [fetchedModels, setFetchedModels] = useState<string[]>([]);
   const [modelsFetching, setModelsFetching] = useState(false);
   const [modelsFetched, setModelsFetched] = useState(false);
   const modelSearchRef = useRef<HTMLInputElement>(null);
+  const visionModelSearchRef = useRef<HTMLInputElement>(null);
 
   // Connectivity test state
   const [aiTestResult, setAiTestResult] = useState<ConnectivityTestResult | null>(null);
@@ -121,6 +125,7 @@ export function SettingsDialog({ open, onClose }: SettingsDialogProps) {
         const config = settings.ai?.providerConfigs?.[provider];
         setAIBaseURL(config?.baseUrl || "");
         setAIModel(config?.model || "");
+        setResumeImportVisionModel(settings.ai?.resumeImportVisionModel || "");
         setSetAsDefault(true);
 
         // Exa
@@ -140,6 +145,14 @@ export function SettingsDialog({ open, onClose }: SettingsDialogProps) {
     }
   }, [modelOpen]);
 
+  useEffect(() => {
+    if (visionModelOpen) {
+      setTimeout(() => visionModelSearchRef.current?.focus(), 50);
+    } else {
+      setVisionModelSearch("");
+    }
+  }, [visionModelOpen]);
+
   // Fetch models when combobox opens
   const fetchModelsForProvider = useCallback(async () => {
     setModelsFetching(true);
@@ -156,21 +169,27 @@ export function SettingsDialog({ open, onClose }: SettingsDialogProps) {
   }, [aiProvider]);
 
   useEffect(() => {
-    if (modelOpen && !modelsFetched && !modelsFetching) {
+    if ((modelOpen || visionModelOpen) && !modelsFetched && !modelsFetching) {
       void fetchModelsForProvider();
     }
-  }, [modelOpen, modelsFetched, modelsFetching, fetchModelsForProvider]);
+  }, [modelOpen, visionModelOpen, modelsFetched, modelsFetching, fetchModelsForProvider]);
 
   // Reset model fetch state when provider changes
   useEffect(() => {
+    setModelOpen(false);
+    setVisionModelOpen(false);
     setModelsFetched(false);
     setFetchedModels([]);
     setAiTestResult(null);
     setModelSearch("");
+    setVisionModelSearch("");
   }, [aiProvider]);
 
   const filteredModels = fetchedModels.filter((m) =>
     m.toLowerCase().includes(modelSearch.toLowerCase()),
+  );
+  const filteredVisionModels = fetchedModels.filter((m) =>
+    m.toLowerCase().includes(visionModelSearch.toLowerCase()),
   );
 
   // Auto-save appearance settings on change
@@ -225,19 +244,24 @@ export function SettingsDialog({ open, onClose }: SettingsDialogProps) {
   };
 
   // Auto-save AI config on blur
-  const saveAIConfig = useCallback(async (overrides?: { model?: string }) => {
+  const saveAIConfig = useCallback(async (overrides?: {
+    model?: string;
+    resumeImportVisionModel?: string;
+  }) => {
     try {
       const payload: ProviderConfigUpdateInput = {
         provider: aiProvider,
         baseUrl: aiBaseURL,
         model: overrides?.model ?? aiModel,
         setAsDefault,
+        resumeImportVisionModel:
+          overrides?.resumeImportVisionModel ?? resumeImportVisionModel,
       };
       await updateAiProviderSettings(payload);
     } catch (error) {
       console.error("Failed to save AI settings:", error);
     }
-  }, [aiProvider, aiBaseURL, aiModel, setAsDefault]);
+  }, [aiProvider, aiBaseURL, aiModel, resumeImportVisionModel, setAsDefault]);
 
   const saveApiKey = useCallback(async () => {
     if (!aiApiKey.trim()) return;
@@ -303,11 +327,11 @@ export function SettingsDialog({ open, onClose }: SettingsDialogProps) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+      className="fixed inset-0 z-50 grid items-start justify-items-center overflow-y-auto bg-black/50 p-4 sm:items-center"
       onClick={onClose}
     >
       <div
-        className="relative w-full max-w-[540px] rounded-lg bg-white shadow-xl dark:bg-zinc-900"
+        className="relative my-4 w-full max-w-[540px] max-h-[calc(100vh-2rem)] overflow-y-auto rounded-lg bg-white shadow-xl dark:bg-zinc-900"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -481,6 +505,91 @@ export function SettingsDialog({ open, onClose }: SettingsDialogProps) {
                   </div>
                 )}
               </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>{t("settings.ai.resumeImportVisionModel")}</Label>
+              <div className="relative">
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  aria-expanded={visionModelOpen}
+                  className="w-full justify-between cursor-pointer font-normal"
+                  onClick={() => setVisionModelOpen(!visionModelOpen)}
+                >
+                  <span className="truncate">
+                    {resumeImportVisionModel || t("settings.ai.resumeImportVisionModelPlaceholder")}
+                  </span>
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+                {visionModelOpen && (
+                  <div className="absolute z-50 mt-1 w-full rounded-md border border-zinc-200 bg-white shadow-md dark:border-zinc-800 dark:bg-zinc-900">
+                    <div className="border-b px-3 py-2 dark:border-zinc-800">
+                      <Input
+                        ref={visionModelSearchRef}
+                        value={visionModelSearch}
+                        onChange={(e) => setVisionModelSearch(e.target.value)}
+                        placeholder={t("settings.ai.resumeImportVisionModelPlaceholder")}
+                        className="h-8 text-sm"
+                      />
+                    </div>
+                    <div className="max-h-48 overflow-y-auto">
+                      {modelsFetching && (
+                        <div className="flex items-center gap-2 px-3 py-3 text-xs text-zinc-400">
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          {t("aiFetchingModels")}
+                        </div>
+                      )}
+                      {!modelsFetching && filteredVisionModels.length === 0 && modelsFetched && (
+                        <div className="px-3 py-3 text-xs text-zinc-400">
+                          {t("aiNoModelsFound")}
+                        </div>
+                      )}
+                      {filteredVisionModels.map((m) => (
+                        <button
+                          key={m}
+                          type="button"
+                          className={cn(
+                            "flex w-full cursor-pointer items-center px-3 py-1.5 text-sm hover:bg-zinc-50 dark:hover:bg-zinc-800",
+                            resumeImportVisionModel === m && "bg-zinc-100 dark:bg-zinc-800",
+                          )}
+                          onClick={() => {
+                            setResumeImportVisionModel(m);
+                            setVisionModelOpen(false);
+                            void saveAIConfig({ resumeImportVisionModel: m });
+                          }}
+                        >
+                          <Check
+                            className={cn(
+                              "mr-2 h-4 w-4",
+                              resumeImportVisionModel === m ? "opacity-100" : "opacity-0",
+                            )}
+                          />
+                          {m}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="border-t px-3 py-2 dark:border-zinc-800">
+                      <Input
+                        value={resumeImportVisionModel}
+                        onChange={(e) => setResumeImportVisionModel(e.target.value)}
+                        placeholder={t("settings.ai.resumeImportVisionModelPlaceholder")}
+                        className="h-8 text-sm"
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            setVisionModelOpen(false);
+                            void saveAIConfig();
+                          }
+                        }}
+                        onBlur={() => void saveAIConfig()}
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+              <p className="text-xs text-zinc-400">
+                {t("settings.ai.resumeImportVisionModelHint")}
+              </p>
             </div>
 
             {/* Test AI Connection */}

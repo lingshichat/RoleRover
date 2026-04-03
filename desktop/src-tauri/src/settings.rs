@@ -32,6 +32,8 @@ pub struct WorkspaceAiSettings {
     pub default_provider: String,
     pub provider_configs: BTreeMap<String, ProviderRuntimeSettings>,
     pub exa_pool_base_url: String,
+    #[serde(default)]
+    pub resume_import_vision_model: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -173,6 +175,7 @@ pub struct ProviderConfigUpdateInput {
     pub base_url: String,
     pub model: String,
     pub set_as_default: bool,
+    pub resume_import_vision_model: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -357,6 +360,15 @@ pub fn update_ai_provider_settings(
 
     if input.set_as_default {
         document.ai.default_provider = normalized_provider.into();
+    }
+
+    if let Some(vision_model) = input.resume_import_vision_model {
+        let trimmed = vision_model.trim();
+        document.ai.resume_import_vision_model = if trimmed.is_empty() {
+            None
+        } else {
+            Some(trimmed.into())
+        };
     }
 
     persist_settings(workspace_root, document.clone())?;
@@ -672,6 +684,7 @@ fn default_settings_document() -> Result<WorkspaceSettingsDocument, String> {
             default_provider: "openai".into(),
             provider_configs,
             exa_pool_base_url: String::new(),
+            resume_import_vision_model: None,
         },
         editor: WorkspaceEditorSettings {
             auto_save: true,

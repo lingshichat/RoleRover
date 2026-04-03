@@ -4,7 +4,8 @@ use serde_json::{json, Value};
 use std::{
     collections::HashMap,
     fs,
-    path::PathBuf,
+    path::{Path, PathBuf},
+    process::Command,
     time::{SystemTime, UNIX_EPOCH},
 };
 use tauri::{AppHandle, Manager};
@@ -267,6 +268,100 @@ pub fn write_template_validation_export(
         file_name: resolved_name,
         output_path: path_to_string(&resolved_output_path),
         bytes_written,
+    })
+}
+
+pub fn write_export_file(
+    output_path: String,
+    expected_extension: String,
+    bytes: Vec<u8>,
+) -> Result<TemplateValidationExportWriteResult, String> {
+    let resolved_output_path =
+        normalize_requested_output_path_with_extension(&output_path, &expected_extension)?;
+    write_export_bytes(&resolved_output_path, bytes)
+}
+
+pub fn write_pdf_export(
+    app: &AppHandle,
+    output_path: String,
+    html: String,
+) -> Result<TemplateValidationExportWriteResult, String> {
+    let resolved_output_path = normalize_requested_output_path_with_extension(&output_path, "pdf")?;
+    ensure_parent_directory(&resolved_output_path)?;
+
+    let cache_dir = app
+        .path()
+        .app_cache_dir()
+        .map_err(|error| format!("failed to resolve app cache dir: {error}"))?
+        .join("exports");
+    ensure_storage_directory(&cache_dir)?;
+
+    let timestamp = now_epoch_ms()?;
+    let temp_html_path = cache_dir.join(format!("pdf-export-{timestamp}.html"));
+    fs::write(&temp_html_path, html.into_bytes()).map_err(|error| {
+        format!(
+            "failed to write temporary pdf html {}: {error}",
+            temp_html_path.display()
+        )
+    })?;
+
+    let browser_path = resolve_pdf_browser_path()?;
+    let print_argument = format!(
+        "--print-to-pdf={}",
+        resolved_output_path.to_string_lossy()
+    );
+
+    let mut command = Command::new(&browser_path);
+    command
+        .arg("--headless")
+        .arg("--disable-gpu")
+        .arg("--allow-file-access-from-files")
+        .arg("--run-all-compositor-stages-before-draw")
+        .arg("--virtual-time-budget=12000")
+        .arg("--no-first-run")
+        .arg("--no-default-browser-check")
+        .arg("--no-pdf-header-footer")
+        .arg(print_argument)
+        .arg(path_to_string(&temp_html_path));
+
+    #[cfg(target_os = "linux")]
+    command.arg("--no-sandbox");
+
+    let output = command.output().map_err(|error| {
+        format!(
+            "failed to launch browser {} for pdf export: {error}",
+            browser_path.display()
+        )
+    })?;
+
+    let _ = fs::remove_file(&temp_html_path);
+
+    if !output.status.success() {
+        let stdout = String::from_utf8_lossy(&output.stdout).trim().to_string();
+        let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
+        return Err(format!(
+            "pdf export browser command failed (status: {}). stdout: {} stderr: {}",
+            output
+                .status
+                .code()
+                .map(|code| code.to_string())
+                .unwrap_or_else(|| "terminated".into()),
+            if stdout.is_empty() { "<empty>" } else { &stdout },
+            if stderr.is_empty() { "<empty>" } else { &stderr },
+        ));
+    }
+
+    let metadata = fs::metadata(&resolved_output_path).map_err(|error| {
+        format!(
+            "pdf export did not produce {}: {error}",
+            resolved_output_path.display()
+        )
+    })?;
+
+    Ok(TemplateValidationExportWriteResult {
+        file_name: file_name_from_path(&resolved_output_path)?,
+        output_path: path_to_string(&resolved_output_path),
+        bytes_written: metadata.len() as usize,
     })
 }
 
@@ -683,6 +778,28 @@ fn normalize_requested_output_path(raw: &str) -> Result<PathBuf, String> {
     Ok(candidate)
 }
 
+fn normalize_requested_output_path_with_extension(
+    raw: &str,
+    expected_extension: &str,
+) -> Result<PathBuf, String> {
+    let normalized_extension = normalize_export_extension(expected_extension)?;
+    let mut candidate = PathBuf::from(raw.trim());
+
+    if candidate.as_os_str().is_empty() {
+        return Err("requested export output path must not be empty".into());
+    }
+
+    let extension = candidate
+        .extension()
+        .map(|value| value.to_string_lossy().to_ascii_lowercase());
+
+    if extension.as_deref() != Some(normalized_extension.as_str()) {
+        candidate.set_extension(&normalized_extension);
+    }
+
+    Ok(candidate)
+}
+
 fn resolve_non_conflicting_name(
     directory: &PathBuf,
     preferred_name: &str,
@@ -698,6 +815,106 @@ fn resolve_non_conflicting_name(
         preferred_name.trim_end_matches(".html")
     );
     Ok(candidate)
+}
+
+fn normalize_export_extension(raw: &str) -> Result<String, String> {
+    let normalized = raw.trim().trim_start_matches('.').to_ascii_lowercase();
+
+    if normalized.is_empty()
+        || !normalized
+            .chars()
+            .all(|character| character.is_ascii_alphanumeric())
+    {
+        return Err(format!("invalid export extension: {raw}"));
+    }
+
+    Ok(normalized)
+}
+
+fn file_name_from_path(path: &Path) -> Result<String, String> {
+    let Some(file_name) = path.file_name() else {
+        return Err("requested export output path must include a file name".into());
+    };
+
+    Ok(file_name.to_string_lossy().to_string())
+}
+
+fn ensure_parent_directory(path: &Path) -> Result<(), String> {
+    let Some(parent_dir) = path.parent() else {
+        return Err("requested export output path must include a parent directory".into());
+    };
+
+    if parent_dir.as_os_str().is_empty() {
+        return Err("requested export output path must include a parent directory".into());
+    }
+
+    ensure_storage_directory(&parent_dir.to_path_buf())
+}
+
+fn write_export_bytes(
+    resolved_output_path: &Path,
+    bytes: Vec<u8>,
+) -> Result<TemplateValidationExportWriteResult, String> {
+    ensure_parent_directory(resolved_output_path)?;
+
+    let bytes_written = bytes.len();
+    fs::write(resolved_output_path, bytes).map_err(|error| {
+        format!(
+            "failed to write export {}: {error}",
+            resolved_output_path.display()
+        )
+    })?;
+
+    Ok(TemplateValidationExportWriteResult {
+        file_name: file_name_from_path(resolved_output_path)?,
+        output_path: path_to_string(resolved_output_path),
+        bytes_written,
+    })
+}
+
+fn resolve_pdf_browser_path() -> Result<PathBuf, String> {
+    for key in ["ROLEROVER_DESKTOP_BROWSER_PATH", "CHROME_PATH", "BROWSER_PATH"] {
+        if let Ok(value) = std::env::var(key) {
+            let candidate = PathBuf::from(value.trim());
+            if candidate.exists() {
+                return Ok(candidate);
+            }
+        }
+    }
+
+    #[cfg(target_os = "windows")]
+    let candidates = [
+        r"C:\Program Files\Google\Chrome\Application\chrome.exe",
+        r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe",
+        r"C:\Program Files\Microsoft\Edge\Application\msedge.exe",
+        r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe",
+    ];
+
+    #[cfg(target_os = "macos")]
+    let candidates = [
+        "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+        "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge",
+    ];
+
+    #[cfg(target_os = "linux")]
+    let candidates = [
+        "/usr/bin/google-chrome",
+        "/usr/bin/microsoft-edge",
+        "/usr/bin/chromium-browser",
+        "/usr/bin/chromium",
+    ];
+
+    for raw_candidate in candidates {
+        let candidate = PathBuf::from(raw_candidate);
+        if candidate.exists() {
+            return Ok(candidate);
+        }
+    }
+
+    Err(
+        "No supported Chrome/Edge browser was found for PDF export. Set CHROME_PATH or ROLEROVER_DESKTOP_BROWSER_PATH to continue."
+            .into(),
+    )
 }
 
 fn ensure_storage_directory(path: &PathBuf) -> Result<(), String> {
@@ -913,7 +1130,7 @@ fn now_epoch_ms() -> Result<u64, String> {
     Ok(duration.as_millis() as u64)
 }
 
-fn path_to_string(path: &PathBuf) -> String {
+fn path_to_string(path: &Path) -> String {
     path.to_string_lossy().replace('\\', "/")
 }
 

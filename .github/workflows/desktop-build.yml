@@ -41,9 +41,6 @@ jobs:
       - name: Install dependencies
         run: pnpm install
 
-      - name: Build frontend for Desktop
-        run: pnpm --filter @rolerover/desktop run build
-
       - name: Ensure updater signing key
         run: |
           if ([string]::IsNullOrWhiteSpace($env:TAURI_SIGNING_PRIVATE_KEY)) {

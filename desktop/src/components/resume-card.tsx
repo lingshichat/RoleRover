@@ -1,8 +1,14 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useTranslation } from "react-i18next";
-import { Link } from "@tanstack/react-router";
+import { useNavigate } from "@tanstack/react-router";
 import { Copy, Trash2, MoreVertical, Pencil } from "lucide-react";
 import { TemplateThumbnail } from "@/components/dashboard/template-thumbnail";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { templateLabelsMap } from "../lib/template-labels";
 import type { Resume } from "../types/resume";
 
@@ -15,16 +21,15 @@ interface ResumeCardProps {
 
 export function ResumeCard({ resume, onDelete, onDuplicate, onRename }: ResumeCardProps) {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const [isRenaming, setIsRenaming] = useState(false);
   const [renameValue, setRenameValue] = useState(resume.title);
-  const [menuOpen, setMenuOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const renamingRef = useRef(false);
 
   const startRenaming = () => {
     renamingRef.current = true;
     setIsRenaming(true);
-    setMenuOpen(false);
   };
 
   useEffect(() => {
@@ -73,6 +78,11 @@ export function ResumeCard({ resume, onDelete, onDuplicate, onRename }: ResumeCa
   return (
     <div
       className={`group relative overflow-hidden rounded-xl border border-zinc-200 bg-white transition-all duration-200 dark:border-zinc-700/60 dark:bg-card ${isRenaming ? "" : "cursor-pointer hover:shadow-lg hover:-translate-y-0.5"}`}
+      onClick={() => {
+        if (!renamingRef.current) {
+          void navigate({ to: "/editor/$id", params: { id: resume.id } });
+        }
+      }}
     >
       {/* Template preview thumbnail */}
       <div className="relative border-b border-zinc-100 bg-zinc-50 p-2.5 dark:border-zinc-700/40 dark:bg-zinc-800/50">
@@ -109,11 +119,9 @@ export function ResumeCard({ resume, onDelete, onDuplicate, onRename }: ResumeCa
                 className="w-full truncate rounded border border-pink-300 bg-white px-1 text-sm font-semibold text-zinc-900 outline-none focus:ring-1 focus:ring-pink-400 dark:bg-zinc-800 dark:text-zinc-100"
               />
             ) : (
-              <Link to="/editor/$id" params={{ id: resume.id }}>
-                <h3 className="truncate text-sm font-semibold text-zinc-900 dark:text-zinc-100 hover:text-pink-600">
-                  {resume.title}
-                </h3>
-              </Link>
+              <h3 className="truncate text-sm font-semibold text-zinc-900 dark:text-zinc-100 group-hover:text-pink-600">
+                {resume.title}
+              </h3>
             )}
             <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
               <span className="inline-flex items-center rounded-full bg-zinc-100 px-1.5 py-0 text-[11px] font-medium text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400">
@@ -135,64 +143,52 @@ export function ResumeCard({ resume, onDelete, onDuplicate, onRename }: ResumeCa
           </div>
 
           {/* Dropdown menu */}
-          <div className="relative">
-            <button
-              type="button"
-              className="cursor-pointer rounded-md p-1 opacity-0 transition-opacity group-hover:opacity-100 hover:bg-zinc-100 dark:hover:bg-zinc-800"
-              onClick={(e) => {
-                e.stopPropagation();
-                setMenuOpen(!menuOpen);
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                className="cursor-pointer rounded-md p-1 opacity-0 transition-opacity group-hover:opacity-100 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <MoreVertical className="h-4 w-4 text-zinc-400" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+              align="end"
+              onCloseAutoFocus={(e) => {
+                if (renamingRef.current) e.preventDefault();
               }}
             >
-              <MoreVertical className="h-4 w-4 text-zinc-400" />
-            </button>
-
-            {menuOpen && (
-              <>
-                <div
-                  className="fixed inset-0 z-10"
-                  onClick={() => setMenuOpen(false)}
-                />
-                <div className="absolute right-0 top-full z-20 mt-1 w-40 rounded-lg border border-zinc-200 bg-white py-1 shadow-lg dark:border-zinc-700 dark:bg-zinc-800">
-                  <button
-                    type="button"
-                    className="flex w-full cursor-pointer items-center gap-2 px-3 py-2 text-sm text-zinc-700 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-700"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      startRenaming();
-                    }}
-                  >
-                    <Pencil className="h-4 w-4" />
-                    {t("commonRename")}
-                  </button>
-                  <button
-                    type="button"
-                    className="flex w-full cursor-pointer items-center gap-2 px-3 py-2 text-sm text-zinc-700 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-700"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setMenuOpen(false);
-                      onDuplicate();
-                    }}
-                  >
-                    <Copy className="h-4 w-4" />
-                    {t("commonDuplicate")}
-                  </button>
-                  <button
-                    type="button"
-                    className="flex w-full cursor-pointer items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setMenuOpen(false);
-                      onDelete();
-                    }}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                    {t("commonDelete")}
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
+              <DropdownMenuItem
+                onClick={(e) => {
+                  e.stopPropagation();
+                  startRenaming();
+                }}
+              >
+                <Pencil className="h-4 w-4" />
+                {t("commonRename")}
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDuplicate();
+                }}
+              >
+                <Copy className="h-4 w-4" />
+                {t("commonDuplicate")}
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                variant="destructive"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete();
+                }}
+              >
+                <Trash2 className="h-4 w-4" />
+                {t("commonDelete")}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
     </div>

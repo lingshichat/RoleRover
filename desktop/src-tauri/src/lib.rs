@@ -180,6 +180,24 @@ fn write_template_validation_export(
 }
 
 #[tauri::command]
+fn write_export_file(
+    output_path: String,
+    expected_extension: String,
+    bytes: Vec<u8>,
+) -> Result<TemplateValidationExportWriteResult, String> {
+    storage::write_export_file(output_path, expected_extension, bytes)
+}
+
+#[tauri::command]
+fn write_pdf_export(
+    app: tauri::AppHandle,
+    output_path: String,
+    html: String,
+) -> Result<TemplateValidationExportWriteResult, String> {
+    storage::write_pdf_export(&app, output_path, html)
+}
+
+#[tauri::command]
 fn get_workspace_settings_snapshot(
     app: tauri::AppHandle,
 ) -> Result<WorkspaceSettingsDocument, String> {
@@ -368,6 +386,8 @@ pub fn run() {
             rename_document,
             get_template_validation_snapshot,
             write_template_validation_export,
+            write_export_file,
+            write_pdf_export,
             get_workspace_settings_snapshot,
             get_secret_vault_status,
             get_secret_inventory_snapshot,

@@ -261,6 +261,7 @@ export interface WorkspaceSettingsDocument {
     defaultProvider: string;
     providerConfigs: Record<string, ProviderRuntimeSettings>;
     exaPoolBaseUrl: string;
+    resumeImportVisionModel?: string | null;
   };
   editor: {
     autoSave: boolean;
@@ -340,6 +341,7 @@ export interface ProviderConfigUpdateInput {
   baseUrl: string;
   model: string;
   setAsDefault: boolean;
+  resumeImportVisionModel?: string;
 }
 
 export interface WorkspaceAppearanceSettingsUpdateInput {
@@ -363,6 +365,7 @@ export interface StartAiPromptStreamInput {
   baseUrl?: string;
   requestId?: string;
   systemPrompt?: string;
+  images?: string[];
 }
 
 export interface AiStreamStartReceipt {
@@ -611,6 +614,17 @@ export interface TemplateValidationExportInput extends Record<string, unknown> {
   html: string;
 }
 
+export interface ExportFileWriteInput extends Record<string, unknown> {
+  outputPath: string;
+  expectedExtension: string;
+  bytes: number[];
+}
+
+export interface PdfExportWriteInput extends Record<string, unknown> {
+  outputPath: string;
+  html: string;
+}
+
 export type UpdaterArtifactsMode =
   | "disabled"
   | "current"
@@ -814,6 +828,7 @@ const FALLBACK_SETTINGS: WorkspaceSettingsDocument = {
       },
     },
     exaPoolBaseUrl: "https://api.exa.ai",
+    resumeImportVisionModel: "",
   },
   editor: {
     autoSave: true,
@@ -1400,6 +1415,18 @@ export async function writeTemplateValidationExport(
     "write_template_validation_export",
     input,
   );
+}
+
+export async function writeExportFile(
+  input: ExportFileWriteInput,
+): Promise<TemplateValidationExportReceipt> {
+  return invoke<TemplateValidationExportReceipt>("write_export_file", input);
+}
+
+export async function writePdfExport(
+  input: PdfExportWriteInput,
+): Promise<TemplateValidationExportReceipt> {
+  return invoke<TemplateValidationExportReceipt>("write_pdf_export", input);
 }
 
 export async function updateAiProviderSettings(

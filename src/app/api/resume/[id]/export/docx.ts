@@ -351,11 +351,14 @@ function sectionHeading(title: string, theme: DocxTheme): DocxChild[] {
 
 // ─── Header (dark-bg vs light) ───────────────────────────────
 
-function tryParseImage(avatar: string): { data: Buffer; ext: 'png' | 'jpg' | 'gif' } | null {
+function tryParseImage(avatar: string): { data: Uint8Array; ext: 'png' | 'jpg' | 'gif' } | null {
   const m = avatar.match(/^data:image\/(png|jpe?g|gif);base64,(.+)$/);
   if (!m) return null;
   try {
-    return { data: Buffer.from(m[2], 'base64'), ext: m[1] === 'jpeg' ? 'jpg' : m[1] as 'png' | 'gif' };
+    return {
+      data: decodeBase64ToBytes(m[2]),
+      ext: m[1] === 'jpeg' ? 'jpg' : m[1] as 'png' | 'gif',
+    };
   } catch { return null; }
 }
 
@@ -689,7 +692,7 @@ function buildGitHub(c: GitHubContent, title: string, theme: DocxTheme): DocxChi
   return res;
 }
 
-function buildQrCodes(c: QrCodesContent, title: string, theme: DocxTheme, qrImages: Map<string, Buffer>): DocxChild[] {
+function buildQrCodes(c: QrCodesContent, title: string, theme: DocxTheme, qrImages: Map<string, Uint8Array>): DocxChild[] {
   const res: DocxChild[] = [...sectionHeading(title, theme)];
   const items = (c.items || []).filter(i => i.url);
   if (!items.length) return res;
@@ -819,7 +822,7 @@ function buildSidebarCustom(c: CustomContent, title: string, theme: DocxTheme): 
   return res;
 }
 
-function buildSidebarQrCodes(c: QrCodesContent, title: string, theme: DocxTheme, qrImages: Map<string, Buffer>): DocxChild[] {
+function buildSidebarQrCodes(c: QrCodesContent, title: string, theme: DocxTheme, qrImages: Map<string, Uint8Array>): DocxChild[] {
   const res: DocxChild[] = [sidebarSectionHeading(title, theme)];
   for (const item of c.items || []) {
     if (!item.url) continue;
@@ -840,7 +843,7 @@ function buildSidebarQrCodes(c: QrCodesContent, title: string, theme: DocxTheme,
 
 type Section = ReturnType<typeof visibleSections>[number];
 
-function buildSidebarSection(section: Section, theme: DocxTheme, qrImages: Map<string, Buffer>): DocxChild[] {
+function buildSidebarSection(section: Section, theme: DocxTheme, qrImages: Map<string, Uint8Array>): DocxChild[] {
   const c = section.content;
   switch (section.type) {
     case 'skills': return buildSidebarSkills(c as SkillsContent, section.title, theme);
@@ -926,13 +929,42 @@ function buildSidebarHeader(info: PersonalInfoContent, theme: DocxTheme): DocxCh
   return res;
 }
 
+function decodeBase64ToBytes(base64: string): Uint8Array {
+  const maybeBuffer = (globalThis as { Buffer?: { from(input: string, encoding: string): Uint8Array } }).Buffer;
+
+  if (maybeBuffer?.from) {
+    return new Uint8Array(maybeBuffer.from(base64, 'base64'));
+  }
+
+  if (typeof atob === 'function') {
+    const binary = atob(base64);
+    const bytes = new Uint8Array(binary.length);
+    for (let index = 0; index < binary.length; index += 1) {
+      bytes[index] = binary.charCodeAt(index);
+    }
+    return bytes;
+  }
+
+  throw new Error('Base64 decoding is unavailable in the current runtime.');
+}
+
+async function generateQrPngBytes(url: string): Promise<Uint8Array> {
+  const dataUrl = await QRCode.toDataURL(url, {
+    type: 'image/png',
+    width: 150,
+    margin: 1,
+  });
+  const [, base64 = ''] = dataUrl.split(',', 2);
+  return decodeBase64ToBytes(base64);
+}
+
 // ─── Sidebar layout (2-column table) ─────────────────────────
 
 function buildSidebarLayout(
   info: PersonalInfoContent,
   sections: Section[],
   theme: DocxTheme,
-  qrImages: Map<string, Buffer>,
+  qrImages: Map<string, Uint8Array>,
 ): DocxChild[] {
   const sidebarSet = new Set(theme.sidebarSections);
   const sidebarSections = sections.filter(s => sidebarSet.has(s.type));
@@ -1021,7 +1053,7 @@ function buildSidebarLayout(
 
 // ─── Main section dispatcher ─────────────────────────────────
 
-function buildMainSection(section: Section, theme: DocxTheme, qrImages: Map<string, Buffer>): DocxChild[] {
+function buildMainSection(section: Section, theme: DocxTheme, qrImages: Map<string, Uint8Array>): DocxChild[] {
   const c = section.content;
   switch (section.type) {
     case 'summary': return buildSummary(c as SummaryContent, section.title, theme);
@@ -1039,19 +1071,19 @@ function buildMainSection(section: Section, theme: DocxTheme, qrImages: Map<stri
 
 // ─── Main export ─────────────────────────────────────────────
 
-export async function generateDocxBuffer(resume: ResumeWithSections): Promise<Buffer> {
+export async function generateDocxBuffer(resume: ResumeWithSections): Promise<Uint8Array> {
   const theme = resolveTheme(resume.themeConfig, resume.template);
   const info = getPersonalInfo(resume);
   const sections = visibleSections(resume);
 
   // Pre-generate QR code PNG buffers
-  const qrImages = new Map<string, Buffer>();
+  const qrImages = new Map<string, Uint8Array>();
   const qrSection = sections.find(s => s.type === 'qr_codes');
   if (qrSection) {
     const qrItems = ((qrSection.content as QrCodesContent).items || []).filter(i => i.url);
     await Promise.all(qrItems.map(async (item) => {
       try {
-        const buf = await QRCode.toBuffer(item.url, { type: 'png', width: 150, margin: 1 });
+        const buf = await generateQrPngBytes(item.url);
         qrImages.set(item.url, buf);
       } catch { /* skip failed QR */ }
     }));
@@ -1089,5 +1121,5 @@ export async function generateDocxBuffer(resume: ResumeWithSections): Promise<Bu
     },
   });
 
-  return Buffer.from(await Packer.toBuffer(doc));
+  return new Uint8Array(await Packer.toArrayBuffer(doc));
 }

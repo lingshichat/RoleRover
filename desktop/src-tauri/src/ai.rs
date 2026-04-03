@@ -17,6 +17,8 @@ pub struct StartAiPromptStreamInput {
     pub base_url: Option<String>,
     pub request_id: Option<String>,
     pub system_prompt: Option<String>,
+    #[serde(default)]
+    pub images: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -112,6 +114,12 @@ pub fn start_ai_prompt_stream(
         .as_ref()
         .map(|value| value.trim().to_string())
         .filter(|value| !value.is_empty());
+    let images = input
+        .images
+        .iter()
+        .map(|value| value.trim().to_string())
+        .filter(|value| !value.is_empty())
+        .collect::<Vec<_>>();
     let receipt = AiStreamStartReceipt {
         request_id: request_id.clone(),
         provider: resolved.provider.clone(),
@@ -128,6 +136,7 @@ pub fn start_ai_prompt_stream(
                     &request_id,
                     &prompt,
                     system_prompt.as_deref(),
+                    &images,
                     &resolved,
                     started_at_epoch_ms,
                 )
@@ -216,6 +225,7 @@ async fn run_openai_compatible_stream(
     request_id: &str,
     prompt: &str,
     system_prompt: Option<&str>,
+    images: &[String],
     config: &ResolvedProviderConfig,
     started_at_epoch_ms: u64,
 ) -> Result<(), String> {
@@ -245,9 +255,27 @@ async fn run_openai_compatible_stream(
             "content": system_prompt,
         }));
     }
+    let user_content = if images.is_empty() {
+        json!(prompt)
+    } else {
+        let mut content_parts = Vec::with_capacity(images.len() + 1);
+        for image_url in images {
+            content_parts.push(json!({
+                "type": "image_url",
+                "image_url": {
+                    "url": image_url,
+                },
+            }));
+        }
+        content_parts.push(json!({
+            "type": "text",
+            "text": prompt,
+        }));
+        json!(content_parts)
+    };
     messages.push(json!({
         "role": "user",
-        "content": prompt,
+        "content": user_content,
     }));
 
     let response = client

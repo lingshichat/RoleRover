@@ -9,12 +9,13 @@ This contract covers the bootstrap-stage desktop shell in `desktop/`:
 1. Tauri starts the desktop-local Vite dev/build pipeline
 2. Rust exposes bootstrap/runtime commands
 3. Renderer requests runtime/workspace/settings snapshots through Tauri commands
-4. Renderer can request representative template validation snapshots, secret inventory snapshots, and native HTML export writes through Tauri commands
-5. Renderer can mutate desktop-local provider config / secrets and start native AI prompt streams through Tauri write commands
-6. Renderer consumes incremental AI events from the desktop-native `desktop://ai-stream` event bridge
-7. Renderer can request a native release-readiness snapshot that reflects bundling, updater, tray, and window-state posture
-8. Renderer falls back to explicit placeholder data only when Tauri commands are unavailable
-9. UI must surface fallback limitations instead of presenting fallback data as native readiness
+4. Renderer can request representative template validation snapshots, secret inventory snapshots, and native multi-format export writes through Tauri commands
+5. Renderer can mutate desktop-local provider config / secrets, fetch provider model catalogs, test provider connectivity, and start native AI prompt streams through Tauri write commands
+6. Renderer can import resumes through local PDF/image preprocessing while honoring the persisted vision-model contract for scanned or image-only files
+7. Renderer consumes incremental AI events from the desktop-native `desktop://ai-stream` event bridge
+8. Renderer can request a native release-readiness snapshot that reflects bundling, updater, tray, and window-state posture
+9. Renderer falls back to explicit placeholder data only when Tauri commands are unavailable
+10. UI must surface fallback limitations instead of presenting fallback data as native readiness
 
 ## Files
 
@@ -25,8 +26,13 @@ This contract covers the bootstrap-stage desktop shell in `desktop/`:
 - `desktop/src-tauri/src/storage.rs`
 - `desktop/src-tauri/src/settings.rs`
 - `desktop/src-tauri/src/workspace.rs`
+- `desktop/src/components/dashboard/create-resume-dialog.tsx`
+- `desktop/src/components/editor/export-dialog.tsx`
+- `desktop/src/components/editor/settings-dialog.tsx`
 - `desktop/src/lib/desktop-api.ts`
 - `desktop/src/lib/desktop-loaders.ts`
+- `desktop/src/lib/resume-export.ts`
+- `desktop/src/lib/resume-import.ts`
 - `desktop/src/lib/template-validation.ts`
 - `desktop/src/routes/root.tsx`
 - `desktop/src/routes/home.tsx`
@@ -36,6 +42,7 @@ This contract covers the bootstrap-stage desktop shell in `desktop/`:
 - `desktop/src/routes/settings.tsx`
 - `desktop/src/i18n.ts`
 - `src/lib/constants.ts`
+- `src/lib/export/index.ts`
 - `src/lib/pdf/export-tailwind-css.ts`
 - `src/lib/template-renderer/index.ts`
 - `src/lib/template-renderer/template-contract.ts`
@@ -202,9 +209,10 @@ Renderer helper:
 Rules:
 
 1. `get_bootstrap_context`, `get_workspace_snapshot`, `get_storage_snapshot`, `get_workspace_settings_snapshot`, `get_secret_vault_status`, `get_secret_inventory_snapshot`, `get_release_readiness_snapshot`, `get_importer_dry_run`, and `get_template_validation_snapshot` must route through `invokeWithFallback(...)`.
-2. Fallback reads must log the failing command name via `reportDesktopFallback(...)`.
-3. Renderer pages must use `isBrowserFallbackRuntime(context)` instead of string-matching raw runtime text.
-4. Native write commands such as `write_template_validation_export`, `update_ai_provider_settings`, `write_secret_value`, and `start_ai_prompt_stream` must not silently fall back; write failures should surface as explicit UI errors.
+2. `fetch_ai_models`, `test_ai_connectivity`, and `test_exa_connectivity` must also route through `invokeWithFallback(...)` so browser preview stays truthful when native commands are absent.
+3. Fallback reads must log the failing command name via `reportDesktopFallback(...)`.
+4. Renderer pages must use `isBrowserFallbackRuntime(context)` instead of string-matching raw runtime text.
+5. Native write commands such as `write_template_validation_export`, `write_export_file`, `write_pdf_export`, `update_ai_provider_settings`, `write_secret_value`, and `start_ai_prompt_stream` must not silently fall back; write failures should surface as explicit UI errors.
 
 ## AI Runtime Streaming Contract
 
@@ -317,6 +325,183 @@ Rules:
 5. PR5 validates the OpenAI-compatible streaming path first. Unsupported providers must fail explicitly instead of pretending native parity.
 6. Renderer consumers must filter `desktop://ai-stream` events by `requestId` and build the final transcript from `deltaText` / `accumulatedText`.
 7. Future providers extend by adding dispatcher branches behind the same command + event contract; the renderer event model must stay stable.
+
+## AI Provider Discovery And Resume Import Settings Contract
+
+Rust commands:
+
+- File: `desktop/src-tauri/src/lib.rs`
+- Commands:
+  - `update_ai_provider_settings`
+  - `fetch_ai_models`
+  - `test_ai_connectivity`
+  - `test_exa_connectivity`
+
+Renderer / settings files:
+
+- `desktop/src-tauri/src/ai.rs`
+- `desktop/src-tauri/src/settings.rs`
+- `desktop/src/lib/desktop-api.ts`
+- `desktop/src/components/editor/settings-dialog.tsx`
+- `desktop/src/components/dashboard/create-resume-dialog.tsx`
+- `desktop/src/lib/resume-import.ts`
+- `desktop/vite.config.ts`
+- `desktop/src/vite-env.d.ts`
+
+Workspace settings payload fields:
+
+```json
+{
+  "ai": {
+    "defaultProvider": "openai",
+    "providerConfigs": {
+      "openai": {
+        "baseUrl": "https://api.openai.com/v1",
+        "model": "gpt-4o"
+      }
+    },
+    "exaPoolBaseUrl": "https://api.exa.ai",
+    "resumeImportVisionModel": "gpt-4.1-mini"
+  }
+}
+```
+
+Provider config write input:
+
+```json
+{
+  "provider": "openai",
+  "baseUrl": "https://api.openai.com/v1",
+  "model": "gpt-4o",
+  "setAsDefault": true,
+  "resumeImportVisionModel": "gpt-4.1-mini"
+}
+```
+
+Fetch models result:
+
+```json
+{
+  "provider": "openai",
+  "models": ["gpt-4.1", "gpt-4.1-mini", "gpt-4o"]
+}
+```
+
+Connectivity result:
+
+```json
+{
+  "success": true,
+  "latencyMs": 812,
+  "errorMessage": null
+}
+```
+
+Rules:
+
+1. `update_ai_provider_settings` must reject unsupported providers plus empty `baseUrl` or `model`; when `resumeImportVisionModel` is present but blank, the persisted field must be cleared to `null` instead of saving whitespace.
+2. `fetch_ai_models` resolves the provider from the optional input override or the persisted `defaultProvider`, reads the provider API key from `provider.{provider}.api_key`, and returns `{ provider, models: [] }` when no key is configured.
+3. Provider-specific model discovery must stay explicit: OpenAI-compatible providers call `GET {baseUrl}/models`, Anthropic calls `GET {baseUrl}/v1/models` with `x-api-key` and `anthropic-version`, and Gemini calls `GET {baseUrl}/models?key={apiKey}` then strips the `models/` prefix from returned names.
+4. `test_ai_connectivity` and `test_exa_connectivity` must return `{ success, latencyMs, errorMessage }` even for common upstream failures; browser fallback returns `success=false`, `latencyMs=0`, and `errorMessage="Desktop runtime not available"`.
+5. `settings-dialog.tsx` must use the fetched model list for both the main model picker and the resume-import vision-model picker, while still allowing a manual text override that persists through `update_ai_provider_settings`.
+6. `create-resume-dialog.tsx` and `resume-import.ts` must read `resumeImportVisionModel` from runtime settings, block direct image uploads when it is missing, and switch scanned-PDF parsing to the vision model only after text extraction proves the PDF is not text-based.
+7. `desktop/vite.config.ts` must keep `mupdf` out of `optimizeDeps`, and `desktop/src/lib/resume-import.ts` must load `mupdf-wasm.wasm` through a Vite `?url` import; otherwise the renderer can receive HTML instead of Wasm and fail with `WebAssembly.instantiate(): expected magic word`.
+
+## Native Resume Export Contract
+
+Rust commands:
+
+- File: `desktop/src-tauri/src/lib.rs`
+- Commands:
+  - `write_export_file`
+  - `write_pdf_export`
+
+Renderer / shared export files:
+
+- `desktop/src-tauri/src/storage.rs`
+- `desktop/src/lib/desktop-api.ts`
+- `desktop/src/lib/resume-export.ts`
+- `desktop/src/components/editor/export-dialog.tsx`
+- `src/lib/export/index.ts`
+- `src/app/api/resume/[id]/export/docx.ts`
+- `src/app/api/resume/[id]/export/utils.ts`
+
+Binary export input:
+
+```json
+{
+  "outputPath": "C:/Users/Avery/Desktop/resume.docx",
+  "expectedExtension": "docx",
+  "bytes": [80, 75, 3, 4]
+}
+```
+
+PDF export input:
+
+```json
+{
+  "outputPath": "C:/Users/Avery/Desktop/resume.pdf",
+  "html": "<!DOCTYPE html><html><body>...</body></html>"
+}
+```
+
+Write success payload:
+
+```json
+{
+  "fileName": "resume.pdf",
+  "outputPath": "C:/Users/Avery/Desktop/resume.pdf",
+  "bytesWritten": 48231
+}
+```
+
+Rules:
+
+1. Desktop export must reuse shared web export builders through `src/lib/export/index.ts` for HTML / TXT / DOCX generation, while the renderer delegates the final file write to native Tauri commands.
+2. `write_export_file` must normalize the requested path to the required extension, reject parentless or extension-mismatched destinations, create missing parent directories, and return the final resolved path plus `bytesWritten`.
+3. `write_pdf_export` must normalize to `.pdf`, write temporary HTML under `app_cache_dir()/exports`, resolve a local Chrome / Edge executable, invoke headless `--print-to-pdf`, delete the temp HTML, and fail explicitly when the browser command does not produce the requested output file.
+4. `desktop/src/lib/resume-export.ts` may inject the `fitToOnePage` scaling script only for the `pdf-one-page` variant; the normal PDF path must preserve the original rendered layout.
+5. Browser fallback must never claim native export success for `write_export_file` or `write_pdf_export`; export UI should keep these flows disabled or surface a direct write error instead of fabricating a receipt.
+
+## Resume Import Contract
+
+Renderer files:
+
+- `desktop/src/components/dashboard/create-resume-dialog.tsx`
+- `desktop/src/lib/resume-import.ts`
+- `desktop/src/components/editor/ai-dialog-helpers.ts`
+
+Progress payload:
+
+```json
+{
+  "stage": "extracting",
+  "completed": 2,
+  "total": 3,
+  "fileName": "resume.pdf"
+}
+```
+
+Allowed `stage` values:
+
+- `validating`
+- `extracting`
+- `rendering`
+- `parsing`
+- `saving`
+
+Known import error codes:
+
+- `vision_model_required_for_image`
+- `vision_model_required_for_scanned_pdf`
+
+Rules:
+
+1. The create-resume upload lane must show a concrete progress state, not only a spinner, while `importResumeFromFile(...)` advances through validation, extraction/rendering, parsing, and save stages.
+2. `resolveResumeImportMimeType(...)` only accepts `application/pdf`, `image/png`, `image/jpeg`, and `image/webp`; unsupported types must fail before any AI request is sent.
+3. Text-based PDFs must prefer local MuPDF text extraction and continue on the standard text model. Only PDFs whose extracted text length stays at or below `TEXT_BASED_PDF_THRESHOLD=200` may render page images and switch to the configured vision model.
+4. Direct image imports always require `resumeImportVisionModel`; `create-resume-dialog.tsx` must block the action early and surface the configuration hint before invoking AI when that value is absent.
+5. Successful parsing must convert the returned JSON into the desktop document contract and persist via `importDocument(...)`, with the final progress stage set to `saving` before the dialog closes or navigates away.
 
 ## Template Validation Contract
 
@@ -524,13 +709,19 @@ Rules:
 | Renderer -> `get_secret_inventory_snapshot` | Native secrets manifest or fallback exists | Descriptor-only inventory returns, with no plaintext secret values | Command throws / browser runtime | Placeholder inventory returns and UI marks the surface as fallback-only |
 | Renderer -> `get_template_validation_snapshot` | Workspace has representative templates | Representative documents render from workspace data | No representative docs available | Rust returns native sample docs and UI labels the source honestly |
 | Renderer -> `write_template_validation_export` | Valid HTML + writable user-selected path or workspace exports dir | HTML file lands at the selected system path (or workspace fallback path) and receipt returns final path | Browser fallback / cancelled save dialog / write failure / invalid path | Export button stays disabled in fallback; UI shows cancelled or explicit error state |
+| Renderer -> `write_export_file` | Valid `outputPath`, matching `expectedExtension`, and encoded bytes | Native write returns `{ fileName, outputPath, bytesWritten }` for HTML / TXT / DOCX / JSON exports | Browser fallback / invalid extension / invalid path / filesystem write failure | Export dialog must show a direct write error and never pretend the file was saved |
+| Renderer -> `write_pdf_export` | Valid `outputPath` and rendered HTML | Native PDF lands at the selected path and receipt reports actual output size | Browser fallback / browser executable missing / headless print failure / output file absent | Export dialog surfaces the PDF-specific failure and keeps the user-selected path visible |
 | Native startup / window events -> `workspace_settings.window_state_json` | Desktop runtime active + `rememberWindowState=true` | Main window reapplies the most recent normal bounds plus any `maximized`/`fullscreen` flags, while move/resize/close events persist the updated geometry | Browser fallback / invalid stored JSON / native window event wiring failure | Runtime logs a warning, fallback mode stays explicit, and the shell reverts to the default geometry without claiming persistence |
 | Native startup / tray events -> system tray icon + tray menu | Desktop runtime active + default icon available | Tray icon exposes Show / Hide To Tray / Quit actions and tray interaction can restore the main window | Browser fallback / missing icon / tray init failure | Runtime logs the tray failure explicitly and keeps the main window shell usable without pretending tray support |
 | Renderer -> `get_release_readiness_snapshot` | Native desktop runtime + Tauri config available | Settings page shows the real bundling/updater/tray/window-state posture with blockers when needed | Browser fallback / config gaps / missing updater feed/signing | Fallback stays explicitly blocked and native UI keeps incomplete updater chains visible instead of implying parity |
 | Renderer -> `check_for_app_update` | Native desktop runtime + running updater feed | Settings page reports current/latest versions or an available update without leaving the app | Browser fallback / unreachable feed / invalid latest.json | UI shows an explicit updater check error and keeps local smoke limitations visible |
-| Renderer -> `update_ai_provider_settings` | Provider, base URL, model are valid | Settings document is persisted and subsequent reads reflect the change | Browser fallback / invalid provider / empty model or base URL | UI shows explicit error; no silent fallback write |
+| Renderer -> `update_ai_provider_settings` | Provider, base URL, model are valid | Settings document is persisted and subsequent reads reflect the change, including `ai.resumeImportVisionModel` when provided | Browser fallback / invalid provider / empty model or base URL | UI shows explicit error; no silent fallback write |
+| Renderer -> `fetch_ai_models` | Supported provider plus configured API key | Provider model list returns in provider-specific normalized shape | Browser fallback / missing API key / upstream non-2xx / malformed response | Settings keeps the picker usable, may show an empty list, and must not claim models were discovered |
+| Renderer -> `test_ai_connectivity` | Supported provider with saved API key | Result returns `success=true`, measured `latencyMs`, and `errorMessage=null` | Browser fallback / missing API key / upstream auth or network failure | Settings shows the returned error text without crashing or throwing away the current draft values |
+| Renderer -> `test_exa_connectivity` | Saved Exa API key and reachable Exa base URL | Result returns `success=true`, measured `latencyMs`, and `errorMessage=null` | Browser fallback / missing API key / upstream auth or network failure | Settings shows the returned Exa error text and keeps the rest of the panel interactive |
 | Renderer -> `write_secret_value` | Valid secret key contract + non-empty value | Secret manifest and vault fallback update together | Browser fallback / invalid key / file write failure | UI shows explicit error; plaintext secret never echoes back to renderer |
 | Renderer -> `start_ai_prompt_stream` | Supported provider + saved secret + prompt | Start receipt returns and `desktop://ai-stream` emits started / delta / completed events | Unsupported provider / missing secret / upstream error | UI shows explicit failure state and event log captures the error |
+| Create Resume dialog -> `importResumeFromFile` | Supported file type and configured vision model when required | Progress advances through `validating` / `extracting|rendering` / `parsing` / `saving`, and `importDocument` returns a desktop document | Unsupported file / missing vision model / invalid AI JSON / save failure | Dialog shows progress or a specific import error instead of a generic endless spinner |
 | Page state mapping | `BootstrapContext` | Runtime-specific labels and warnings | Raw status shown without runtime check | UI becomes misleading and PR1 is not complete |
 
 ## Good / Base / Bad Cases
@@ -541,10 +732,13 @@ Rules:
 - `root.tsx` shows native runtime badge
 - `dashboard.tsx` shows real SQLite version instead of `browser-fallback`
 - `templates.tsx` renders representative `classic` / `modern` previews and writes HTML exports to a user-selected system path through the native save dialog
+- Editor export writes HTML / TXT / JSON / DOCX through `write_export_file` and writes PDF / PDF one-page through `write_pdf_export`, with the final receipt matching the path chosen in the native save dialog.
 - Desktop window restores the last geometry (including maximized/fullscreen state) after restart and honors the `rememberWindowState` toggle.
 - Native tray icon can hide the window, restore it from the tray, and quit the desktop shell without placeholder behavior.
 - `build:desktop:updater-feed` emits a signed local `latest.json`, and settings can perform a native updater check against the local smoke feed.
 - `settings.tsx` saves an OpenAI-compatible provider config + API key into the desktop workspace and streams an assistant response through `desktop://ai-stream`
+- `settings-dialog.tsx` loads provider-specific models, lets the user choose a dedicated resume-import vision model from the same returned list, and reports AI / Exa connectivity with explicit latency and error text.
+- Resume import shows stage-by-stage progress, parses text PDFs on the standard text model, and switches scanned PDFs or direct images onto the configured vision model.
 
 ### Base
 
@@ -552,6 +746,8 @@ Rules:
 - Pages still render, but root/home/library/settings all display fallback messaging and limitations
 - Template validation previews may render fallback samples, but export actions remain disabled
 - Settings may preview provider contracts, but config writes and native AI streaming stay unavailable
+- Settings model pickers may still open in browser fallback, but model discovery returns an empty list and connectivity tests return `Desktop runtime not available`.
+- Create-resume may still show the upload flow in browser preview, but native import/save success cannot be claimed there.
 - Tray behavior is intentionally unavailable in browser fallback; tray checks wait for the native desktop shell.
 - Release readiness stays blocked in browser fallback and does not claim real updater posture.
 - Local updater smoke may still warn that transport is HTTP/localhost until a hosted HTTPS feed replaces it.
@@ -562,11 +758,15 @@ Rules:
 - Renderer infers fallback by string-matching ad hoc runtime text only
 - Fallback snapshots render `created` / `cleanWorkspace` / `Initialized` without a fallback warning
 - Export UI claims success without a native write receipt from `write_template_validation_export`
+- Export UI claims success for DOCX / JSON / TXT / PDF without a receipt from `write_export_file` or `write_pdf_export`
 - Tray menu items exist but do nothing, or tray boot failure silently removes the feature without logging.
 - Settings UI implies updater parity even though feed/signing/artifact requirements are still missing.
 - Settings UI claims a provider is stream-ready without a saved secret or while browser fallback is active
+- Settings UI lets users select an arbitrary vision model value that is not persisted under `ai.resumeImportVisionModel`
 - Renderer consumes all `desktop://ai-stream` events globally without filtering by `requestId`
 - Desktop window always opens at the default size and ignores the previously persisted maximized/fullscreen state.
+- Resume import stays on a generic spinner even though stage-aware progress is available, or it sends scanned/image-only files through the text-only model path.
+- Vite prebundles `mupdf` or serves the Wasm URL as HTML, leading to `WebAssembly.instantiate(): expected magic word`.
 
 ## Required Tests And Assertion Points
 
@@ -578,17 +778,22 @@ Manual assertions:
 4. In the desktop shell, confirm `templates.tsx` shows the template validation lane with representative `classic` / `modern` templates.
 5. Trigger HTML export from the native desktop shell, choose a custom system save path, and confirm the returned path matches the selected location.
 6. Trigger the same export flow and cancel the save dialog; confirm the UI reports a cancelled outcome and no file is written.
-7. Confirm browser fallback keeps the template validation lane visible but disables native export.
-8. In the native desktop shell, save an OpenAI-compatible provider config and API key from `settings.tsx`.
-9. Run the native AI smoke test from `settings.tsx` and confirm the event log shows started / delta / completed (or explicit error) for the returned `requestId`.
-10. Confirm browser fallback keeps the AI controls visible but disables config writes and native streaming.
-11. Confirm library/settings copy changes between native and fallback modes.
-12. Resize or move the desktop window, close the app, and confirm the next launch restores the latest normal bounds while replaying any maximized/fullscreen state active at exit.
-13. Toggle between normal, maximized, and fullscreen states, close the shell, and confirm the restored session replays the flags while keeping the normal bounds updated for future runs.
-14. In the native desktop shell, confirm the tray icon can hide the window, restore it from tray interaction, and exit cleanly through the tray menu.
-15. In the native desktop shell, confirm settings show updater wiring plus local-smoke warnings for localhost / insecure transport.
-16. Run `pnpm run verify:desktop:release-readiness` and confirm it passes with warnings once updater feed, signing pubkey, and artifacts are configured.
-17. Run `pnpm run build:desktop:updater-feed`, start `pnpm run serve:desktop:updater-feed`, and confirm Settings can execute a native updater check against the local smoke feed.
+7. From the editor export dialog, save HTML, TXT, JSON, DOCX, PDF, and PDF one-page outputs from the native desktop shell; confirm each receipt path matches the selected location and that PDF one-page applies the fit-to-page layout.
+8. Confirm browser fallback keeps the template validation lane visible but disables native export.
+9. In the native desktop shell, save an OpenAI-compatible provider config and API key from `settings.tsx`.
+10. Open the settings model picker and the resume-import vision-model picker; confirm both are populated from `fetch_ai_models(...)`, and manual entry still persists if a model is not listed.
+11. Run the AI and Exa connectivity checks from `settings.tsx`; confirm each result returns latency plus either success or an explicit error string without leaving the dialog stuck in loading state.
+12. Import a text-based PDF and confirm progress advances through `validating` -> `extracting` -> `parsing` -> `saving`, with the standard text model remaining active.
+13. Import an image resume with no configured vision model and confirm the create-resume dialog blocks the action with the vision-model guidance instead of spinning forever.
+14. Import a scanned PDF with a configured vision model and confirm progress advances through `validating` -> `extracting` -> `rendering` -> `parsing` -> `saving`.
+15. Confirm browser fallback keeps the AI controls visible but disables config writes and native streaming.
+16. Confirm library/settings copy changes between native and fallback modes.
+17. Resize or move the desktop window, close the app, and confirm the next launch restores the latest normal bounds while replaying any maximized/fullscreen state active at exit.
+18. Toggle between normal, maximized, and fullscreen states, close the shell, and confirm the restored session replays the flags while keeping the normal bounds updated for future runs.
+19. In the native desktop shell, confirm the tray icon can hide the window, restore it from tray interaction, and exit cleanly through the tray menu.
+20. In the native desktop shell, confirm settings show updater wiring plus local-smoke warnings for localhost / insecure transport.
+21. Run `pnpm run verify:desktop:release-readiness` and confirm it passes with warnings once updater feed, signing pubkey, and artifacts are configured.
+22. Run `pnpm run build:desktop:updater-feed`, start `pnpm run serve:desktop:updater-feed`, and confirm Settings can execute a native updater check against the local smoke feed.
 
 Automated / static assertions:
 
@@ -598,6 +803,7 @@ Automated / static assertions:
 4. `pnpm run lint:desktop:shared`
 5. `pnpm lint` as repo-wide observation
 6. `pnpm --filter @rolerover/desktop exec tsc -b`
-
+7. `npm --prefix desktop run build`
+8. `pnpm run verify:desktop:migration`
 
 

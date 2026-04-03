@@ -28,6 +28,7 @@ export interface DesktopAiRuntimeConfig {
   provider: string;
   model?: string;
   baseUrl?: string;
+  resumeImportVisionModel?: string;
 }
 
 export interface RunPromptStreamOptions {
@@ -52,11 +53,13 @@ export async function getDesktopAiRuntimeConfig(): Promise<DesktopAiRuntimeConfi
       provider,
       model: providerConfig?.model || "",
       baseUrl: providerConfig?.baseUrl || undefined,
+      resumeImportVisionModel: settings.ai.resumeImportVisionModel || "",
     };
   } catch {
     return {
       provider: "openai",
       model: "",
+      resumeImportVisionModel: "",
     };
   }
 }
