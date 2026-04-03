@@ -1,19 +1,20 @@
-name: Desktop CI
+name: Release Desktop
 
 on:
-  pull_request:
-    branches: [main]
   push:
-    branches: [main]
-  workflow_dispatch:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
 
 concurrency:
-  group: desktop-ci-${{ github.ref }}
-  cancel-in-progress: true
+  group: desktop-release-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
-  verify:
-    name: Verify Desktop Boundary
+  release:
+    name: Draft Desktop Release
     runs-on: windows-latest
 
     steps:
@@ -46,6 +47,15 @@ jobs:
 
       - name: Verify desktop version sync
         run: pnpm run verify:desktop:version-sync
+
+      - name: Verify release tag matches package version
+        shell: pwsh
+        run: |
+          $version = (Get-Content package.json | ConvertFrom-Json).version
+          $expectedTag = "v$version"
+          if ($expectedTag -ne "${{ github.ref_name }}") {
+            throw "Release tag ${{ github.ref_name }} does not match package.json version $version."
+          }
 
       - name: Verify desktop migration gate
         run: pnpm run verify:desktop:migration
@@ -53,53 +63,14 @@ jobs:
       - name: Verify desktop release readiness
         run: pnpm run verify:desktop:release-readiness
 
-  package-smoke:
-    name: Packaged Desktop Smoke
-    if: github.event_name != 'pull_request'
-    needs: verify
-    runs-on: windows-latest
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 9
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: 'pnpm'
-
-      - name: Set up Rust
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: x86_64-pc-windows-msvc
-
-      - name: Cache Rust
-        uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: desktop/src-tauri -> .codex-cargo-target/desktop-tauri
-
-      - name: Install dependencies
-        run: pnpm install
-
-      - name: Verify desktop version sync
-        run: pnpm run verify:desktop:version-sync
-
-      - name: Ensure updater signing key
-        run: |
-          if ([string]::IsNullOrWhiteSpace($env:TAURI_SIGNING_PRIVATE_KEY)) {
-            pnpm --prefix desktop exec tauri signer generate --ci --write-keys .tauri/updater.key --force
-          } else {
-            Write-Host "Using repository TAURI_SIGNING_PRIVATE_KEY secret."
-          }
-        shell: powershell
+      - name: Validate updater signing key secret
+        shell: pwsh
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:TAURI_SIGNING_PRIVATE_KEY)) {
+            throw "TAURI_SIGNING_PRIVATE_KEY secret is required for tagged desktop releases."
+          }
 
       - name: Build Tauri Desktop
         run: pnpm run build:tauri
@@ -108,15 +79,26 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
 
-      - name: Upload Desktop Artifacts
-        uses: actions/upload-artifact@v4
+      - name: Build release updater manifest
+        run: pnpm run build:desktop:release-updater-manifest
+        env:
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          RELEASE_TAG: ${{ github.ref_name }}
+          RELEASE_UPDATER_MANIFEST_OUTPUT: desktop/.codex-temp/release-assets/latest.json
+
+      - name: Create draft GitHub release
+        uses: softprops/action-gh-release@v2
         with:
-          name: rolerover-desktop-windows-${{ github.sha }}
-          path: |
+          name: ${{ github.ref_name }}
+          draft: true
+          prerelease: false
+          generate_release_notes: true
+          fail_on_unmatched_files: true
+          files: |
             .codex-cargo-target/desktop-tauri/release/bundle/**/*.exe
             .codex-cargo-target/desktop-tauri/release/bundle/**/*.exe.sig
             .codex-cargo-target/desktop-tauri/release/bundle/**/*.msi
             .codex-cargo-target/desktop-tauri/release/bundle/**/*.msi.sig
             .codex-cargo-target/desktop-tauri/release/bundle/**/*.zip
             .codex-cargo-target/desktop-tauri/release/bundle/**/*.zip.sig
-          if-no-files-found: error
+            desktop/.codex-temp/release-assets/latest.json

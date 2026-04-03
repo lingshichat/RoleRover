@@ -58,11 +58,15 @@ This contract covers the bootstrap-stage desktop shell in `desktop/`:
 
 ```bash
 pnpm dev:tauri
+pnpm run dev:tauri:local-updater
+pnpm run sync:desktop-version
+pnpm run verify:desktop:version-sync
 pnpm run lint:desktop:active
 pnpm run lint:desktop:shared
 pnpm run verify:desktop:migration
 pnpm run report:desktop:release-readiness
 pnpm run verify:desktop:release-readiness
+pnpm run build:desktop:release-updater-manifest
 pnpm run build:desktop:updater-feed
 pnpm run serve:desktop:updater-feed
 pnpm lint   # repo-wide observation
@@ -94,6 +98,13 @@ To avoid high CPU/memory usage from repeated Rust recompilation during active de
 
 4. **GitHub CI Delegation**:
    Avoid running `pnpm build` or full `tauri build` locally. Push your code and rely on GitHub CI to produce the final `.exe` or `.msi` artifacts.
+
+5. **Local Updater Smoke Override**:
+   The committed `tauri.conf.json` points updater checks at the hosted GitHub Release feed. If you need localhost updater smoke, run:
+   ```bash
+   pnpm run dev:tauri:local-updater
+   ```
+   *This command generates a temporary `TAURI_CONFIG` override so the native shell can talk to `http://127.0.0.1:8765/latest.json` without committing localhost updater settings into production config.*
 
 ## Staged Migration Lint Boundary
 
@@ -634,6 +645,10 @@ Files:
 - `desktop/src/lib/desktop-api.ts`
 - `desktop/src/lib/desktop-loaders.ts`
 - `desktop/src/routes/settings.tsx`
+- `scripts/build-release-updater-manifest.mjs`
+- `scripts/build-tauri-desktop.mjs`
+- `scripts/run-tauri-local-updater.mjs`
+- `scripts/sync-desktop-version.mjs`
 - `scripts/verify-desktop-release-readiness.mjs`
 
 Rust command:
@@ -653,27 +668,27 @@ Read payload:
   "updaterArtifactsMode": "current",
   "updaterEndpointCount": 1,
   "updaterPubkeyConfigured": true,
-  "updaterDangerousInsecureTransport": true,
-  "updaterUsesLocalhost": true,
+  "updaterDangerousInsecureTransport": false,
+  "updaterUsesLocalhost": false,
   "updaterWindowsInstallMode": "passive",
   "trayIconReady": true,
   "rememberWindowStateEnabled": true,
   "blockers": [],
-  "warnings": [
-    "Updater config allows insecure transport so the local smoke feed can run over HTTP.",
-    "Updater endpoint currently targets localhost, which is suitable for local smoke only."
-  ],
+  "warnings": [],
 }
 ```
 
 Rules:
 
 1. The native desktop runtime must wire `tauri-plugin-updater` during bootstrap even if the renderer does not expose a user-facing update button yet.
-2. `tauri.conf.json` must declare `plugins.updater` with a feed endpoint and public key, and any localhost / insecure transport fallback must stay visible as warnings instead of being treated as production-ready hosting.
-3. `bundle.createUpdaterArtifacts` must be enabled so the native build emits signed updater payloads instead of only wiring the runtime plugin.
-4. `settings.tsx` must surface release blockers and warnings from the snapshot so PR6 can track truthful release posture inside the native shell.
-5. Browser fallback must return an explicitly blocked placeholder snapshot and must not imply real release readiness.
-6. `check_for_app_update` must fail explicitly when the feed is unreachable and must return parsed remote version metadata when the local smoke feed is running.
+2. `tauri.conf.json` must declare the production updater endpoint as the hosted GitHub Release feed, not localhost, and it must carry the current updater public key.
+3. Localhost updater smoke must flow through the generated `TAURI_CONFIG` override from `scripts/run-tauri-local-updater.mjs`; production config must not keep `dangerousInsecureTransportProtocol=true`.
+4. Root `package.json` is the single version source. `desktop/package.json`, `desktop/src-tauri/tauri.conf.json`, and `desktop/src-tauri/Cargo.toml` must be synchronized through `scripts/sync-desktop-version.mjs`.
+5. Tagged desktop releases use `vX.Y.Z` tags that match the root package version and create a draft GitHub Release containing installers, `.sig` files, and `latest.json`.
+6. `bundle.createUpdaterArtifacts` must be enabled so the native build emits signed updater payloads instead of only wiring the runtime plugin.
+7. `settings.tsx` must surface release blockers and warnings from the snapshot so PR6 can track truthful release posture inside the native shell.
+8. Browser fallback must return an explicitly blocked placeholder snapshot and must not imply real release readiness.
+9. `check_for_app_update` must fail explicitly when the feed is unreachable and must return parsed remote version metadata when the hosted feed or a temporary local smoke override is available.
 
 ## UI Truthfulness Contract
 
@@ -735,7 +750,8 @@ Rules:
 - Editor export writes HTML / TXT / JSON / DOCX through `write_export_file` and writes PDF / PDF one-page through `write_pdf_export`, with the final receipt matching the path chosen in the native save dialog.
 - Desktop window restores the last geometry (including maximized/fullscreen state) after restart and honors the `rememberWindowState` toggle.
 - Native tray icon can hide the window, restore it from the tray, and quit the desktop shell without placeholder behavior.
-- `build:desktop:updater-feed` emits a signed local `latest.json`, and settings can perform a native updater check against the local smoke feed.
+- `build:desktop:release-updater-manifest` emits a GitHub Release-ready `latest.json` whose `version` matches the tagged desktop build and whose URL points at the signed release artifact.
+- `build:desktop:updater-feed` emits a signed local `latest.json`, and `dev:tauri:local-updater` lets settings perform a native updater check against the local smoke feed without mutating committed production config.
 - `settings.tsx` saves an OpenAI-compatible provider config + API key into the desktop workspace and streams an assistant response through `desktop://ai-stream`
 - `settings-dialog.tsx` loads provider-specific models, lets the user choose a dedicated resume-import vision model from the same returned list, and reports AI / Exa connectivity with explicit latency and error text.
 - Resume import shows stage-by-stage progress, parses text PDFs on the standard text model, and switches scanned PDFs or direct images onto the configured vision model.
@@ -750,7 +766,7 @@ Rules:
 - Create-resume may still show the upload flow in browser preview, but native import/save success cannot be claimed there.
 - Tray behavior is intentionally unavailable in browser fallback; tray checks wait for the native desktop shell.
 - Release readiness stays blocked in browser fallback and does not claim real updater posture.
-- Local updater smoke may still warn that transport is HTTP/localhost until a hosted HTTPS feed replaces it.
+- Hosted production config stays on the GitHub Release feed, while local updater smoke remains opt-in through the generated localhost override.
 
 ### Bad
 
@@ -760,6 +776,7 @@ Rules:
 - Export UI claims success without a native write receipt from `write_template_validation_export`
 - Export UI claims success for DOCX / JSON / TXT / PDF without a receipt from `write_export_file` or `write_pdf_export`
 - Tray menu items exist but do nothing, or tray boot failure silently removes the feature without logging.
+- Production updater config quietly drifts back to localhost / insecure transport, or version files drift away from the root package version.
 - Settings UI implies updater parity even though feed/signing/artifact requirements are still missing.
 - Settings UI claims a provider is stream-ready without a saved secret or while browser fallback is active
 - Settings UI lets users select an arbitrary vision model value that is not persisted under `ai.resumeImportVisionModel`
@@ -791,9 +808,11 @@ Manual assertions:
 17. Resize or move the desktop window, close the app, and confirm the next launch restores the latest normal bounds while replaying any maximized/fullscreen state active at exit.
 18. Toggle between normal, maximized, and fullscreen states, close the shell, and confirm the restored session replays the flags while keeping the normal bounds updated for future runs.
 19. In the native desktop shell, confirm the tray icon can hide the window, restore it from tray interaction, and exit cleanly through the tray menu.
-20. In the native desktop shell, confirm settings show updater wiring plus local-smoke warnings for localhost / insecure transport.
-21. Run `pnpm run verify:desktop:release-readiness` and confirm it passes with warnings once updater feed, signing pubkey, and artifacts are configured.
-22. Run `pnpm run build:desktop:updater-feed`, start `pnpm run serve:desktop:updater-feed`, and confirm Settings can execute a native updater check against the local smoke feed.
+20. Run `pnpm run verify:desktop:version-sync` and confirm desktop version files still match the root `package.json`.
+21. In the native desktop shell, confirm settings show hosted updater wiring without production localhost/insecure warnings.
+22. Run `pnpm run verify:desktop:release-readiness` and confirm it passes once updater feed, signing pubkey, and artifacts are configured.
+23. Run `pnpm run build:desktop:release-updater-manifest` with `GITHUB_REPOSITORY` and `RELEASE_TAG` set; confirm the emitted `latest.json` points at the signed GitHub Release asset.
+24. Run `pnpm run build:desktop:updater-feed`, start `pnpm run serve:desktop:updater-feed`, then launch `pnpm run dev:tauri:local-updater` and confirm Settings can execute a native updater check against the local smoke feed.
 
 Automated / static assertions:
 
@@ -804,6 +823,7 @@ Automated / static assertions:
 5. `pnpm lint` as repo-wide observation
 6. `pnpm --filter @rolerover/desktop exec tsc -b`
 7. `npm --prefix desktop run build`
-8. `pnpm run verify:desktop:migration`
+8. `pnpm run verify:desktop:version-sync`
+9. `pnpm run verify:desktop:migration`
 
 

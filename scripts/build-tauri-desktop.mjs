@@ -8,12 +8,63 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const ROOT = path.resolve(__dirname, "..");
 const defaultKeyPath = path.join(ROOT, "desktop", ".tauri", "updater.key");
+const localEnvPath = path.join(ROOT, ".env.local");
+
+function readLocalEnvValue(key) {
+  if (!existsSync(localEnvPath)) {
+    return undefined;
+  }
+
+  const lines = readFileSync(localEnvPath, "utf8").split(/\r?\n/gu);
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (trimmed.length === 0 || trimmed.startsWith("#")) {
+      continue;
+    }
+
+    const separatorIndex = line.indexOf("=");
+    if (separatorIndex === -1) {
+      continue;
+    }
+
+    const name = line.slice(0, separatorIndex).trim();
+    if (name !== key) {
+      continue;
+    }
+
+    let value = line.slice(separatorIndex + 1);
+    if (
+      (value.startsWith('"') && value.endsWith('"'))
+      || (value.startsWith("'") && value.endsWith("'"))
+    ) {
+      value = value.slice(1, -1);
+    }
+    return value;
+  }
+
+  return undefined;
+}
 
 function firstDefined(...values) {
   return values.find((value) => typeof value === "string" && value.length > 0);
 }
 
 const env = { ...process.env };
+for (const key of [
+  "TAURI_SIGNING_PRIVATE_KEY",
+  "TAURI_SIGNING_PRIVATE_KEY_PATH",
+  "TAURI_SIGNING_PRIVATE_KEY_PASSWORD",
+  "TAURI_PRIVATE_KEY",
+  "TAURI_PRIVATE_KEY_PATH",
+  "TAURI_PRIVATE_KEY_PASSWORD",
+]) {
+  if (!env[key]) {
+    const localValue = readLocalEnvValue(key);
+    if (typeof localValue === "string" && localValue.length > 0) {
+      env[key] = localValue;
+    }
+  }
+}
 if (!env.CI) {
   env.CI = "true";
 }

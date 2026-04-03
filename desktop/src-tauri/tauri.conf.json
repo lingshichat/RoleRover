@@ -27,11 +27,10 @@
   },
   "plugins": {
     "updater": {
-      "dangerousInsecureTransportProtocol": true,
       "endpoints": [
-        "http://127.0.0.1:8765/latest.json"
+        "https://github.com/lingshichat/RoleRover/releases/latest/download/latest.json"
       ],
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDdEQ0Y2OUQ0Mjk4Q0U0MjQKUldRazVJd3AxR25QZll1cFgrSXFMZ0RNR1BvcmZ1Y25qcE5kc2JNclRhYjFXOEhHTC9uNHYvam4K",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEEyMzNDODA5QjExNkEwNUUKUldSZW9CYXhDY2d6b3JkSFpucmhmS0VzOFBWZzJMVGFBOXc2SC9aZW5CaEs2QnlBQlRHL216RWwK",
       "windows": {
         "installMode": "passive"
       }

@@ -20,9 +20,10 @@ Build and feed flow:
 1. Run `pnpm run build:tauri`
 2. Run `pnpm run build:desktop:updater-feed`
 3. Run `pnpm run serve:desktop:updater-feed`
-4. In the native desktop shell, use the updater check action from Settings
+4. In another shell, run `pnpm run dev:tauri:local-updater`
+5. In the native desktop shell, use the updater check action from Settings
 
 Notes:
-- The current endpoint is `http://127.0.0.1:8765/latest.json`
-- `dangerousInsecureTransportProtocol` is enabled only so this local smoke feed can run over HTTP
-- Replace the localhost endpoint with a real HTTPS host before treating this as a production updater channel
+- The committed production updater endpoint now points to `https://github.com/lingshichat/RoleRover/releases/latest/download/latest.json`
+- `pnpm run dev:tauri:local-updater` generates a temporary `TAURI_CONFIG` override so local updater smoke can still target `http://127.0.0.1:8765/latest.json`
+- `dangerousInsecureTransportProtocol` is enabled only in that generated local override so the smoke feed can run over HTTP

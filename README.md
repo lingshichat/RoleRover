@@ -158,12 +158,23 @@ docker run -d -p 3000:3000 \
 | `pnpm lint` | Run ESLint |
 | `pnpm type-check` | TypeScript type checking |
 | `pnpm --filter @rolerover/desktop run dev` | Run desktop UI pure in browser for fast iteration |
-| `pnpm run tauri:dev` | Start the Tauri app with HMR to the native desktop shell |
+| `pnpm run dev:tauri` | Start the Tauri app with HMR to the native desktop shell |
+| `pnpm run dev:tauri:local-updater` | Start the Tauri app with a temporary localhost updater config for local smoke testing |
+| `pnpm run sync:desktop-version` | Sync desktop package / Tauri / Cargo versions from the root `package.json` |
+| `pnpm run verify:desktop:version-sync` | Fail if desktop version files drift from the root `package.json` |
 | `pnpm db:generate` | Generate Drizzle migrations (SQLite) |
 | `pnpm db:generate:pg` | Generate Drizzle migrations (PostgreSQL) |
 | `pnpm db:migrate` | Execute database migrations |
 | `pnpm db:studio` | Open Drizzle Studio |
 | `pnpm db:seed` | Seed sample data |
+
+## Desktop Release Workflow
+
+1. Bump the root [`package.json`](./package.json) version.
+2. Run `pnpm run sync:desktop-version` and commit the synced desktop version files.
+3. Push a matching `vX.Y.Z` tag.
+4. GitHub Actions builds the Windows desktop artifacts, generates updater `latest.json`, and creates a draft GitHub Release.
+5. Download the draft artifacts, run the minimum smoke pass, then publish the draft release.
 
 ## Project Structure
 

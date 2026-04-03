@@ -7,12 +7,18 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const ROOT = path.resolve(__dirname, "..");
 
-const bundleDir = path.join(ROOT, "desktop", "src-tauri", "target", "release", "bundle");
 const feedDir = path.join(ROOT, "desktop", "dev-updater");
 const artifactsDir = path.join(feedDir, "artifacts");
 const latestJsonPath = path.join(feedDir, "latest.json");
 const tauriConfigPath = path.join(ROOT, "desktop", "src-tauri", "tauri.conf.json");
 const tauriConfig = JSON.parse(fs.readFileSync(tauriConfigPath, "utf8"));
+const explicitBundleDir = process.env.DESKTOP_TAURI_BUNDLE_DIR?.trim();
+const bundleDirCandidates = [
+  explicitBundleDir,
+  path.join(ROOT, ".codex-cargo-target", "desktop-tauri", "release", "bundle"),
+  path.join(ROOT, "desktop", "src-tauri", "target", "release", "bundle"),
+].filter((value) => typeof value === "string" && value.length > 0);
+const bundleDir = bundleDirCandidates.find((candidate) => fs.existsSync(candidate));
 const supportedArtifactExtensions = [".zip", ".exe", ".msi"];
 
 function walk(dir) {
@@ -29,9 +35,9 @@ function walk(dir) {
   return files;
 }
 
-if (!fs.existsSync(bundleDir)) {
+if (!bundleDir) {
   console.error(
-    `[build-local-updater-feed] Bundle directory not found: ${bundleDir}. Run pnpm run build:tauri first.`,
+    `[build-local-updater-feed] Bundle directory not found. Checked: ${bundleDirCandidates.join(", ")}. Run pnpm run build:tauri first.`,
   );
   process.exit(1);
 }
