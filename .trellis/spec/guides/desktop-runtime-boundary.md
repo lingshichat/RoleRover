@@ -61,6 +61,33 @@ pnpm run serve:desktop:updater-feed
 pnpm lint   # repo-wide observation
 ```
 
+## Lightweight Development Workflow
+
+To avoid high CPU/memory usage from repeated Rust recompilation during active development, follow this decoupled workflow:
+
+1. **Browser-Only Mode for UI/Component Changes**:
+   Run the Vite dev server pure in the browser without Tauri.
+   ```bash
+   pnpm --filter @rolerover/desktop run dev
+   ```
+   *Open `http://localhost:1420` in your browser. The renderer will automatically fall back to placeholder data for native commands, allowing fast UI iteration.*
+
+2. **Background HMR for Native Desktop**:
+   If you need to test the UI inside the native shell, start Tauri once and leave it running.
+   ```bash
+   pnpm run tauri:dev
+   ```
+   *Vite's Hot Module Replacement (HMR) will stream React changes directly to the Tauri window without requiring Rust to restart.*
+
+3. **Rust-Only Validation**:
+   When changing Rust code in `desktop/src-tauri/`, avoid full local builds. Use cargo's fast check mode instead:
+   ```bash
+   cd desktop/src-tauri && cargo check
+   ```
+
+4. **GitHub CI Delegation**:
+   Avoid running `pnpm build` or full `tauri build` locally. Push your code and rely on GitHub CI to produce the final `.exe` or `.msi` artifacts.
+
 ## Staged Migration Lint Boundary
 
 Blocking hard gate for the current desktop migration slice:

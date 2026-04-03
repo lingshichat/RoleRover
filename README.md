@@ -157,6 +157,8 @@ docker run -d -p 3000:3000 \
 | `pnpm start` | Start production server |
 | `pnpm lint` | Run ESLint |
 | `pnpm type-check` | TypeScript type checking |
+| `pnpm --filter @rolerover/desktop run dev` | Run desktop UI pure in browser for fast iteration |
+| `pnpm run tauri:dev` | Start the Tauri app with HMR to the native desktop shell |
 | `pnpm db:generate` | Generate Drizzle migrations (SQLite) |
 | `pnpm db:generate:pg` | Generate Drizzle migrations (PostgreSQL) |
 | `pnpm db:migrate` | Execute database migrations |
