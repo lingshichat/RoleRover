@@ -13,6 +13,7 @@ const TAURI_CONFIG_PATH = "desktop/src-tauri/tauri.conf.json";
 const TAURI_CARGO_PATH = "desktop/src-tauri/Cargo.toml";
 const TAURI_ICON_PATH = "desktop/src-tauri/icons/icon.ico";
 const CHECKLIST_CANDIDATES = [
+  ".trellis/spec/guides/windows-release-smoke-checklist.md",
   ".trellis/tasks/03-29-desktop-hardening-release-readiness/windows-release-smoke-checklist.md",
   ".trellis/tasks/archive/2026-04/03-29-desktop-hardening-release-readiness/windows-release-smoke-checklist.md",
 ];
@@ -160,7 +161,7 @@ function collectChecks() {
     },
     {
       status: fileExists(checklistPath) ? "pass" : "fail",
-      label: "PR6 Windows release checklist exists",
+      label: "Windows release smoke checklist exists",
       detail: `Expected checklist at ${checklistPath}.`,
     },
     {
