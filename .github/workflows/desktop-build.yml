@@ -44,11 +44,16 @@ jobs:
       - name: Build frontend for Desktop
         run: pnpm --filter @rolerover/desktop run build
 
-      - name: Generate CI updater signing key
+      - name: Ensure updater signing key
         run: |
-          pnpm --prefix desktop exec tauri signer generate --ci -w .tauri/updater.key -f -p ""
+          if ([string]::IsNullOrWhiteSpace($env:TAURI_SIGNING_PRIVATE_KEY)) {
+            pnpm --prefix desktop exec tauri signer generate --ci -w .tauri/updater.key -f -p ""
+          } else {
+            Write-Host "Using repository TAURI_SIGNING_PRIVATE_KEY secret."
+          }
         shell: powershell
-        if: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY == '' }}
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
 
       - name: Build Tauri Desktop
         run: pnpm run build:tauri
