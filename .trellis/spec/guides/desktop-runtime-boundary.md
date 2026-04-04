@@ -63,13 +63,16 @@ pnpm run sync:desktop-version
 pnpm run verify:desktop:version-sync
 pnpm run lint:desktop:active
 pnpm run lint:desktop:shared
+pnpm run lint:web:reference
+pnpm run report:web:reference
+pnpm run lint:repo:full
 pnpm run verify:desktop:migration
 pnpm run report:desktop:release-readiness
 pnpm run verify:desktop:release-readiness
 pnpm run build:desktop:release-updater-manifest
 pnpm run build:desktop:updater-feed
 pnpm run serve:desktop:updater-feed
-pnpm lint   # repo-wide observation
+pnpm lint   # product-aligned desktop/shared lint + web-reference observation
 ```
 
 ## Lightweight Development Workflow
@@ -116,9 +119,10 @@ Blocking hard gate for the current desktop migration slice:
 - `pnpm --filter @rolerover/desktop build`
 - `cargo check --manifest-path desktop/src-tauri/Cargo.toml --target-dir .codex-cargo-target/desktop-tauri`
 
-Desktop active surface enforced by `lint:desktop:active`:
+Desktop blocking surface enforced by `lint:desktop:active`:
 
 - `desktop/src/lib/desktop-api.ts`
+- `desktop/src/lib/ai/reasoning-parser.ts`
 - `desktop/src/lib/template-validation.ts`
 - `desktop/src/i18n.ts`
 - `desktop/src/routes/root.tsx`
@@ -127,23 +131,69 @@ Desktop active surface enforced by `lint:desktop:active`:
 - `desktop/src/routes/editor.tsx`
 - `desktop/src/routes/templates.tsx`
 - `desktop/src/routes/settings.tsx`
+- `desktop/src/components/ai/ai-chat-panel.tsx`
+- `desktop/src/components/ai/ai-chat-bubble.tsx`
+- `desktop/src/components/ai/reasoning-block.tsx`
+- `desktop/src/components/ai/tool-execution-card.tsx`
+- `desktop/src/components/dashboard/create-resume-dialog.tsx`
+- `desktop/src/lib/resume-import.ts`
 
-Shared active surface v1 enforced by `lint:desktop:shared`:
+Shared blocking surface enforced by `lint:desktop:shared`:
 
+- `src/components/ui/`
+- `src/components/dashboard/template-thumbnail.tsx`
+- `src/components/preview/`
 - `src/lib/constants.ts`
+- `src/lib/export/`
 - `src/lib/pdf/export-tailwind-css.ts`
+- `src/lib/ai/parse-schema.ts`
+- `src/lib/qrcode.ts`
+- `src/lib/section-content.ts`
+- `src/lib/template-labels.ts`
 - `src/lib/template-renderer/index.ts`
 - `src/lib/template-renderer/template-contract.ts`
 - `src/lib/template-renderer/types.ts`
 - `src/lib/template-renderer/templates/classic.tsx`
 - `src/lib/template-renderer/templates/modern.tsx`
+- `src/lib/utils.ts`
 - `src/types/resume.ts`
 - `scripts/build-export-css.ts` when the export CSS contract changes
 - `scripts/verify-desktop-lint-boundary.mjs` when the migration gate changes
 
+Pure web-reference observation surface reported by `lint:web:reference` /
+`report:web:reference`:
+
+- `src/app/`
+- `src/components/ai/`
+- `src/components/auth/`
+- `src/components/dashboard/` except `template-thumbnail.tsx`
+- `src/components/editor/`
+- `src/components/landing/`
+- `src/components/layout/`
+- `src/components/resume/`
+- `src/components/settings/`
+- `src/components/tour/`
+- `src/hooks/`
+- `src/i18n/`
+- `src/lib/ai/` except `parse-schema.ts`
+- `src/lib/auth/`
+- `src/lib/config.ts`
+- `src/lib/db/`
+- `src/lib/desktop/`
+- `src/lib/resume-target.ts`
+- `src/lib/utils/`
+- `src/middleware.ts`
+- `src/stores/`
+- `src/types/` except `resume.ts`
+
 Observation-only signals for this migration stage:
 
-- `pnpm lint` at repo scope
+- `pnpm lint` as the product-aligned composite: desktop/shared blocking lint +
+  web-reference observation
+- `pnpm run report:web:reference` for archived web feature debt that should not
+  block desktop shipping
+- `pnpm run lint:repo:full` when you intentionally need the full legacy repo
+  lint sweep
 - Desktop build chunk warnings
 - Shared-surface warnings that remain outside the current blocking contract
 
@@ -872,10 +922,11 @@ Automated / static assertions:
 2. `cargo check --manifest-path desktop/src-tauri/Cargo.toml --target-dir .codex-cargo-target/desktop-tauri`
 3. `pnpm run lint:desktop:active`
 4. `pnpm run lint:desktop:shared`
-5. `pnpm lint` as repo-wide observation
-6. `pnpm --filter @rolerover/desktop exec tsc -b`
-7. `npm --prefix desktop run build`
-8. `pnpm run verify:desktop:version-sync`
-9. `pnpm run verify:desktop:migration`
+5. `pnpm run report:web:reference` as archived web observation
+6. `pnpm lint` as the product-aligned desktop/shared composite
+7. `pnpm --filter @rolerover/desktop exec tsc -b`
+8. `npm --prefix desktop run build`
+9. `pnpm run verify:desktop:version-sync`
+10. `pnpm run verify:desktop:migration`
 
 

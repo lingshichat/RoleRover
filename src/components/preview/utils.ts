@@ -38,7 +38,7 @@ export function degreeField(degree: string, field: string | undefined): string {
 }
 
 export function isSectionEmpty(section: ResumeSection): boolean {
-  const content = section.content as any;
+  const content = section.content;
 
   if (section.type === 'summary') {
     return !(content as SummaryContent).text;
@@ -50,8 +50,9 @@ export function isSectionEmpty(section: ResumeSection): boolean {
   }
 
   // work_experience, education, projects, certifications, languages, custom
-  if ('items' in content) {
-    return !content.items?.length;
+  if (typeof content === 'object' && content !== null && 'items' in content) {
+    const items = (content as { items?: unknown[] }).items;
+    return !items?.length;
   }
 
   return false;

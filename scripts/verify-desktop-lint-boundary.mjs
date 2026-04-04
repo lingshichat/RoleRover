@@ -7,8 +7,9 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const ROOT = path.resolve(__dirname, "..");
 
-const DESKTOP_ACTIVE_FILES = [
+const DESKTOP_BLOCKING_PATHS = [
   "desktop/src/lib/desktop-api.ts",
+  "desktop/src/lib/ai/reasoning-parser.ts",
   "desktop/src/lib/template-validation.ts",
   "desktop/src/i18n.ts",
   "desktop/src/routes/root.tsx",
@@ -17,19 +18,67 @@ const DESKTOP_ACTIVE_FILES = [
   "desktop/src/routes/editor.tsx",
   "desktop/src/routes/templates.tsx",
   "desktop/src/routes/settings.tsx",
+  "desktop/src/components/ai/ai-chat-panel.tsx",
+  "desktop/src/components/ai/ai-chat-bubble.tsx",
+  "desktop/src/components/ai/reasoning-block.tsx",
+  "desktop/src/components/ai/tool-execution-card.tsx",
+  "desktop/src/components/dashboard/create-resume-dialog.tsx",
+  "desktop/src/lib/resume-import.ts",
 ];
 
-const SHARED_ACTIVE_FILES = [
+const SHARED_BLOCKING_PATHS = [
+  "src/components/ui",
+  "src/components/dashboard/template-thumbnail.tsx",
+  "src/components/preview",
   "src/lib/constants.ts",
+  "src/lib/export",
   "src/lib/pdf/export-tailwind-css.ts",
+  "src/lib/ai/parse-schema.ts",
+  "src/lib/qrcode.ts",
+  "src/lib/section-content.ts",
+  "src/lib/template-labels.ts",
   "src/lib/template-renderer/index.ts",
   "src/lib/template-renderer/template-contract.ts",
   "src/lib/template-renderer/types.ts",
   "src/lib/template-renderer/templates/classic.tsx",
   "src/lib/template-renderer/templates/modern.tsx",
+  "src/lib/utils.ts",
   "src/types/resume.ts",
   "scripts/build-export-css.ts",
   "scripts/verify-desktop-lint-boundary.mjs",
+];
+
+const WEB_REFERENCE_PATHS = [
+  "src/app",
+  "src/middleware.ts",
+  "src/components/ai",
+  "src/components/auth",
+  "src/components/dashboard",
+  "src/components/editor",
+  "src/components/landing",
+  "src/components/layout",
+  "src/components/resume",
+  "src/components/settings",
+  "src/components/tour",
+  "src/hooks",
+  "src/i18n",
+  "src/lib/ai",
+  "src/lib/auth",
+  "src/lib/config.ts",
+  "src/lib/db",
+  "src/lib/desktop",
+  "src/lib/resume-target.ts",
+  "src/lib/utils",
+  "src/stores",
+  "src/types",
+];
+
+const WEB_REFERENCE_IGNORES = [
+  "src/components/dashboard/template-thumbnail.tsx",
+  "src/components/preview/**",
+  "src/components/ui/**",
+  "src/lib/ai/parse-schema.ts",
+  "src/types/resume.ts",
 ];
 
 function resolveCommandBin(command) {
@@ -40,7 +89,7 @@ function quoteShellArg(arg) {
   return /[\s"]/u.test(arg) ? `"${arg.replaceAll("\"", '\\"')}"` : arg;
 }
 
-function runCommand(label, command, args) {
+function runCommand(label, command, args, options = {}) {
   console.log(`\n[verify-desktop-lint-boundary] ${label}`);
   console.log(`> ${command} ${args.join(" ")}`);
 
@@ -64,10 +113,16 @@ function runCommand(label, command, args) {
       `[verify-desktop-lint-boundary] Failed to start ${command}:`,
       result.error,
     );
+    if (options.allowFailure) {
+      return 1;
+    }
     process.exit(1);
   }
 
   if (typeof result.status === "number" && result.status !== 0) {
+    if (options.allowFailure) {
+      return result.status;
+    }
     process.exit(result.status);
   }
 
@@ -75,18 +130,30 @@ function runCommand(label, command, args) {
     console.error(
       `[verify-desktop-lint-boundary] ${command} exited from signal ${result.signal}.`,
     );
+    if (options.allowFailure) {
+      return 1;
+    }
     process.exit(1);
   }
+
+  return 0;
 }
 
-function runEslint(label, files) {
-  if (files.length === 0) {
+function runEslint(label, paths, options = {}) {
+  if (paths.length === 0) {
     console.log(`[verify-desktop-lint-boundary] ${label}: no files to lint.`);
-    return;
+    return 0;
   }
 
   // ESLint warnings remain visible in output, but only errors block by default.
-  runCommand(label, "pnpm", ["exec", "eslint", ...files]);
+  const args = ["exec", "eslint", ...paths];
+  for (const pattern of options.ignorePatterns ?? []) {
+    args.push("--ignore-pattern", pattern);
+  }
+
+  return runCommand(label, "pnpm", args, {
+    allowFailure: options.allowFailure,
+  });
 }
 
 function normalizeRelativeFile(filePath) {
@@ -96,39 +163,98 @@ function normalizeRelativeFile(filePath) {
   return path.relative(ROOT, absolutePath).split(path.sep).join("/");
 }
 
-function getBoundaryFiles() {
-  return new Set([...DESKTOP_ACTIVE_FILES, ...SHARED_ACTIVE_FILES]);
+function normalizeBoundaryPaths(paths) {
+  return getUniqueFiles(paths.map((filePath) => normalizeRelativeFile(filePath)));
 }
 
 function getUniqueFiles(files) {
   return [...new Set(files)];
 }
 
+function pathMatchesBoundary(filePath, boundaryPath) {
+  return filePath === boundaryPath || filePath.startsWith(`${boundaryPath}/`);
+}
+
+function getBoundaryMatches(touchedFiles, boundaryPaths) {
+  const normalizedBoundaryPaths = normalizeBoundaryPaths(boundaryPaths);
+  return touchedFiles.filter((filePath) =>
+    normalizedBoundaryPaths.some((boundaryPath) =>
+      pathMatchesBoundary(filePath, boundaryPath),
+    ),
+  );
+}
+
 function printUsage() {
-  console.log(`Usage:\n  node scripts/verify-desktop-lint-boundary.mjs active\n  node scripts/verify-desktop-lint-boundary.mjs shared\n  node scripts/verify-desktop-lint-boundary.mjs touched <file...>\n  node scripts/verify-desktop-lint-boundary.mjs list\n  node scripts/verify-desktop-lint-boundary.mjs verify`);
+  console.log(`Usage:\n  node scripts/verify-desktop-lint-boundary.mjs active\n  node scripts/verify-desktop-lint-boundary.mjs shared\n  node scripts/verify-desktop-lint-boundary.mjs lint\n  node scripts/verify-desktop-lint-boundary.mjs reference\n  node scripts/verify-desktop-lint-boundary.mjs reference-report\n  node scripts/verify-desktop-lint-boundary.mjs touched <file...>\n  node scripts/verify-desktop-lint-boundary.mjs list\n  node scripts/verify-desktop-lint-boundary.mjs verify`);
 }
 
 const mode = process.argv[2] ?? "verify";
 
 switch (mode) {
   case "active": {
-    runEslint("Linting desktop active surface", DESKTOP_ACTIVE_FILES);
+    runEslint("Linting desktop blocking surface", DESKTOP_BLOCKING_PATHS);
     break;
   }
 
   case "shared": {
-    runEslint("Linting desktop shared active surface", SHARED_ACTIVE_FILES);
+    runEslint("Linting desktop shared blocking surface", SHARED_BLOCKING_PATHS);
+    break;
+  }
+
+  case "reference": {
+    runEslint("Linting pure web reference surface", WEB_REFERENCE_PATHS, {
+      ignorePatterns: WEB_REFERENCE_IGNORES,
+    });
+    break;
+  }
+
+  case "reference-report": {
+    const status = runEslint(
+      "Observing pure web reference surface",
+      WEB_REFERENCE_PATHS,
+      {
+        ignorePatterns: WEB_REFERENCE_IGNORES,
+        allowFailure: true,
+      },
+    );
+
+    if (status !== 0) {
+      console.log(
+        "[verify-desktop-lint-boundary] Web reference lint debt remains observation-only for the desktop client line.",
+      );
+    }
+    break;
+  }
+
+  case "lint": {
+    runEslint("Linting desktop blocking surface", DESKTOP_BLOCKING_PATHS);
+    runEslint("Linting desktop shared blocking surface", SHARED_BLOCKING_PATHS);
+
+    const status = runEslint(
+      "Observing pure web reference surface",
+      WEB_REFERENCE_PATHS,
+      {
+        ignorePatterns: WEB_REFERENCE_IGNORES,
+        allowFailure: true,
+      },
+    );
+
+    if (status !== 0) {
+      console.log(
+        "[verify-desktop-lint-boundary] Web reference lint debt remains observation-only for the desktop client line.",
+      );
+    }
     break;
   }
 
   case "touched": {
-    const boundaryFiles = getBoundaryFiles();
     const touchedFiles = getUniqueFiles(
       process.argv.slice(3).map(normalizeRelativeFile),
     );
-    const matchedFiles = touchedFiles.filter((filePath) =>
-      boundaryFiles.has(filePath),
-    );
+    const matchedFiles = getUniqueFiles([
+      ...getBoundaryMatches(touchedFiles, DESKTOP_BLOCKING_PATHS),
+      ...getBoundaryMatches(touchedFiles, SHARED_BLOCKING_PATHS),
+    ]);
 
     if (matchedFiles.length === 0) {
       console.log(
@@ -148,8 +274,10 @@ switch (mode) {
     console.log(
       JSON.stringify(
         {
-          desktopActiveFiles: DESKTOP_ACTIVE_FILES,
-          sharedActiveFiles: SHARED_ACTIVE_FILES,
+          desktopBlockingPaths: normalizeBoundaryPaths(DESKTOP_BLOCKING_PATHS),
+          sharedBlockingPaths: normalizeBoundaryPaths(SHARED_BLOCKING_PATHS),
+          webReferencePaths: normalizeBoundaryPaths(WEB_REFERENCE_PATHS),
+          webReferenceIgnores: WEB_REFERENCE_IGNORES,
         },
         null,
         2,
@@ -160,8 +288,8 @@ switch (mode) {
 
   case "verify": {
     runCommand("Type-checking repo", "pnpm", ["type-check"]);
-    runEslint("Linting desktop active surface", DESKTOP_ACTIVE_FILES);
-    runEslint("Linting desktop shared active surface", SHARED_ACTIVE_FILES);
+    runEslint("Linting desktop blocking surface", DESKTOP_BLOCKING_PATHS);
+    runEslint("Linting desktop shared blocking surface", SHARED_BLOCKING_PATHS);
     runCommand("Building desktop renderer", "pnpm", [
       "--filter",
       "@rolerover/desktop",

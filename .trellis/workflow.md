@@ -245,7 +245,7 @@ python3 ./.trellis/scripts/task.py create "<title>" --slug <task-name>
 - The default expectation is still repo-wide lint/type/test coverage.
 - If an active task PRD or spec defines a narrower hard gate, that task-defined gate becomes the blocking requirement for the slice.
 - Repo-wide observation commands should still be run when requested and reported separately from blocking failures.
-- For the current desktop migration line, prefer `pnpm run verify:desktop:migration` as the blocking gate and treat repo-wide `pnpm lint` as observation until legacy debt is intentionally pulled into scope.
+- For the current desktop migration line, prefer `pnpm run verify:desktop:migration` as the blocking gate, use `pnpm lint` as the product-aligned desktop/shared composite, and run `pnpm run report:web:reference` or `pnpm run lint:repo:full` separately when you need archived web-reference observation.
 
 ---
 

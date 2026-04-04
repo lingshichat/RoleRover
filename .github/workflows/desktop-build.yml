@@ -50,6 +50,11 @@ jobs:
       - name: Verify desktop migration gate
         run: pnpm run verify:desktop:migration
 
+      - name: Observe web reference lint debt
+        if: always()
+        continue-on-error: true
+        run: pnpm run report:web:reference
+
       - name: Verify desktop release readiness
         run: pnpm run verify:desktop:release-readiness
 

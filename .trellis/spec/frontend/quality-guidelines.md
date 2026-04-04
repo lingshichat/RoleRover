@@ -17,10 +17,15 @@ TypeScript config) and strict TypeScript. There is no dedicated frontend test
 script yet, so manual testing is part of the required review process.
 
 For staged desktop migration tasks, the blocking gate may be narrower when the
-task PRD or guide says so. In the current desktop rewrite, use
-`pnpm run verify:desktop:migration` as the blocking gate and report repo-wide
-`pnpm lint` separately as an observation signal until additional legacy debt is
-intentionally pulled into scope.
+task PRD or guide says so. In the current desktop rewrite:
+
+- `pnpm run verify:desktop:migration` is the blocking gate
+- `pnpm lint` runs desktop/shared blocking lint and reports pure web-reference
+  lint debt as observation-only
+- `pnpm run report:web:reference` reports archived web-reference debt without
+  turning it into a desktop release blocker
+- `pnpm run lint:repo:full` remains available when you explicitly want the full
+  legacy repo lint picture
 
 ---
 
@@ -62,9 +67,16 @@ intentionally pulled into scope.
 - Run `pnpm lint`.
 - Run `pnpm type-check`.
 - If the task PRD or guide defines a narrower hard gate, run that gate as the
-  blocking check and report repo-wide lint separately as observation.
+  blocking check and keep any web-reference lint debt clearly marked as
+  observation-only.
 - For the current desktop migration boundary, run
   `pnpm run verify:desktop:migration` as the blocking check.
+- If the work stays inside archived web-reference code, run
+  `pnpm run lint:web:reference` when you want strict lint inside that archived
+  lane, or `pnpm run report:web:reference` when you only need observation, and
+  state clearly that neither result changes the desktop client release gate.
+- Use `pnpm run lint:repo:full` only when you intentionally want the full
+  legacy repo debt report, including deprecated web/reference surfaces.
 - Manually verify the exact flow you changed.
 - If the change touches localized UI, verify both `messages/en.json` and
   `messages/zh.json` coverage or at least confirm the impacted locale path.
@@ -89,5 +101,7 @@ were performed.
   handling still work?
 - If visual styling changed, does it still match JadeAI's current neutral + pink
   design language and the correct page-type intensity?
-- Were the blocking verification commands run (repo default or task-defined hard gate), and was repo-wide `pnpm lint` reported when it remained observation-only?
+- Were the blocking verification commands run (repo default or task-defined hard gate), and was the distinction between desktop blocking lint and web-reference observation kept clear?
+- If the work stayed in pure web-reference code, was that scope called out so
+  desktop CI expectations were not misrepresented?
 - Was the changed UI flow manually tested?

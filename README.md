@@ -143,6 +143,10 @@ Local signing notes:
 | `pnpm --filter @rolerover/desktop run dev` | Run the desktop renderer in browser-only preview mode on `127.0.0.1:1420` |
 | `pnpm run dev:tauri` | Start the Tauri desktop app with native runtime access |
 | `pnpm run dev:tauri:local-updater` | Start the Tauri app with a temporary localhost updater override for smoke testing |
+| `pnpm lint` | Run desktop/shared blocking lint and report pure web-reference lint debt without failing the desktop product line |
+| `pnpm run lint:web:reference` | Run strict lint for the web-reference surface when you intentionally work there, without turning it into a desktop release gate |
+| `pnpm run report:web:reference` | Report archived web-reference lint debt without failing the desktop product line |
+| `pnpm run lint:repo:full` | Run the full legacy repo ESLint sweep, including deprecated web/reference surfaces |
 | `pnpm run sync:desktop-version` | Sync desktop package, Tauri, and Cargo versions from the root `package.json` |
 | `pnpm run verify:desktop:version-sync` | Fail if desktop version files drift from the root `package.json` |
 | `pnpm run verify:desktop:migration` | Run the current desktop migration verification gate |

@@ -43,6 +43,8 @@ verify:
   # Prefer a task-defined blocking gate when staged migration boundaries exist.
   # Desktop migration example:
   # - pnpm run verify:desktop:migration
-  # Repo-wide lint can still run as observation:
+  # Product-aligned composite lint:
   # - pnpm lint
+  # Archived web-reference observation:
+  # - pnpm run report:web:reference
   # - pnpm typecheck
