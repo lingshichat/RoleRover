@@ -88,6 +88,53 @@ const PRODUCT_REWRITE_RULES = [
     summary: "Desktop navigation and template thumbnails",
   },
 ];
+const INITIAL_RELEASE_SECTIONS = [
+  {
+    title: "New",
+    items: [
+      "Native desktop workflow for resume editing and export",
+      "Desktop resume workspace with drag-and-drop editing, inline updates, and autosave",
+      "Template browsing, preview, customization, and export in the desktop app",
+      "AI workflows for resume writing, resume parsing, JD matching, cover letters, translation, and writing polish",
+      "English and Chinese interface",
+    ],
+  },
+  {
+    title: "Improved",
+    items: [
+      "More consistent desktop experience across dashboard, editor, templates, and settings",
+      "Local-first AI settings with model discovery and connectivity checks",
+      "In-app update checking, release notes viewing, and installer download flow",
+    ],
+  },
+];
+const SECTION_TITLE_TRANSLATIONS = new Map([
+  ["New", "新增"],
+  ["Improved", "优化"],
+]);
+const SUMMARY_TRANSLATIONS = new Map([
+  ["Native desktop workflow for resume editing and export", "原生桌面简历编辑与导出工作流"],
+  ["Desktop resume workspace with drag-and-drop editing, inline updates, and autosave", "桌面简历工作台，支持拖拽编辑、行内修改和自动保存"],
+  ["Template browsing, preview, customization, and export in the desktop app", "在桌面端支持模板浏览、预览、定制与导出"],
+  ["AI workflows for resume writing, resume parsing, JD matching, cover letters, translation, and writing polish", "支持 AI 简历撰写、简历解析、JD 匹配、求职信生成、翻译与润色"],
+  ["English and Chinese interface", "支持中英文界面"],
+  ["More consistent desktop experience across dashboard, editor, templates, and settings", "仪表盘、编辑器、模板与设置等核心页面体验更加统一"],
+  ["Local-first AI settings with model discovery and connectivity checks", "本地优先的 AI 设置，支持模型发现与连通性检测"],
+  ["In-app update checking, release notes viewing, and installer download flow", "支持应用内检查更新、查看更新日志与下载安装流程"],
+  ["Desktop dashboard experience", "桌面端仪表盘体验"],
+  ["Desktop templates browsing and preview", "桌面端模板浏览与预览"],
+  ["Desktop editor experience now matches the web app more closely", "桌面端编辑器体验与 Web 版更加一致"],
+  ["Core desktop screens now feel more consistent and polished", "桌面端核心页面更统一、更完善"],
+  ["AI settings now support model discovery and connectivity checks", "AI 设置现已支持模型发现与连通性检测"],
+  ["Expanded AI settings and refreshed key AI dialogs", "扩展 AI 设置并重做关键 AI 弹窗"],
+  ["Native AI streaming in the desktop app", "桌面端原生 AI 流式输出"],
+  ["Template preview and export in the desktop app", "桌面端模板预览与导出"],
+  ["Template preview dialog and button styling", "模板预览弹窗与按钮样式优化"],
+  ["Templates page layout and create-dialog thumbnails", "模板页布局与创建弹窗缩略图优化"],
+  ["Desktop navigation and template thumbnails", "桌面导航与模板缩略图优化"],
+  ["Ship in-app updater flow", "上线应用内更新流程"],
+  ["Restore tool-driven resume editing", "恢复工具驱动的简历编辑流程"],
+]);
 
 function runGit(rootDir, args) {
   return execFileSync("git", args, {
@@ -260,25 +307,46 @@ function buildSections(commits) {
   ].filter((section) => section.items.length > 0);
 }
 
+function buildInitialReleaseSections() {
+  return INITIAL_RELEASE_SECTIONS.map((section) => ({
+    title: section.title,
+    items: [...section.items],
+  }));
+}
+
+function translateSectionTitle(title) {
+  return SECTION_TITLE_TRANSLATIONS.get(title) ?? title;
+}
+
+function translateSummary(summary) {
+  return SUMMARY_TRANSLATIONS.get(summary) ?? summary;
+}
+
+function formatBilingualText(english, chinese) {
+  return chinese && chinese !== english ? `${english} / ${chinese}` : english;
+}
+
 function buildCompareLine(repository, previousTag, currentTag) {
   if (!repository || !previousTag) {
     return null;
   }
 
-  return `Compared with [${previousTag}](https://github.com/${repository}/compare/${previousTag}...${currentTag}).`;
+  return `Compared with [${previousTag}](https://github.com/${repository}/compare/${previousTag}...${currentTag}). / 对比 [${previousTag}](https://github.com/${repository}/compare/${previousTag}...${currentTag})。`;
 }
 
 function buildReleaseNotesBody(sections) {
   if (sections.length === 0) {
-    return "No user-facing additions or improvements were summarized for this release.";
+    return "No user-facing additions or improvements were summarized for this release. / 本次发布暂无可总结的用户可感知新增或优化。";
   }
 
   const lines = [];
   for (const section of sections) {
-    lines.push(`## ${section.title}`);
+    lines.push(
+      `## ${formatBilingualText(section.title, translateSectionTitle(section.title))}`,
+    );
     lines.push("");
     for (const item of section.items) {
-      lines.push(`- ${item}`);
+      lines.push(`- ${formatBilingualText(item, translateSummary(item))}`);
     }
     lines.push("");
   }
@@ -296,14 +364,14 @@ function buildReleaseNotesMarkdown({
   const lines = [
     `# RoleRover ${currentTag}`,
     "",
-    `Release date: ${releaseDate}`,
+    `Release date: ${releaseDate} / 发布日期：${releaseDate}`,
   ];
 
   const compareLine = buildCompareLine(repository, previousTag, currentTag);
   if (compareLine) {
     lines.push(compareLine);
   } else {
-    lines.push("Initial tagged desktop release for the current GitHub-based release workflow.");
+    lines.push("First official desktop release of RoleRover. / RoleRover 首个正式桌面版本发布。");
   }
 
   lines.push("");
@@ -317,7 +385,7 @@ export function collectReleaseNotes(rootDir, currentTag, repository) {
   const previousTag = getPreviousReleaseTag(rootDir, currentTag);
   const rangeSpec = previousTag ? `${previousTag}..${currentTag}` : currentTag;
   const commits = getCommitLines(rootDir, rangeSpec);
-  const sections = buildSections(commits);
+  const sections = previousTag ? buildSections(commits) : buildInitialReleaseSections();
   const releaseDate = new Date().toISOString().slice(0, 10);
 
   return {

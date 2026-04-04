@@ -1,6 +1,6 @@
 [package]
 name = "rolerover-desktop"
-version = "0.1.0"
+version = "1.0.0"
 description = "Tauri bootstrap shell for the RoleRover desktop rewrite"
 authors = ["RoleRover"]
 edition = "2021"
@@ -25,3 +25,4 @@ tauri-plugin-dialog = "2.0.0"
 tauri-plugin-opener = "2.5.3"
 tauri-plugin-updater = "2.0.0-rc.4"
 uuid = { version = "1.18.1", features = ["v4"] }
+
