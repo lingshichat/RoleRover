@@ -361,11 +361,18 @@ export interface SecretValueWriteInput {
 export interface StartAiPromptStreamInput {
   provider: string;
   prompt: string;
+  documentId?: string;
   model?: string;
   baseUrl?: string;
   requestId?: string;
   systemPrompt?: string;
   images?: string[];
+  conversation?: DesktopAiConversationMessage[];
+}
+
+export interface DesktopAiConversationMessage {
+  role: "user" | "assistant";
+  content: string;
 }
 
 export interface AiStreamStartReceipt {
@@ -380,7 +387,22 @@ export type DesktopAiStreamEventKind =
   | "started"
   | "delta"
   | "completed"
-  | "error";
+  | "error"
+  | "tool";
+
+export type DesktopAiToolCallState =
+  | "input-streaming"
+  | "output-available"
+  | "output-error";
+
+export interface DesktopAiToolCallPayload {
+  toolCallId: string;
+  toolName: string;
+  state: DesktopAiToolCallState;
+  input?: unknown;
+  output?: unknown;
+  errorText?: string | null;
+}
 
 export interface DesktopAiStreamEvent {
   requestId: string;
@@ -394,6 +416,7 @@ export interface DesktopAiStreamEvent {
   deltaText?: string | null;
   accumulatedText?: string | null;
   errorMessage?: string | null;
+  toolCall?: DesktopAiToolCallPayload | null;
 }
 
 export type ImporterSourceKind =

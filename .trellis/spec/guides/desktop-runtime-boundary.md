@@ -292,8 +292,19 @@ Prompt stream start input:
   "provider": "openai",
   "baseUrl": "https://api.openai.com/v1",
   "model": "gpt-4o",
+  "documentId": "resume-1",
   "prompt": "Summarize the desktop runtime boundary.",
-  "systemPrompt": "Respond in concise English."
+  "systemPrompt": "Respond in concise English.",
+  "conversation": [
+    {
+      "role": "user",
+      "content": "Rewrite my summary to sound more quantitative."
+    },
+    {
+      "role": "assistant",
+      "content": "Share the current summary and I will update it."
+    }
+  ]
 }
 ```
 
@@ -327,15 +338,53 @@ Incremental event payload:
 }
 ```
 
+Tool event payload:
+
+```json
+{
+  "requestId": "4a4f7b6f-1f25-4b6d-a1a8-0b83e5c7023d",
+  "provider": "openai",
+  "model": "gpt-4o",
+  "kind": "tool",
+  "startedAtEpochMs": 1710000000000,
+  "emittedAtEpochMs": 1710000001300,
+  "finishedAtEpochMs": null,
+  "chunkIndex": null,
+  "deltaText": null,
+  "accumulatedText": null,
+  "errorMessage": null,
+  "toolCall": {
+    "toolCallId": "call_123",
+    "toolName": "updateSection",
+    "state": "output-available",
+    "input": {
+      "sectionId": "summary-1",
+      "content": {
+        "text": "Led a 12-person team and shipped three releases."
+      }
+    },
+    "output": {
+      "success": true,
+      "documentId": "resume-1",
+      "sectionId": "summary-1"
+    },
+    "errorText": null
+  }
+}
+```
+
 Rules:
 
 1. `get_secret_inventory_snapshot` may expose secret descriptors and presence only; it must never return plaintext secret values.
 2. `update_ai_provider_settings` persists the selected provider's `baseUrl` / `model` under the desktop workspace settings document and may also flip `defaultProvider`.
 3. `write_secret_value` must prefer the Windows OS keyring backend for new writes, update the manifest descriptor list, and only retain fallback storage when migration debt still exists; clearing or missing values must not silently claim success.
 4. `start_ai_prompt_stream` resolves provider config and secret from the desktop workspace contract, not from browser local storage or web request headers.
-5. PR5 validates the OpenAI-compatible streaming path first. Unsupported providers must fail explicitly instead of pretending native parity.
-6. Renderer consumers must filter `desktop://ai-stream` events by `requestId` and build the final transcript from `deltaText` / `accumulatedText`.
-7. Future providers extend by adding dispatcher branches behind the same command + event contract; the renderer event model must stay stable.
+5. Renderer must pass the current `documentId` plus a bounded `conversation` array when chat continuity or resume-edit tool execution depends on prior turns; desktop runtime must not infer either value from browser-only state.
+6. Resume-edit tool execution is part of the same `start_ai_prompt_stream` contract. When the model emits OpenAI-compatible tool calls, the runtime must execute supported tools (`updateSection`, `updateResumeMetadata`) against desktop storage and mirror the result back through `desktop://ai-stream` with `kind="tool"`.
+7. Resume-edit tools are only valid when `documentId` is present. Missing `documentId` must fail explicitly instead of pretending the resume was updated.
+8. Renderer consumers must filter `desktop://ai-stream` events by `requestId`, merge `kind="delta"` into the transcript, and preserve `kind="tool"` as a visible tool execution trail instead of silently collapsing writes into plain assistant text.
+9. PR5 validates the OpenAI-compatible streaming path first. Unsupported providers must fail explicitly instead of pretending native parity.
+10. Future providers extend by adding dispatcher branches behind the same command + event contract; the renderer event model must stay stable.
 
 ## AI Provider Discovery And Resume Import Settings Contract
 
@@ -481,6 +530,7 @@ Renderer files:
 - `desktop/src/components/dashboard/create-resume-dialog.tsx`
 - `desktop/src/lib/resume-import.ts`
 - `desktop/src/components/editor/ai-dialog-helpers.ts`
+- `desktop/src-tauri/tauri.conf.json`
 
 Progress payload:
 
@@ -513,6 +563,7 @@ Rules:
 3. Text-based PDFs must prefer local MuPDF text extraction and continue on the standard text model. Only PDFs whose extracted text length stays at or below `TEXT_BASED_PDF_THRESHOLD=200` may render page images and switch to the configured vision model.
 4. Direct image imports always require `resumeImportVisionModel`; `create-resume-dialog.tsx` must block the action early and surface the configuration hint before invoking AI when that value is absent.
 5. Successful parsing must convert the returned JSON into the desktop document contract and persist via `importDocument(...)`, with the final progress stage set to `saving` before the dialog closes or navigates away.
+6. Windows desktop drag-and-drop import relies on the renderer receiving the native HTML5 drop event. `desktop/src-tauri/tauri.conf.json` must keep the main window `dragDropEnabled: false`; otherwise Tauri intercepts the file drop and the import surface will never receive the file.
 
 ## Template Validation Contract
 
@@ -735,7 +786,7 @@ Rules:
 | Renderer -> `test_ai_connectivity` | Supported provider with saved API key | Result returns `success=true`, measured `latencyMs`, and `errorMessage=null` | Browser fallback / missing API key / upstream auth or network failure | Settings shows the returned error text without crashing or throwing away the current draft values |
 | Renderer -> `test_exa_connectivity` | Saved Exa API key and reachable Exa base URL | Result returns `success=true`, measured `latencyMs`, and `errorMessage=null` | Browser fallback / missing API key / upstream auth or network failure | Settings shows the returned Exa error text and keeps the rest of the panel interactive |
 | Renderer -> `write_secret_value` | Valid secret key contract + non-empty value | Secret manifest and vault fallback update together | Browser fallback / invalid key / file write failure | UI shows explicit error; plaintext secret never echoes back to renderer |
-| Renderer -> `start_ai_prompt_stream` | Supported provider + saved secret + prompt | Start receipt returns and `desktop://ai-stream` emits started / delta / completed events | Unsupported provider / missing secret / upstream error | UI shows explicit failure state and event log captures the error |
+| Renderer -> `start_ai_prompt_stream` | Supported provider + saved secret + prompt, plus `documentId` when resume-edit tools are needed | Start receipt returns and `desktop://ai-stream` emits started / delta / tool / completed events | Unsupported provider / missing secret / upstream error / missing `documentId` for resume tools | UI shows explicit failure state, keeps tool activity visible, and reloads desktop resume state after successful tool writes |
 | Create Resume dialog -> `importResumeFromFile` | Supported file type and configured vision model when required | Progress advances through `validating` / `extracting|rendering` / `parsing` / `saving`, and `importDocument` returns a desktop document | Unsupported file / missing vision model / invalid AI JSON / save failure | Dialog shows progress or a specific import error instead of a generic endless spinner |
 | Page state mapping | `BootstrapContext` | Runtime-specific labels and warnings | Raw status shown without runtime check | UI becomes misleading and PR1 is not complete |
 
@@ -753,8 +804,9 @@ Rules:
 - `build:desktop:release-updater-manifest` emits a GitHub Release-ready `latest.json` whose `version` matches the tagged desktop build and whose URL points at the signed release artifact.
 - `build:desktop:updater-feed` emits a signed local `latest.json`, and `dev:tauri:local-updater` lets settings perform a native updater check against the local smoke feed without mutating committed production config.
 - `settings.tsx` saves an OpenAI-compatible provider config + API key into the desktop workspace and streams an assistant response through `desktop://ai-stream`
+- Desktop AI chat keeps a bounded recent conversation history, shows tool execution blocks for resume writes, and reloads the affected desktop resume after successful `updateSection` / `updateResumeMetadata` events.
 - `settings-dialog.tsx` loads provider-specific models, lets the user choose a dedicated resume-import vision model from the same returned list, and reports AI / Exa connectivity with explicit latency and error text.
-- Resume import shows stage-by-stage progress, parses text PDFs on the standard text model, and switches scanned PDFs or direct images onto the configured vision model.
+- Resume import shows stage-by-stage progress, parses text PDFs on the standard text model, switches scanned PDFs or direct images onto the configured vision model, and accepts drag-and-drop file input on Windows.
 
 ### Base
 

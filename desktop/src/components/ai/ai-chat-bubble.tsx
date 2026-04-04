@@ -113,13 +113,27 @@ export function AIChatBubble({ resumeId }: AIChatBubbleProps) {
   }, []);
 
   useEffect(() => {
-    void refreshRuntimeStatus();
+    const timeoutId = window.setTimeout(() => {
+      void refreshRuntimeStatus();
+    }, 0);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
   }, [refreshRuntimeStatus]);
 
   useEffect(() => {
-    if (showAiChat) {
-      void refreshRuntimeStatus();
+    if (!showAiChat) {
+      return;
     }
+
+    const timeoutId = window.setTimeout(() => {
+      void refreshRuntimeStatus();
+    }, 0);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
   }, [refreshRuntimeStatus, showAiChat]);
 
   const handleBubbleMouseDown = useCallback(
@@ -251,7 +265,7 @@ export function AIChatBubble({ resumeId }: AIChatBubbleProps) {
         </div>
 
         <div className="flex flex-1 flex-col overflow-hidden">
-          <AIChatContent resumeId={resumeId} hideTitle />
+          <AIChatContent key={resumeId} resumeId={resumeId} hideTitle />
         </div>
       </div>
 

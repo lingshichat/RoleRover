@@ -34,16 +34,23 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { parseReasoningContent } from "../../lib/ai/reasoning-parser";
 import { useEditorStore } from "../../stores/editor-store";
 import { useResumeStore } from "../../stores/resume-store";
 import {
+  getDocument,
   getSecretInventorySnapshot,
   getWorkspaceSettingsSnapshot,
   listenToAiStreamEvents,
   startAiPromptStream,
   fetchAiModels,
+  type DesktopAiConversationMessage,
+  type DesktopAiToolCallPayload,
   type DesktopAiStreamEvent,
 } from "../../lib/desktop-api";
+import { toResumeDocument } from "../../lib/desktop-document-mappers";
+import { ReasoningBlock } from "./reasoning-block";
+import { ToolExecutionCard } from "./tool-execution-card";
 
 interface AIChatPanelProps {
   resumeId: string;
@@ -62,6 +69,7 @@ interface ChatMessage {
   content: string;
   createdAt: number;
   error?: boolean;
+  toolCalls?: DesktopAiToolCallPayload[];
 }
 
 interface ChatSession {
@@ -69,6 +77,11 @@ interface ChatSession {
   title: string;
   updatedAt: number;
   messages: ChatMessage[];
+}
+
+interface InitialChatState {
+  sessions: ChatSession[];
+  activeSessionId: string | null;
 }
 
 interface RuntimeChatSettings {
@@ -81,6 +94,8 @@ interface RuntimeChatSettings {
 
 const SESSION_STORAGE_VERSION = 1;
 const SESSION_STORAGE_PREFIX = "desktop-ai-chat-sessions";
+const MAX_CONVERSATION_HISTORY_MESSAGES = 12;
+const MAX_CONVERSATION_HISTORY_CHARS = 12_000;
 
 function createId(prefix: string): string {
   return `${prefix}-${Date.now().toString(36)}-${Math.random()
@@ -149,6 +164,25 @@ function loadStoredSessions(resumeId: string): ChatSession[] {
   }
 }
 
+function getInitialChatState(
+  resumeId: string,
+  fallbackTitle: string,
+): InitialChatState {
+  const storedSessions = resumeId ? loadStoredSessions(resumeId) : [];
+  if (storedSessions.length > 0) {
+    return {
+      sessions: storedSessions,
+      activeSessionId: storedSessions[0].id,
+    };
+  }
+
+  const initialSession = createSession(fallbackTitle);
+  return {
+    sessions: [initialSession],
+    activeSessionId: initialSession.id,
+  };
+}
+
 function persistSessions(resumeId: string, sessions: ChatSession[]): void {
   if (typeof window === "undefined") {
     return;
@@ -201,12 +235,102 @@ function buildFriendlyError(rawMessage: string, fallback: string): string {
   return rawMessage;
 }
 
+function toConversationContent(message: ChatMessage): string {
+  if (message.role === "assistant") {
+    const parsed = parseReasoningContent(message.content);
+    return (parsed.answerText || parsed.reasoningText || "").trim();
+  }
+
+  return message.content.trim();
+}
+
+function buildConversationHistory(
+  messages: ChatMessage[],
+): DesktopAiConversationMessage[] {
+  const collected: DesktopAiConversationMessage[] = [];
+  let totalChars = 0;
+
+  for (const message of [...messages].reverse()) {
+    if (message.error) {
+      continue;
+    }
+
+    const content = toConversationContent(message);
+    if (!content) {
+      continue;
+    }
+
+    const nextTotalChars = totalChars + content.length;
+    if (
+      collected.length >= MAX_CONVERSATION_HISTORY_MESSAGES ||
+      nextTotalChars > MAX_CONVERSATION_HISTORY_CHARS
+    ) {
+      break;
+    }
+
+    collected.push({
+      role: message.role,
+      content,
+    });
+    totalChars = nextTotalChars;
+  }
+
+  return collected.reverse();
+}
+
+function buildResumeEditSystemPrompt(
+  sections: Array<{
+    id: string;
+    type: string;
+    title: string;
+  }>,
+): string {
+  const sectionList = sections.length
+    ? sections
+        .map(
+          (section) =>
+            `- [${section.type}] "${section.title}" (sectionId: ${section.id})`,
+        )
+        .join("\n")
+    : "- No editable sections were provided.";
+
+  return [
+    "You are RoleRover's desktop resume assistant.",
+    "Keep answers concise, actionable, and in the user's language.",
+    "If fetched webpage content or search results are included in the prompt, use them directly, cite the URLs you relied on, and do not say you cannot access the link or browse the web.",
+    "When the user asks to update, rewrite, optimize, add, or directly modify the resume, you MUST use the available resume-editing tools instead of outputting raw resume JSON.",
+    "Never dump the full resume JSON unless the user explicitly asks for raw JSON.",
+    "For section edits, use the exact sectionId values provided below.",
+    "When calling updateSection, send the FULL updated content object for that section and preserve untouched fields plus existing item IDs.",
+    "After a resume-edit tool succeeds, briefly confirm what changed.",
+    "Available resume sections:",
+    sectionList,
+  ].join("\n");
+}
+
+function upsertToolCall(
+  toolCalls: DesktopAiToolCallPayload[],
+  nextToolCall: DesktopAiToolCallPayload,
+): DesktopAiToolCallPayload[] {
+  const existingIndex = toolCalls.findIndex(
+    (toolCall) => toolCall.toolCallId === nextToolCall.toolCallId,
+  );
+
+  if (existingIndex === -1) {
+    return [...toolCalls, nextToolCall];
+  }
+
+  return toolCalls.map((toolCall, index) =>
+    index === existingIndex ? nextToolCall : toolCall,
+  );
+}
+
 export function AIChatContent({
   resumeId,
   hideTitle = false,
 }: AIChatContentProps) {
   const { t } = useTranslation();
-  const { currentResume, sections } = useResumeStore();
+  const { currentResume, sections, isDirty, save, setResume } = useResumeStore();
 
   const translate = useCallback(
     (key: string, fallback: string) => {
@@ -226,7 +350,6 @@ export function AIChatContent({
     "Describe what you want to improve...",
   );
   const thinkingLabel = translate("ai.thinking", "AI is thinking...");
-  const bubbleTooltip = translate("ai.bubbleTooltip", "Chat with AI Assistant");
   const apiKeyMissingTitle = translate(
     "ai.apiKeyMissing",
     "API Key Not Configured",
@@ -240,6 +363,13 @@ export function AIChatContent({
     "ai.errorMessage",
     "Something went wrong. Please try again.",
   );
+  const reasoningLabel = translate("ai.reasoning", "Thought process");
+  const toolCallingLabel = translate("ai.toolCalling", "Calling:");
+  const toolResultLabel = translate("ai.toolResult", "Result");
+  const toolCallErrorLabel = translate("ai.toolCallError", "Failed");
+  const [initialChatState] = useState<InitialChatState>(() =>
+    getInitialChatState(resumeId, newChatLabel),
+  );
 
   const [runtimeSettings, setRuntimeSettings] = useState<RuntimeChatSettings>({
     loading: true,
@@ -250,23 +380,33 @@ export function AIChatContent({
   });
   const [selectedModel, setSelectedModel] = useState("");
   const [fetchedModelOptions, setFetchedModelOptions] = useState<string[]>([]);
-  const [sessions, setSessions] = useState<ChatSession[]>([]);
-  const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
+  const [sessions, setSessions] = useState<ChatSession[]>(initialChatState.sessions);
+  const [activeSessionId, setActiveSessionId] = useState<string | null>(
+    initialChatState.activeSessionId,
+  );
   const [historyOpen, setHistoryOpen] = useState(false);
   const [input, setInput] = useState("");
   const [isThinking, setIsThinking] = useState(false);
   const [streamingText, setStreamingText] = useState("");
+  const [streamingToolCalls, setStreamingToolCalls] = useState<
+    DesktopAiToolCallPayload[]
+  >([]);
   const [errorMessage, setErrorMessage] = useState("");
 
   const activeSessionIdRef = useRef<string | null>(null);
   const requestIdRef = useRef<string | null>(null);
   const streamingTextRef = useRef("");
+  const streamingToolCallsRef = useRef<DesktopAiToolCallPayload[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
   const isNearBottomRef = useRef(true);
 
   const activeSession = useMemo(
     () => sessions.find((session) => session.id === activeSessionId) ?? null,
     [activeSessionId, sessions],
+  );
+  const parsedStreamingContent = useMemo(
+    () => parseReasoningContent(streamingText),
+    [streamingText],
   );
 
   const modelOptions = useMemo(() => {
@@ -278,6 +418,24 @@ export function AIChatContent({
       ),
     );
   }, [runtimeSettings.model, fetchedModelOptions, selectedModel]);
+
+  const reloadDocumentIntoStore = useCallback(
+    async (documentId: string) => {
+      if (!documentId) {
+        return;
+      }
+
+      try {
+        const document = await getDocument(documentId);
+        if (document) {
+          setResume(toResumeDocument(document));
+        }
+      } catch (error) {
+        console.error("Failed to reload desktop resume after AI tool call:", error);
+      }
+    },
+    [setResume],
+  );
 
 
   const refreshRuntimeSettings = useCallback(async () => {
@@ -326,7 +484,13 @@ export function AIChatContent({
   }, []);
 
   useEffect(() => {
-    void refreshRuntimeSettings();
+    const timeoutId = window.setTimeout(() => {
+      void refreshRuntimeSettings();
+    }, 0);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
   }, [refreshRuntimeSettings]);
 
   useEffect(() => {
@@ -341,30 +505,18 @@ export function AIChatContent({
   }, [refreshRuntimeSettings]);
 
   useEffect(() => {
-    const storedSessions = loadStoredSessions(resumeId);
-    if (storedSessions.length > 0) {
-      setSessions(storedSessions);
-      setActiveSessionId(storedSessions[0].id);
-    } else {
-      const initialSession = createSession(newChatLabel);
-      setSessions([initialSession]);
-      setActiveSessionId(initialSession.id);
-    }
-
-    setHistoryOpen(false);
-    setInput("");
-    setIsThinking(false);
-    setStreamingText("");
-    streamingTextRef.current = "";
-    setErrorMessage("");
-    requestIdRef.current = null;
-  }, [resumeId, newChatLabel]);
-
-  useEffect(() => {
     activeSessionIdRef.current = activeSessionId;
   }, [activeSessionId]);
 
   useEffect(() => {
+    streamingToolCallsRef.current = streamingToolCalls;
+  }, [streamingToolCalls]);
+
+  useEffect(() => {
+    if (!resumeId) {
+      return;
+    }
+
     persistSessions(resumeId, sessions);
   }, [resumeId, sessions]);
 
@@ -383,8 +535,22 @@ export function AIChatContent({
           return;
         }
 
+        if (event.kind === "tool" && event.toolCall) {
+          setStreamingToolCalls((previous) =>
+            upsertToolCall(previous, event.toolCall as DesktopAiToolCallPayload),
+          );
+          return;
+        }
+
         if (event.kind === "completed") {
           const sessionId = activeSessionIdRef.current;
+          const toolCalls = streamingToolCallsRef.current;
+          const shouldReloadResume = toolCalls.some(
+            (toolCall) =>
+              toolCall.state === "output-available" &&
+              (toolCall.toolName === "updateSection" ||
+                toolCall.toolName === "updateResumeMetadata"),
+          );
           if (sessionId) {
             const content = event.accumulatedText || streamingTextRef.current;
             setSessions((previous) =>
@@ -394,7 +560,7 @@ export function AIChatContent({
                     ? {
                         ...session,
                         updatedAt: Date.now(),
-                        messages: content.trim()
+                        messages: content.trim() || toolCalls.length > 0
                           ? [
                               ...session.messages,
                               {
@@ -402,6 +568,8 @@ export function AIChatContent({
                                 role: "assistant",
                                 content,
                                 createdAt: Date.now(),
+                                toolCalls:
+                                  toolCalls.length > 0 ? toolCalls : undefined,
                               },
                             ]
                           : session.messages,
@@ -412,9 +580,15 @@ export function AIChatContent({
             );
           }
 
+          if (shouldReloadResume) {
+            void reloadDocumentIntoStore(resumeId);
+          }
+
           setIsThinking(false);
           setStreamingText("");
           streamingTextRef.current = "";
+          setStreamingToolCalls([]);
+          streamingToolCallsRef.current = [];
           setErrorMessage("");
           requestIdRef.current = null;
           return;
@@ -439,7 +613,7 @@ export function AIChatContent({
     return () => {
       unlisten?.();
     };
-  }, [genericError]);
+  }, [genericError, reloadDocumentIntoStore, resumeId]);
 
   useEffect(() => {
     const element = scrollRef.current;
@@ -448,7 +622,7 @@ export function AIChatContent({
     }
 
     element.scrollTop = element.scrollHeight;
-  }, [activeSession?.messages, errorMessage, isThinking, streamingText]);
+  }, [activeSession?.messages, errorMessage, isThinking, streamingText, streamingToolCalls]);
 
   useEffect(() => {
     const element = scrollRef.current;
@@ -477,6 +651,8 @@ export function AIChatContent({
     setIsThinking(false);
     setStreamingText("");
     streamingTextRef.current = "";
+    setStreamingToolCalls([]);
+    streamingToolCallsRef.current = [];
     setErrorMessage("");
     requestIdRef.current = null;
   }, [newChatLabel]);
@@ -503,6 +679,8 @@ export function AIChatContent({
         setIsThinking(false);
         setStreamingText("");
         streamingTextRef.current = "";
+        setStreamingToolCalls([]);
+        streamingToolCallsRef.current = [];
         setErrorMessage("");
       }
 
@@ -567,9 +745,15 @@ export function AIChatContent({
       setIsThinking(true);
       setStreamingText("");
       streamingTextRef.current = "";
+      setStreamingToolCalls([]);
+      streamingToolCallsRef.current = [];
 
       const requestId = createId("desktop-chat");
       requestIdRef.current = requestId;
+
+      if (isDirty) {
+        await save();
+      }
 
       const resumeContext = {
         title: currentResume?.title || "",
@@ -578,26 +762,37 @@ export function AIChatContent({
         targetJobTitle: currentResume?.targetJobTitle || "",
         targetCompany: currentResume?.targetCompany || "",
         sections: sections.map((section) => ({
+          id: section.id,
           type: section.type,
           title: section.title,
+          sortOrder: section.sortOrder,
           visible: section.visible,
           content: section.content,
         })),
       };
+      const conversation = buildConversationHistory(activeSession?.messages ?? []);
+      const systemPrompt = buildResumeEditSystemPrompt(
+        sections.map((section) => ({
+          id: section.id,
+          type: section.type,
+          title: section.title,
+        })),
+      );
 
       try {
         await startAiPromptStream({
           provider: runtimeSettings.provider,
+          documentId: currentResume?.id || resumeId,
           model: selectedModel || runtimeSettings.model,
           baseUrl: runtimeSettings.baseUrl || undefined,
           requestId,
-          systemPrompt:
-            "You are RoleRover's desktop resume assistant. Use the provided resume context, keep the answer concise and actionable, and provide ready-to-paste rewrites when you suggest text changes. Do not claim you already edited the resume.",
+          systemPrompt,
           prompt: `${prompt}\n\nResume context:\n${JSON.stringify(
             resumeContext,
             null,
             2,
           )}`,
+          conversation,
         });
       } catch (error) {
         setIsThinking(false);
@@ -615,11 +810,7 @@ export function AIChatContent({
     [
       activeSession,
       apiKeyMissingHint,
-      currentResume?.language,
-      currentResume?.targetCompany,
-      currentResume?.targetJobTitle,
-      currentResume?.template,
-      currentResume?.title,
+      currentResume,
       genericError,
       input,
       isThinking,
@@ -628,8 +819,11 @@ export function AIChatContent({
       runtimeSettings.hasApiKey,
       runtimeSettings.model,
       runtimeSettings.provider,
+      save,
       sections,
       selectedModel,
+      isDirty,
+      resumeId,
     ],
   );
 
@@ -740,6 +934,9 @@ export function AIChatContent({
 
           {activeSession?.messages.map((message) => {
             const isUser = message.role === "user";
+            const parsedAssistantContent = isUser
+              ? null
+              : parseReasoningContent(message.content);
             return (
               <div
                 key={message.id}
@@ -772,10 +969,33 @@ export function AIChatContent({
                   {isUser ? (
                     <p className="whitespace-pre-wrap">{message.content}</p>
                   ) : (
-                    <div className="ai-markdown">
-                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                        {message.content}
-                      </ReactMarkdown>
+                    <div className="space-y-2">
+                      {message.toolCalls?.map((toolCall) => (
+                        <ToolExecutionCard
+                          key={toolCall.toolCallId}
+                          toolName={toolCall.toolName}
+                          state={toolCall.state}
+                          input={toolCall.input}
+                          output={toolCall.output}
+                          errorText={toolCall.errorText || undefined}
+                          callingLabel={toolCallingLabel}
+                          resultLabel={toolResultLabel}
+                          resultErrorLabel={toolCallErrorLabel}
+                        />
+                      ))}
+                      {parsedAssistantContent?.reasoningText ? (
+                        <ReasoningBlock
+                          label={reasoningLabel}
+                          content={parsedAssistantContent.reasoningText}
+                        />
+                      ) : null}
+                      {parsedAssistantContent?.answerText ? (
+                        <div className="ai-markdown">
+                          <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                            {parsedAssistantContent.answerText}
+                          </ReactMarkdown>
+                        </div>
+                      ) : null}
                     </div>
                   )}
                 </div>
@@ -783,22 +1003,45 @@ export function AIChatContent({
             );
           })}
 
-          {streamingText && (
+          {(streamingToolCalls.length > 0 || streamingText) && (
             <div className="flex gap-2.5">
               <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-pink-400 to-pink-500">
                 <Bot className="h-3 w-3 text-white" />
               </div>
               <div className="min-w-0 max-w-[calc(100%-2.5rem)] rounded-2xl bg-zinc-50 px-3 py-2 text-[13px] leading-relaxed text-zinc-700 ring-1 ring-zinc-200/60">
-                <div className="ai-markdown">
-                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                    {streamingText}
-                  </ReactMarkdown>
+                <div className="space-y-2">
+                  {streamingToolCalls.map((toolCall) => (
+                    <ToolExecutionCard
+                      key={toolCall.toolCallId}
+                      toolName={toolCall.toolName}
+                      state={toolCall.state}
+                      input={toolCall.input}
+                      output={toolCall.output}
+                      errorText={toolCall.errorText || undefined}
+                      callingLabel={toolCallingLabel}
+                      resultLabel={toolResultLabel}
+                      resultErrorLabel={toolCallErrorLabel}
+                    />
+                  ))}
+                  {parsedStreamingContent.reasoningText ? (
+                    <ReasoningBlock
+                      label={reasoningLabel}
+                      content={parsedStreamingContent.reasoningText}
+                    />
+                  ) : null}
+                  {parsedStreamingContent.answerText ? (
+                    <div className="ai-markdown">
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                        {parsedStreamingContent.answerText}
+                      </ReactMarkdown>
+                    </div>
+                  ) : null}
                 </div>
               </div>
             </div>
           )}
 
-          {isThinking && !streamingText && (
+          {isThinking && !streamingText && streamingToolCalls.length === 0 && (
             <div className="flex items-center gap-2 text-xs text-zinc-400">
               <span className="flex gap-1">
                 <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-pink-400 [animation-delay:0ms]" />
@@ -888,7 +1131,7 @@ export function AIChatPanel({ resumeId }: AIChatPanelProps) {
 
   return (
     <div className="relative flex w-80 shrink-0 flex-col overflow-hidden border-l bg-white">
-      <AIChatContent resumeId={resumeId} />
+      <AIChatContent key={resumeId} resumeId={resumeId} />
       <Button
         variant="ghost"
         size="sm"

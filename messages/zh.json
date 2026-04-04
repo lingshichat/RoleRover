@@ -259,7 +259,8 @@
     "apiKeyMissingHint": "请先在设置中配置 AI 服务的 API Key，才能使用 AI 功能。",
     "apiKeyMissingBubble": "API Key 未配置，请前往设置配置",
     "invalidProviderResponse": "当前模型服务返回了不兼容的响应，请检查 API 地址、模型名称或更换兼容 OpenAI 的服务后重试。",
-    "goToSettings": "前往设置"
+    "goToSettings": "前往设置",
+    "reasoning": "思考过程"
   },
   "pdf": {
     "exporting": "正在生成 PDF...",
