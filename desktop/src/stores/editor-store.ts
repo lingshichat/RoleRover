@@ -1,14 +1,10 @@
 import { create } from 'zustand';
+import type { ResumeSection } from '../types/resume';
 
 const MAX_UNDO_STACK = 50;
 
 export interface ResumeSnapshot {
-  sections: Array<{
-    id: string;
-    title: string;
-    visible: boolean;
-    sortOrder: number;
-  }>;
+  sections: ResumeSection[];
   timestamp: number;
 }
 
@@ -58,16 +54,17 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
     const { undoStack, redoStack } = get();
     if (undoStack.length === 0) return null;
 
-    const current = undoStack[undoStack.length - 1];
+    const previous = undoStack[undoStack.length - 1];
     const newUndoStack = undoStack.slice(0, -1);
 
-    // Push current state to redo stack
     set({
       undoStack: newUndoStack,
-      redoStack: [...redoStack, current],
+      redoStack: [...redoStack, previous],
     });
 
-    return newUndoStack.length > 0 ? newUndoStack[newUndoStack.length - 1] : null;
+    // Return the previous snapshot; caller restores sections from it.
+    // If this was the last entry, "previous" IS the state to restore to.
+    return previous;
   },
 
   redo: () => {

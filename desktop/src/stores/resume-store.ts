@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { saveDocument } from "../lib/desktop-api";
+import { useEditorStore } from "./editor-store";
 import type {
   Resume,
   ResumeSection,
@@ -26,6 +27,7 @@ interface ResumeStore {
   addSection: (section: ResumeSection) => void;
   removeSection: (sectionId: string) => void;
   reorderSections: (sections: ResumeSection[]) => void;
+  restoreSections: (sections: ResumeSection[]) => void;
   toggleSectionVisibility: (sectionId: string) => void;
   setTemplate: (template: string) => void;
   setTitle: (title: string) => void;
@@ -41,6 +43,25 @@ export const useResumeStore = create<ResumeStore>((set, get) => ({
   isDirty: false,
   isSaving: false,
   _saveTimeout: null,
+
+  _captureSnapshot: () => {
+    const { sections } = get();
+    useEditorStore.getState().pushUndo({
+      sections: structuredClone(sections),
+      timestamp: Date.now(),
+    });
+  },
+
+  restoreSections: (sections) => {
+    set((state) => ({
+      sections,
+      currentResume: state.currentResume
+        ? { ...state.currentResume, sections }
+        : null,
+      isDirty: true,
+    }));
+    get()._scheduleSave();
+  },
 
   setResume: (resume) => {
     // Cancel any pending autosave to prevent stale data overwriting
@@ -65,6 +86,7 @@ export const useResumeStore = create<ResumeStore>((set, get) => ({
   },
 
   updateSection: (sectionId, content) => {
+    get()._captureSnapshot();
     set((state) => {
       const sections = state.sections.map((s) =>
         s.id === sectionId
@@ -93,6 +115,7 @@ export const useResumeStore = create<ResumeStore>((set, get) => ({
   },
 
   updateSectionTitle: (sectionId, title) => {
+    get()._captureSnapshot();
     set((state) => {
       const sections = state.sections.map((s) =>
         s.id === sectionId ? { ...s, title } : s
@@ -109,6 +132,7 @@ export const useResumeStore = create<ResumeStore>((set, get) => ({
   },
 
   addSection: (section) => {
+    get()._captureSnapshot();
     set((state) => {
       const sections = [...state.sections, section];
       return {
@@ -123,6 +147,7 @@ export const useResumeStore = create<ResumeStore>((set, get) => ({
   },
 
   removeSection: (sectionId) => {
+    get()._captureSnapshot();
     set((state) => {
       const sections = state.sections.filter((s) => s.id !== sectionId);
       return {
@@ -137,6 +162,7 @@ export const useResumeStore = create<ResumeStore>((set, get) => ({
   },
 
   reorderSections: (sections) => {
+    get()._captureSnapshot();
     set((state) => ({
       sections,
       currentResume: state.currentResume
@@ -148,6 +174,7 @@ export const useResumeStore = create<ResumeStore>((set, get) => ({
   },
 
   toggleSectionVisibility: (sectionId) => {
+    get()._captureSnapshot();
     set((state) => {
       const sections = state.sections.map((s) =>
         s.id === sectionId ? { ...s, visible: !s.visible } : s

@@ -33,7 +33,7 @@ export function EditorToolbar() {
   const { t } = useTranslation();
   const { toggleThemeEditor, showThemeEditor, undo, redo, undoStack, redoStack } =
     useEditorStore();
-  const { isSaving, isDirty, currentResume, reorderSections, save } = useResumeStore();
+  const { isSaving, isDirty, currentResume, restoreSections, save } = useResumeStore();
   const { activeModal, openModal, closeModal } = useUIStore();
   const [autoSave, setAutoSave] = useState(true);
 
@@ -56,14 +56,14 @@ export function EditorToolbar() {
   const handleUndo = () => {
     const snapshot = undo();
     if (snapshot) {
-      reorderSections(snapshot.sections as any);
+      restoreSections(snapshot.sections);
     }
   };
 
   const handleRedo = () => {
     const snapshot = redo();
     if (snapshot) {
-      reorderSections(snapshot.sections as any);
+      restoreSections(snapshot.sections);
     }
   };
 
