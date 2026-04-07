@@ -115,7 +115,7 @@ const preferred = candidates.sort((left, right) => {
 const artifactName = path.basename(preferred.artifactPath);
 const signature = fs.readFileSync(preferred.sigPath, "utf8").trim();
 const target = process.env.DESKTOP_UPDATER_TARGET?.trim() || "windows-x86_64";
-const downloadUrl = `https://github.com/${repository}/releases/download/${encodeURIComponent(releaseTag)}/${encodeURIComponent(artifactName)}`;
+const downloadUrl = `https://github.com/${repository}/releases/download/${encodeURIComponent(releaseTag)}/${encodeURIComponent(artifactName.replace(/ /g, "."))}`;
 const releaseNotes = collectReleaseNotes(ROOT, releaseTag, repository);
 
 const latestJson = {
